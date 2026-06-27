@@ -18,7 +18,7 @@ lua54 'yes'
 version '5.3.38'
 
 name 'qs-housing'
-author 'Quasar Store'
+author 'RealRPG / Hexney272'
 
 ui_page 'web/build/index.html'
 -- ui_page 'http://localhost:3005/' -- dev

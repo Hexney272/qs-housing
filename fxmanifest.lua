@@ -4,10 +4,7 @@
 
 
 
---[[
-	These custom shells are a collaboration between Quasar Store and SubhaMPro.
-	Designed by SubhaMPro (https://subhampro.tebex.io/), integrated and distributed by Quasar Store.
-]]
+
 
 fx_version 'cerulean'
 

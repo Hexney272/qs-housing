@@ -689,16 +689,11 @@ lib.callback.register("housing:phoneBuyUpgrade", function(source, houseName, upg
     end
 
     local identifier = GetIdentifier(source)
-    if HouseOwnerIdentifierList[houseName] == identifier then
-        if HouseOwnerCitizenidList[houseName] == identifier then
-            goto ownerVerified
-        end
+    local isOwner = HouseOwnerIdentifierList[houseName] == identifier and HouseOwnerCitizenidList[houseName] == identifier
+    if not isOwner then
+        Notification(source, i18n.t("you_are_not_owner"), "error")
+        return { ok = false, error = "not_owner" }
     end
-
-    Notification(source, i18n.t("you_are_not_owner"), "error")
-    return { ok = false, error = "not_owner" }
-
-    ::ownerVerified::
 
     local upgrade = table.find(Config.Upgrades or {}, function(item)
         return item.name == upgradeName

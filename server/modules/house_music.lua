@@ -256,15 +256,12 @@ AddEventHandler("housing:setInside", function(houseName, isInside)
 
   if wasInside then
     local remaining = playersInHouse[houseName]
-    if remaining and next(remaining) then
-      goto skip_destroy
-    end
-
-    if HousingHouseMusic[houseName] then
-      HousingHouseMusicDestroyHouse(houseName)
+    if not remaining or not next(remaining) then
+      if HousingHouseMusic[houseName] then
+        HousingHouseMusicDestroyHouse(houseName)
+      end
     end
   end
-  ::skip_destroy::
 end)
 
 AddEventHandler("playerDropped", function()

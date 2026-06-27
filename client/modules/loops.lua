@@ -758,16 +758,10 @@ local function outsideOwnedHouseLoop()
     local sleepTime = nil
 
     -- If house is owned but rentable/purchasable, show locked house UI instead
-    if CurrentHouseData.isOwned then
-        if not CurrentHouseData.rentable then
-            if not CurrentHouseData.purchasable then
-                goto continueToOwned
-            end
-        end
+    local isOwnedAndNotForSale = CurrentHouseData.isOwned and not CurrentHouseData.rentable and not CurrentHouseData.purchasable
+    if not isOwnedAndNotForSale then
+        return lockedHouseLoop()
     end
-    return lockedHouseLoop()
-
-    ::continueToOwned::
     local houseConfig = Config.Houses[CurrentHouse]
 
     -- MLO houses don't show outside UI

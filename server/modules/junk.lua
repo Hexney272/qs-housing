@@ -202,14 +202,11 @@ lib.callback.register("housing:junk:updateCoords", function(source, junkId, coor
     return false
   end
 
-  if type(coords) == "table" and coords.x and coords.y and coords.z then
-    goto valid
+  if type(coords) ~= "table" or not coords.x or not coords.y or not coords.z then
+    Debug("housing:junk:updateCoords - Invalid coords structure:", coords)
+    return false
   end
 
-  Debug("housing:junk:updateCoords - Invalid coords structure:", coords)
-  return false
-
-  ::valid::
   return updateJunkCoords(junkId, coords)
 end)
 

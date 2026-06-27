@@ -4,16 +4,11 @@ local function GiveKey(ownerSource, targetIdentifier, houseName)
     local targetCitizenid = GetIdentifier(targetIdentifier)
     local targetSource = GetPlayerSourceFromIdentifier(targetCitizenid)
 
-    if HouseOwnerIdentifierList[houseName] == ownerIdentifier then
-        if HouseOwnerCitizenidList[houseName] == ownerIdentifier then
-            goto ownerVerified
-        end
+    local isOwner = HouseOwnerIdentifierList[houseName] == ownerIdentifier and HouseOwnerCitizenidList[houseName] == ownerIdentifier
+    if not isOwner then
+        Notification(ownerSource, i18n.t("you_are_not_owner"), "error")
+        return false
     end
-
-    Notification(ownerSource, i18n.t("you_are_not_owner"), "error")
-    return false
-
-    ::ownerVerified::
 
     if targetPlayer then
         if HouseKeyholdersList[houseName] then
@@ -86,16 +81,11 @@ RegisterServerCallback("housing:buyUpgrade", function(source, cb, houseName, upg
     local playerSource = source
     local identifier = GetIdentifier(playerSource)
 
-    if HouseOwnerIdentifierList[houseName] == identifier then
-        if HouseOwnerCitizenidList[houseName] == identifier then
-            goto ownerVerified
-        end
+    local isOwner = HouseOwnerIdentifierList[houseName] == identifier and HouseOwnerCitizenidList[houseName] == identifier
+    if not isOwner then
+        Notification(playerSource, i18n.t("you_are_not_owner"), "error")
+        return cb(false)
     end
-
-    Notification(playerSource, i18n.t("you_are_not_owner"), "error")
-    return cb(false)
-
-    ::ownerVerified::
 
     local upgrade = table.find(Config.Upgrades, function(item)
         return item.name == upgradeName
@@ -179,16 +169,11 @@ end)
 local function TakeKey(ownerSource, houseName, targetData)
     local ownerIdentifier = GetIdentifier(ownerSource)
 
-    if HouseOwnerIdentifierList[houseName] == ownerIdentifier then
-        if HouseOwnerCitizenidList[houseName] == ownerIdentifier then
-            goto ownerVerified
-        end
+    local isOwner = HouseOwnerIdentifierList[houseName] == ownerIdentifier and HouseOwnerCitizenidList[houseName] == ownerIdentifier
+    if not isOwner then
+        Notification(ownerSource, i18n.t("you_are_not_owner"), "error")
+        return false
     end
-
-    Notification(ownerSource, i18n.t("you_are_not_owner"), "error")
-    return false
-
-    ::ownerVerified::
 
     if HouseKeyholdersList[houseName] ~= nil then
         for index, keyholder in pairs(HouseKeyholdersList[houseName]) do

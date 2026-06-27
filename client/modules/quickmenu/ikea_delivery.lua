@@ -133,24 +133,21 @@ function ikeaDelivery.sync(houseId)
 
     local deliveryState = serverCallbacks.getState(house)
 
-    if deliveryState and deliveryState.enabled and deliveryState.hasPoint then
-        local count = deliveryState.readyCount or 0
-        if count > 0 and deliveryState.point then
-            goto hasDelivery
+    local hasActiveDelivery = deliveryState and deliveryState.enabled and deliveryState.hasPoint
+        and (deliveryState.readyCount or 0) > 0 and deliveryState.point
+
+    if not hasActiveDelivery then
+        if deliveryState and deliveryState.enabled and false == deliveryState.hasPoint then
+            local count = deliveryState.readyCount or 0
+            if count > 0 then
+                Notification(i18n.t("delivery.ikea_point_missing"), "info")
+            end
         end
+
+        internal.clearEntity()
+        return
     end
 
-    if deliveryState and deliveryState.enabled and false == deliveryState.hasPoint then
-        local count = deliveryState.readyCount or 0
-        if count > 0 then
-            Notification(i18n.t("delivery.ikea_point_missing"), "info")
-        end
-    end
-
-    internal.clearEntity()
-    return
-
-    ::hasDelivery::
     local spawnDist = getPedStreamingDistances("ikeaDelivery", 55.0, 65.0)
     local playerCoords = GetEntityCoords(cache.ped)
     local pointVec = vec3(deliveryState.point.x, deliveryState.point.y, deliveryState.point.z)

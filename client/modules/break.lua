@@ -170,7 +170,8 @@ local function AttemptRamDoor(houseId)
 
     if not houseData.mlo then
         if not houseData.locked then
-            goto lbl_already_open
+            Notification(i18n.t("already_open"), "error")
+            return
         end
     end
 
@@ -180,11 +181,7 @@ local function AttemptRamDoor(houseId)
         TriggerServerEvent("qb-houses:server:SetRamState", true, houseId)
     else
         Notification(i18n.t("force_door"), "error")
-        goto lbl_end
-        ::lbl_already_open::
-        Notification(i18n.t("already_open"), "error")
     end
-    ::lbl_end::
 end
 
 RamDoor = AttemptRamDoor
@@ -281,7 +278,8 @@ local function AttemptLockPick(houseId)
 
     if not houseData.mlo then
         if not houseData.locked then
-            goto lbl_already_open
+            Notification(i18n.t("already_open"), "error")
+            return
         end
     end
 
@@ -291,11 +289,7 @@ local function AttemptLockPick(houseId)
         DoLockpickSkillCheck(houseId)
     else
         Notification(i18n.t("force_door"), "error")
-        goto lbl_end
-        ::lbl_already_open::
-        Notification(i18n.t("already_open"), "error")
     end
-    ::lbl_end::
 end
 
 LockPick = AttemptLockPick

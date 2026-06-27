@@ -1,256 +1,137 @@
+-- qs-housing server/main.lua (deobfuscated)
+
+-- Initialize furniture data into Config
+Config.Furniture = db.getMergedFurnitureData()
+
+-- Initialize furniture shops
+function InitFurnitureShops()
+  local shopData = db.getFurnitureShops()
+  Config.FurnitureShops = db.expandFurnitureShopCategories(shopData)
+  Debug("InitFurnitureShops", "Loaded", #Config.FurnitureShops, "furniture shops")
+end
+
+InitFurnitureShops()
+
+-- Global state variables
+local housesInitialized = false
+local houseObjects = {}
+HouseGarages = {}
+local rentableHousesMap = {}
+local purchasableHousesMap = {}
+PlayerInHouseZones = {}
+HouseOwnerIdentifierList = {}
+OfficialHouseOwnerList = {}
+HouseOwnerCitizenidList = {}
+HouseKeyholdersList = {}
+local securityCamState = {}
+
+-- Helper: coerce a value to boolean with a default
+local function coerceToBoolean(value, default)
+  if nil == value then
+    return default
+  end
+  if "boolean" == type(value) then
+    return value
+  end
+  if "number" == type(value) then
+    return 1 == value
+  end
+  if "string" == type(value) then
+    local lower = value:lower()
+    if "1" == lower or "true" == lower then
+      return true
+    end
+    if "0" == lower or "false" == lower then
+      return false
+    end
+  end
+  return default
+end
 
 
-
-
-
-
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1, L8_1, L9_1, L10_1, L11_1, L12_1, L13_1, L14_1, L15_1, L16_1, L17_1, L18_1, L19_1, L20_1, L21_1, L22_1, L23_1, L24_1, L25_1, L26_1, L27_1, L28_1, L29_1
-L0_1 = Config
-L1_1 = db
-L1_1 = L1_1.getMergedFurnitureData
-L1_1 = L1_1()
-L0_1.Furniture = L1_1
-function L0_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2
-  L0_2 = db
-  L0_2 = L0_2.getFurnitureShops
-  L0_2 = L0_2()
-  L1_2 = Config
-  L2_2 = db
-  L2_2 = L2_2.expandFurnitureShopCategories
-  L3_2 = L0_2
-  L2_2 = L2_2(L3_2)
-  L1_2.FurnitureShops = L2_2
-  L1_2 = Debug
-  L2_2 = "InitFurnitureShops"
-  L3_2 = "Loaded"
-  L4_2 = Config
-  L4_2 = L4_2.FurnitureShops
-  L4_2 = #L4_2
-  L5_2 = "furniture shops"
-  L1_2(L2_2, L3_2, L4_2, L5_2)
-end
-InitFurnitureShops = L0_1
-L0_1 = InitFurnitureShops
-L0_1()
-L0_1 = false
-L1_1 = {}
-HouseGarages = L1_1
-L1_1 = {}
-L2_1 = {}
-PlayerInHouseZones = L2_1
-L2_1 = {}
-HouseOwnerIdentifierList = L2_1
-L2_1 = {}
-OfficialHouseOwnerList = L2_1
-L2_1 = {}
-HouseOwnerCitizenidList = L2_1
-L2_1 = {}
-HouseKeyholdersList = L2_1
-L2_1 = {}
-L3_1 = {}
-L4_1 = {}
-function L5_1(A0_2, A1_2)
-  local L2_2, L3_2
-  if nil == A0_2 then
-    return A1_2
-  end
-  L2_2 = type
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if "boolean" == L2_2 then
-    return A0_2
-  end
-  L2_2 = type
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if "number" == L2_2 then
-    L2_2 = 1 == A0_2
-    return L2_2
-  end
-  L2_2 = type
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if "string" == L2_2 then
-    L3_2 = A0_2
-    L2_2 = A0_2.lower
-    L2_2 = L2_2(L3_2)
-    if "1" == L2_2 or "true" == L2_2 then
-      L3_2 = true
-      return L3_2
-    end
-    if "0" == L2_2 or "false" == L2_2 then
-      L3_2 = false
-      return L3_2
-    end
-  end
-  return A1_2
-end
-function L6_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = MySQL
-  L0_2 = L0_2.query
-  L0_2 = L0_2.await
-  L1_2 = "SHOW COLUMNS FROM houselocations LIKE ?"
-  L2_2 = {}
-  L3_2 = "assistantZoneMessagesEnabled"
-  L2_2[1] = L3_2
-  L0_2 = L0_2(L1_2, L2_2)
-  if L0_2 then
-    L1_2 = L0_2[1]
-    if L1_2 then
-      return
-    end
-  end
-  L1_2 = MySQL
-  L1_2 = L1_2.query
-  L1_2 = L1_2.await
-  L2_2 = "ALTER TABLE houselocations ADD COLUMN assistantZoneMessagesEnabled TINYINT(1) NOT NULL DEFAULT 1"
-  L1_2(L2_2)
-  L1_2 = Debug
-  L2_2 = "ensureAssistantZoneMessagesColumn"
-  L3_2 = "assistantZoneMessagesEnabled column created"
-  L1_2(L2_2, L3_2)
-end
-function L7_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = MySQL
-  L0_2 = L0_2.query
-  L0_2 = L0_2.await
-  L1_2 = "SHOW COLUMNS FROM player_houses LIKE ?"
-  L2_2 = {}
-  L3_2 = "rentNextChargeAt"
-  L2_2[1] = L3_2
-  L0_2 = L0_2(L1_2, L2_2)
-  if L0_2 then
-    L1_2 = L0_2[1]
-    if L1_2 then
-      return
-    end
-  end
-  L1_2 = MySQL
-  L1_2 = L1_2.query
-  L1_2 = L1_2.await
-  L2_2 = "ALTER TABLE player_houses ADD COLUMN rentNextChargeAt DATETIME NULL DEFAULT NULL"
-  L1_2(L2_2)
-  L1_2 = Debug
-  L2_2 = "ensureRentNextChargeAtColumn"
-  L3_2 = "rentNextChargeAt column created"
-  L1_2(L2_2, L3_2)
-end
-L8_1 = {}
-L8_1.money = true
-L8_1.bank = true
-L8_1.cash = true
-L8_1.black_money = true
-function L9_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = Config
-  L1_2 = L1_2.Houses
-  L1_2 = L1_2[A0_2]
-  if L1_2 then
-    L2_2 = L1_2.paymentMethod
-    if L2_2 then
-      goto lbl_14
-    end
-  end
-  L2_2 = Config
-  L2_2 = L2_2.MoneyType
-  if not L2_2 then
-    L2_2 = "bank"
-  end
-  ::lbl_14::
-  L3_2 = type
-  L4_2 = L2_2
-  L3_2 = L3_2(L4_2)
-  if "string" ~= L3_2 or "" == L2_2 then
-    L3_2 = Config
-    L3_2 = L3_2.MoneyType
-    L2_2 = L3_2 or L2_2
-    if not L3_2 then
-      L2_2 = "bank"
-    end
-  end
-  L3_2 = L8_1
-  L3_2 = L3_2[L2_2]
-  if not L3_2 then
-    L3_2 = Error
-    L4_2 = "getHousePaymentMethod"
-    L5_2 = "Invalid payment method, using fallback"
-    L6_2 = A0_2
-    L7_2 = L2_2
-    L3_2(L4_2, L5_2, L6_2, L7_2)
-    L3_2 = Config
-    L3_2 = L3_2.MoneyType
-    L2_2 = L3_2 or L2_2
-    if not L3_2 then
-      L2_2 = "bank"
-    end
-  end
-  return L2_2
-end
-getHousePaymentMethod = L9_1
-function L9_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = GetAccountMoney
-  L3_2 = A0_2
-  L4_2 = getHousePaymentMethod
-  L5_2 = A1_2
-  L4_2, L5_2 = L4_2(L5_2)
-  return L2_2(L3_2, L4_2, L5_2)
-end
-getHouseMoney = L9_1
-function L9_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = RemoveAccountMoney
-  L4_2 = A0_2
-  L5_2 = getHousePaymentMethod
-  L6_2 = A1_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = A2_2
-  L3_2(L4_2, L5_2, L6_2)
-end
-removeHouseMoney = L9_1
-function L9_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L4_2 = RemoveMoneyFromAccount
-  L5_2 = A0_2
-  L6_2 = A2_2
-  L7_2 = A3_2
-  L8_2 = getHousePaymentMethod
-  L9_2 = A1_2
-  L8_2, L9_2 = L8_2(L9_2)
-  return L4_2(L5_2, L6_2, L7_2, L8_2, L9_2)
-end
-removeHouseMoneyFromIdentifier = L9_1
-function L9_1()
-  local L0_2, L1_2
-  L0_2 = Config
-  L0_2 = L0_2.RentScheduler
-  if L0_2 then
-    L1_2 = L0_2.Enabled
-    if false ~= L1_2 then
-      goto lbl_10
-    end
-  end
-  L1_2 = false
-  do return L1_2 end
-  ::lbl_10::
-  L1_2 = L0_2.Mode
-  L1_2 = "monthly_utc_anniversary" == L1_2
-  return L1_2
-end
-function L10_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = L9_1
-  L0_2 = L0_2()
-  if not L0_2 then
+-- Ensure DB columns exist
+local function ensureAssistantZoneMessagesColumn()
+  local result = MySQL.query.await("SHOW COLUMNS FROM houselocations LIKE ?", { "assistantZoneMessagesEnabled" })
+  if result and result[1] then
     return
   end
-  L0_2 = MySQL
-  L0_2 = L0_2.update
-  L0_2 = L0_2.await
-  L1_2 = [[
+  MySQL.query.await("ALTER TABLE houselocations ADD COLUMN assistantZoneMessagesEnabled TINYINT(1) NOT NULL DEFAULT 1")
+  Debug("ensureAssistantZoneMessagesColumn", "assistantZoneMessagesEnabled column created")
+end
+
+local function ensureRentNextChargeAtColumn()
+  local result = MySQL.query.await("SHOW COLUMNS FROM player_houses LIKE ?", { "rentNextChargeAt" })
+  if result and result[1] then
+    return
+  end
+  MySQL.query.await("ALTER TABLE player_houses ADD COLUMN rentNextChargeAt DATETIME NULL DEFAULT NULL")
+  Debug("ensureRentNextChargeAtColumn", "rentNextChargeAt column created")
+end
+
+-- Valid payment methods lookup
+local validPaymentMethods = {
+  money = true,
+  bank = true,
+  cash = true,
+  black_money = true,
+}
+
+
+function getHousePaymentMethod(houseName)
+  local houseData = Config.Houses[houseName]
+  local method
+  if houseData and houseData.paymentMethod then
+    method = houseData.paymentMethod
+  else
+    method = Config.MoneyType
+    if not method then
+      method = "bank"
+    end
+  end
+  if "string" ~= type(method) or "" == method then
+    method = Config.MoneyType or method
+    if not Config.MoneyType then
+      method = "bank"
+    end
+  end
+  if not validPaymentMethods[method] then
+    Error("getHousePaymentMethod", "Invalid payment method, using fallback", houseName, method)
+    method = Config.MoneyType or method
+    if not Config.MoneyType then
+      method = "bank"
+    end
+  end
+  return method
+end
+
+function getHouseMoney(playerSource, houseName)
+  return GetAccountMoney(playerSource, getHousePaymentMethod(houseName))
+end
+
+function removeHouseMoney(playerSource, houseName, amount)
+  RemoveAccountMoney(playerSource, getHousePaymentMethod(houseName), amount)
+end
+
+function removeHouseMoneyFromIdentifier(identifier, houseName, amount, useBank)
+  return RemoveMoneyFromAccount(identifier, amount, useBank, getHousePaymentMethod(houseName))
+end
+
+
+-- Check if rent scheduler is in monthly UTC anniversary mode
+local function isMonthlyUTCAnniversaryMode()
+  local scheduler = Config.RentScheduler
+  if scheduler and false ~= scheduler.Enabled then
+    return scheduler.Mode == "monthly_utc_anniversary"
+  end
+  return false
+end
+
+-- Backfill missing rent due dates for anniversary mode
+local function backfillRentNextChargeAt()
+  if not isMonthlyUTCAnniversaryMode() then
+    return
+  end
+  MySQL.update.await([[
 		UPDATE player_houses ph
 		LEFT JOIN (
 			SELECT house, MAX(`date`) AS last_rent_date
@@ -259,9050 +140,3099 @@ function L10_1()
 		) hr ON ph.house = hr.house
 		SET ph.rentNextChargeAt = DATE_ADD(COALESCE(hr.last_rent_date, UTC_TIMESTAMP()), INTERVAL 1 MONTH)
 		WHERE ph.rented = 1 AND ph.rentNextChargeAt IS NULL
-	]]
-  L0_2(L1_2)
-  L0_2 = Debug
-  L1_2 = "backfillRentNextChargeAt"
-  L2_2 = "Backfilled missing rent due dates"
-  L0_2(L1_2, L2_2)
+	]])
+  Debug("backfillRentNextChargeAt", "Backfilled missing rent due dates")
 end
-function L11_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:notification"
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L7_2 = A2_2
-  L3_2(L4_2, L5_2, L6_2, L7_2)
+
+function Notification(playerSource, message, notifType)
+  TriggerClientEvent("housing:notification", playerSource, message, notifType)
 end
-Notification = L11_1
-L11_1 = RegisterNetEvent
-L12_1 = "housing:enterHouseZone"
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = source
-  L2_2 = PlayerInHouseZones
-  L3_2 = PlayerInHouseZones
-  L3_2 = L3_2[A0_2]
-  if not L3_2 then
-    L3_2 = {}
+
+
+-- Player enters house zone tracking
+RegisterNetEvent("housing:enterHouseZone", function(houseName)
+  local src = source
+  if not PlayerInHouseZones[houseName] then
+    PlayerInHouseZones[houseName] = {}
   end
-  L2_2[A0_2] = L3_2
-  L2_2 = PlayerInHouseZones
-  L2_2 = L2_2[A0_2]
-  L2_2[L1_2] = true
-  L2_2 = Debug
-  L3_2 = "housing:enterHouseZone"
-  L4_2 = "Player entered house zone"
-  L5_2 = L1_2
-  L6_2 = A0_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L11_1(L12_1, L13_1)
-L11_1 = RegisterNetEvent
-L12_1 = "housing:exitHouseZone"
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = source
-  L2_2 = PlayerInHouseZones
-  L2_2 = L2_2[A0_2]
-  if L2_2 then
-    L2_2 = PlayerInHouseZones
-    L2_2 = L2_2[A0_2]
-    L2_2[L1_2] = nil
-    L2_2 = next
-    L3_2 = PlayerInHouseZones
-    L3_2 = L3_2[A0_2]
-    L2_2 = L2_2(L3_2)
-    if not L2_2 then
-      L2_2 = PlayerInHouseZones
-      L2_2[A0_2] = nil
+  PlayerInHouseZones[houseName][src] = true
+  Debug("housing:enterHouseZone", "Player entered house zone", src, houseName)
+end)
+
+-- Player exits house zone tracking
+RegisterNetEvent("housing:exitHouseZone", function(houseName)
+  local src = source
+  local zonePlayers = PlayerInHouseZones[houseName]
+  if zonePlayers then
+    zonePlayers[src] = nil
+    if not next(PlayerInHouseZones[houseName]) then
+      PlayerInHouseZones[houseName] = nil
     end
   end
-  L2_2 = Debug
-  L3_2 = "housing:exitHouseZone"
-  L4_2 = "Player exited house zone"
-  L5_2 = L1_2
-  L6_2 = A0_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L11_1(L12_1, L13_1)
-L11_1 = RegisterNetEvent
-L12_1 = "housing:server:houseAlarmSound"
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2
-  L1_2 = type
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if "string" ~= L1_2 then
+  Debug("housing:exitHouseZone", "Player exited house zone", src, houseName)
+end)
+
+
+-- House alarm sound event
+RegisterNetEvent("housing:server:houseAlarmSound", function(houseName)
+  if "string" ~= type(houseName) then
     return
   end
-  L1_2 = Config
-  L1_2 = L1_2.Houses
-  L1_2 = L1_2[A0_2]
-  if L1_2 then
-    L2_2 = L1_2.coords
-    if L2_2 then
-      L2_2 = L1_2.coords
-      L2_2 = L2_2.enter
-      if L2_2 then
-        goto lbl_20
-      end
-    end
-  end
-  do return end
-  ::lbl_20::
-  L2_2 = table
-  L2_2 = L2_2.includes
-  L3_2 = L1_2.upgrades
-  if not L3_2 then
-    L3_2 = {}
-  end
-  L4_2 = "alarm"
-  L2_2 = L2_2(L3_2, L4_2)
-  if not L2_2 then
+  local houseData = Config.Houses[houseName]
+  if not houseData or not houseData.coords or not houseData.coords.enter then
     return
   end
-  L2_2 = L1_2.coords
-  L2_2 = L2_2.enter
-  L3_2 = vector3
-  L4_2 = L2_2.x
-  L5_2 = L2_2.y
-  L6_2 = L2_2.z
-  L3_2 = L3_2(L4_2, L5_2, L6_2)
-  L4_2 = Config
-  L4_2 = L4_2.HouseAlarmDurationMs
-  if not L4_2 then
-    L4_2 = 35000
+  if not table.includes(houseData.upgrades or {}, "alarm") then
+    return
   end
-  L5_2 = Config
-  L5_2 = L5_2.HouseAlarmHearRange
-  if not L5_2 then
-    L5_2 = 80.0
-  end
-  L6_2 = ipairs
-  L7_2 = GetPlayers
-  L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L7_2()
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = tonumber
-    L13_2 = L11_2
-    L12_2 = L12_2(L13_2)
-    if L12_2 then
-      L13_2 = GetPlayerPed
-      L14_2 = L12_2
-      L13_2 = L13_2(L14_2)
-      if L13_2 and 0 ~= L13_2 then
-        L14_2 = GetEntityCoords
-        L15_2 = L13_2
-        L14_2 = L14_2(L15_2)
-        L15_2 = L14_2 - L3_2
-        L15_2 = #L15_2
-        if L5_2 >= L15_2 then
-          L15_2 = TriggerClientEvent
-          L16_2 = "housing:client:houseAlarmSound"
-          L17_2 = L12_2
-          L18_2 = L3_2
-          L19_2 = L4_2
-          L20_2 = L5_2
-          L15_2(L16_2, L17_2, L18_2, L19_2, L20_2)
+  local enterCoords = houseData.coords.enter
+  local housePos = vector3(enterCoords.x, enterCoords.y, enterCoords.z)
+  local duration = Config.HouseAlarmDurationMs or 35000
+  local hearRange = Config.HouseAlarmHearRange or 80.0
+
+  for _, playerId in ipairs(GetPlayers()) do
+    local pid = tonumber(playerId)
+    if pid then
+      local ped = GetPlayerPed(pid)
+      if ped and 0 ~= ped then
+        local pedCoords = GetEntityCoords(ped)
+        local dist = #(pedCoords - housePos)
+        if hearRange >= dist then
+          TriggerClientEvent("housing:client:houseAlarmSound", pid, housePos, duration, hearRange)
         end
       end
     end
   end
-end
-L11_1(L12_1, L13_1)
-function L11_1(A0_2, A1_2, ...)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = PlayerInHouseZones
-  L2_2 = L2_2[A0_2]
-  if not L2_2 then
+end)
+
+
+function BroadcastToPlayersInHouseZone(houseName, eventName, ...)
+  local zonePlayers = PlayerInHouseZones[houseName]
+  if not zonePlayers then
     return
   end
-  L3_2 = pairs
-  L4_2 = L2_2
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2 in L3_2, L4_2, L5_2, L6_2 do
-    L8_2 = TriggerClientEvent
-    L9_2 = A1_2
-    L10_2 = L7_2
-    L11_2 = ...
-    L8_2(L9_2, L10_2, L11_2)
+  for playerId in pairs(zonePlayers) do
+    TriggerClientEvent(eventName, playerId, ...)
   end
 end
-BroadcastToPlayersInHouseZone = L11_1
-function L11_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2
-  L1_2 = A0_2.coords
-  L1_2 = L1_2.PolyZone
-  L1_2 = L1_2.thickness
-  if not L1_2 then
-    L1_2 = A0_2.coords
-    L1_2 = L1_2.PolyZone
-    L1_2.thickness = 600.0
+
+-- Normalize house data (polyzone, mlo, shell coords)
+local function normalizeHouseData(houseData)
+  if not houseData.coords.PolyZone.thickness then
+    houseData.coords.PolyZone.thickness = 600.0
   end
-  L1_2 = A0_2.coords
-  L1_2 = L1_2.PolyZone
-  L1_2 = L1_2.points
-  if L1_2 then
-    L1_2 = pairs
-    L2_2 = A0_2.coords
-    L2_2 = L2_2.PolyZone
-    L2_2 = L2_2.points
-    L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-    for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-      L7_2 = A0_2.coords
-      L7_2 = L7_2.PolyZone
-      L7_2 = L7_2.points
-      L8_2 = vec3
-      L9_2 = L6_2.x
-      L10_2 = L6_2.y
-      L11_2 = L6_2.z
-      if not L11_2 then
-        L11_2 = 0.0
-      end
-      L8_2 = L8_2(L9_2, L10_2, L11_2)
-      L7_2[L5_2] = L8_2
+  if houseData.coords.PolyZone.points then
+    for idx, point in pairs(houseData.coords.PolyZone.points) do
+      houseData.coords.PolyZone.points[idx] = vec3(point.x, point.y, point.z or 0.0)
     end
   end
-  L1_2 = {}
-  L2_2 = A0_2.mlo
-  if L2_2 then
-    L2_2 = pairs
-    L3_2 = A0_2.mlo
-    L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-    for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-      L8_2 = L7_2.coords
-      if not L8_2 then
-        L8_2 = pairs
-        L9_2 = L7_2
-        L8_2, L9_2, L10_2, L11_2 = L8_2(L9_2)
-        for L12_2, L13_2 in L8_2, L9_2, L10_2, L11_2 do
-          L14_2 = table
-          L14_2 = L14_2.insert
-          L15_2 = L1_2
-          L16_2 = L13_2
-          L14_2(L15_2, L16_2)
+  -- Flatten MLO entries
+  local flatMlo = {}
+  if houseData.mlo then
+    for _, mloEntry in pairs(houseData.mlo) do
+      if not mloEntry.coords then
+        for _, coord in pairs(mloEntry) do
+          table.insert(flatMlo, coord)
         end
       else
-        L1_2 = A0_2.mlo
+        flatMlo = houseData.mlo
       end
     end
-    A0_2.mlo = L1_2
+    houseData.mlo = flatMlo
   end
-  L2_2 = A0_2.coords
-  L2_2 = L2_2.shellCoords
-  if not L2_2 then
-    L2_2 = A0_2.coords
-    L2_2 = L2_2.interiorCoords
-    if L2_2 then
-      L2_2 = A0_2.coords
-      L3_2 = vec4
-      L4_2 = A0_2.coords
-      L4_2 = L4_2.interiorCoords
-      L4_2 = L4_2.x
-      L5_2 = A0_2.coords
-      L5_2 = L5_2.interiorCoords
-      L5_2 = L5_2.y
-      L6_2 = A0_2.coords
-      L6_2 = L6_2.interiorCoords
-      L6_2 = L6_2.z
-      L7_2 = A0_2.coords
-      L7_2 = L7_2.interiorCoords
-      L7_2 = L7_2.w
-      if not L7_2 then
-        L7_2 = A0_2.coords
-        L7_2 = L7_2.interiorCoords
-        L7_2 = L7_2.h
-      end
-      L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2)
-      L2_2.shellCoords = L3_2
+  -- Convert interiorCoords to shellCoords if not present
+  if not houseData.coords.shellCoords then
+    if houseData.coords.interiorCoords then
+      local ic = houseData.coords.interiorCoords
+      houseData.coords.shellCoords = vec4(ic.x, ic.y, ic.z, ic.w or ic.h)
     end
   end
-  return A0_2
+  return houseData
 end
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = A1_2.mlo
-  if L2_2 then
-    L2_2 = json
-    L2_2 = L2_2.decode
-    L3_2 = A1_2.mlo
-    L2_2 = L2_2(L3_2)
-    if L2_2 then
-      goto lbl_11
-    end
+
+
+-- Build a house config object from a database row
+local function buildHouseFromRow(index, row)
+  local mlo = (row.mlo and json.decode(row.mlo)) or false
+  local ipl = (row.ipl and json.decode(row.ipl)) or false
+  local garage = (nil ~= row.garage and json.decode(row.garage)) or {}
+  local garageShell = (row.garageShell and json.decode(row.garageShell)) or {}
+  local hasOwner = 1 == row.has_owner
+
+  if not row.id then
+    Error("House id is not set, for this house", row.name, "We set randomly id")
+    row.id = math.random(1, 1000000)
   end
-  L2_2 = false
-  ::lbl_11::
-  L3_2 = A1_2.ipl
-  if L3_2 then
-    L3_2 = json
-    L3_2 = L3_2.decode
-    L4_2 = A1_2.ipl
-    L3_2 = L3_2(L4_2)
-    if L3_2 then
-      goto lbl_21
-    end
-  end
-  L3_2 = false
-  ::lbl_21::
-  L4_2 = A1_2.garage
-  if nil ~= L4_2 then
-    L4_2 = json
-    L4_2 = L4_2.decode
-    L5_2 = A1_2.garage
-    L4_2 = L4_2(L5_2)
-    if L4_2 then
-      goto lbl_32
-    end
-  end
-  L4_2 = {}
-  ::lbl_32::
-  L5_2 = A1_2.garageShell
-  if L5_2 then
-    L5_2 = json
-    L5_2 = L5_2.decode
-    L6_2 = A1_2.garageShell
-    L5_2 = L5_2(L6_2)
-    if L5_2 then
-      goto lbl_43
-    end
-  end
-  L5_2 = {}
-  ::lbl_43::
-  L6_2 = A1_2.has_owner
-  L6_2 = 1 == L6_2
-  L7_2 = A1_2.id
-  if not L7_2 then
-    L7_2 = Error
-    L8_2 = "House id is not set, for this house"
-    L9_2 = A1_2.name
-    L10_2 = "We set randomly id"
-    L7_2(L8_2, L9_2, L10_2)
-    L7_2 = math
-    L7_2 = L7_2.random
-    L8_2 = 1
-    L9_2 = 1000000
-    L7_2 = L7_2(L8_2, L9_2)
-    A1_2.id = L7_2
-  end
-  L7_2 = {}
-  L8_2 = A1_2.id
-  L7_2.id = L8_2
-  L8_2 = json
-  L8_2 = L8_2.decode
-  L9_2 = A1_2.coords
-  L8_2 = L8_2(L9_2)
-  L7_2.coords = L8_2
-  L7_2.owned = L6_2
-  L8_2 = A1_2.price
-  L7_2.price = L8_2
-  L8_2 = A1_2.defaultPrice
-  L7_2.defaultPrice = L8_2
-  L7_2.locked = true
-  L8_2 = A1_2.label
-  L7_2.address = L8_2
-  L8_2 = A1_2.tier
-  L7_2.tier = L8_2
-  L7_2.garage = L4_2
-  L7_2.mlo = L2_2
-  L7_2.ipl = L3_2
-  L8_2 = A1_2.creator
-  L7_2.creator = L8_2
-  L8_2 = A1_2.board
-  if L8_2 then
-    L8_2 = json
-    L8_2 = L8_2.decode
-    L9_2 = A1_2.board
-    L8_2 = L8_2(L9_2)
-    if L8_2 then
-      goto lbl_96
-    end
-  end
-  L8_2 = nil
-  ::lbl_96::
-  L7_2.board = L8_2
-  L8_2 = A1_2.creatorJob
-  L7_2.creatorJob = L8_2
-  L8_2 = A1_2.blip
-  if L8_2 then
-    L8_2 = json
-    L8_2 = L8_2.decode
-    L9_2 = A1_2.blip
-    L8_2 = L8_2(L9_2)
-    if L8_2 then
-      goto lbl_109
-    end
-  end
-  L8_2 = nil
-  ::lbl_109::
-  L7_2.blip = L8_2
-  L8_2 = A1_2.permissions
-  if L8_2 then
-    L8_2 = json
-    L8_2 = L8_2.decode
-    L9_2 = A1_2.permissions
-    L8_2 = L8_2(L9_2)
-    if L8_2 then
-      goto lbl_120
-    end
-  end
-  L8_2 = nil
-  ::lbl_120::
-  L7_2.permissions = L8_2
-  L8_2 = A1_2.upgrades
-  if L8_2 then
-    L8_2 = json
-    L8_2 = L8_2.decode
-    L9_2 = A1_2.upgrades
-    L8_2 = L8_2(L9_2)
-    if L8_2 then
-      goto lbl_131
-    end
-  end
-  L8_2 = nil
-  ::lbl_131::
-  L7_2.upgrades = L8_2
-  L8_2 = A1_2.name
-  L9_2 = L8_2
-  L8_2 = L8_2.match
-  L10_2 = "apt%-%d+"
-  L8_2 = L8_2(L9_2, L10_2)
-  L7_2.apartmentNumber = L8_2
-  L8_2 = A1_2.name
-  L9_2 = L8_2
-  L8_2 = L8_2.gsub
-  L10_2 = "-apt%-%d+"
-  L11_2 = ""
-  L8_2 = L8_2(L9_2, L10_2, L11_2)
-  L7_2.apartmentName = L8_2
-  L8_2 = A1_2.apartmentCount
-  if 0 ~= L8_2 then
-    L8_2 = A1_2.apartmentCount
-    if L8_2 then
-      goto lbl_150
-    end
-  end
-  L8_2 = nil
-  ::lbl_150::
-  L7_2.apartmentCount = L8_2
-  L8_2 = A1_2.paymentMethod
-  if not L8_2 then
-    L8_2 = "cash"
-  end
-  L7_2.paymentMethod = L8_2
-  L8_2 = A1_2.doorbellSound
-  if L8_2 then
-    L8_2 = A1_2.doorbellSound
-    if "" ~= L8_2 then
-      L8_2 = A1_2.doorbellSound
-      if L8_2 then
-        goto lbl_166
-      end
-    end
-  end
-  L8_2 = nil
-  ::lbl_166::
-  L7_2.doorbellSound = L8_2
-  L8_2 = L5_1
-  L9_2 = A1_2.assistantZoneMessagesEnabled
-  L10_2 = true
-  L8_2 = L8_2(L9_2, L10_2)
-  L7_2.assistantZoneMessagesEnabled = L8_2
-  L8_2 = L5_1
-  L9_2 = A1_2.allowPlantInside
-  L10_2 = true
-  L8_2 = L8_2(L9_2, L10_2)
-  L7_2.allowPlantInside = L8_2
-  L8_2 = L5_1
-  L9_2 = A1_2.allowPlantOutside
-  L10_2 = true
-  L8_2 = L8_2(L9_2, L10_2)
-  L7_2.allowPlantOutside = L8_2
-  L8_2 = A1_2.photos
-  if L8_2 then
-    L8_2 = json
-    L8_2 = L8_2.decode
-    L9_2 = A1_2.photos
-    L8_2 = L8_2(L9_2)
-    if L8_2 then
-      goto lbl_193
-    end
-  end
-  L8_2 = {}
-  ::lbl_193::
-  L7_2.photos = L8_2
-  L8_2 = A1_2.description
-  if not L8_2 then
-    L8_2 = ""
-  end
-  L7_2.description = L8_2
-  L8_2 = A1_2.hideFromBrowser
-  L7_2.hideFromBrowser = L8_2
-  L8_2 = L11_1
-  L9_2 = L7_2
-  L8_2 = L8_2(L9_2)
-  L7_2 = L8_2
-  L8_2 = HouseGarages
-  L9_2 = A1_2.name
-  L10_2 = {}
-  L11_2 = A1_2.label
-  L10_2.label = L11_2
-  L10_2.takeVehicle = L4_2
-  L10_2.shell = L5_2
-  L8_2[L9_2] = L10_2
-  return L7_2
+
+  local house = {}
+  house.id = row.id
+  house.coords = json.decode(row.coords)
+  house.owned = hasOwner
+  house.price = row.price
+  house.defaultPrice = row.defaultPrice
+  house.locked = true
+  house.address = row.label
+  house.tier = row.tier
+  house.garage = garage
+  house.mlo = mlo
+  house.ipl = ipl
+  house.creator = row.creator
+  house.board = (row.board and json.decode(row.board)) or nil
+  house.creatorJob = row.creatorJob
+  house.blip = (row.blip and json.decode(row.blip)) or nil
+  house.permissions = (row.permissions and json.decode(row.permissions)) or nil
+  house.upgrades = (row.upgrades and json.decode(row.upgrades)) or nil
+  house.apartmentNumber = row.name:match("apt%-%d+")
+  house.apartmentName = row.name:gsub("-apt%-%d+", "")
+  house.apartmentCount = (0 ~= row.apartmentCount and row.apartmentCount) or nil
+  house.paymentMethod = row.paymentMethod or "cash"
+  house.doorbellSound = (row.doorbellSound and "" ~= row.doorbellSound and row.doorbellSound) or nil
+  house.assistantZoneMessagesEnabled = coerceToBoolean(row.assistantZoneMessagesEnabled, true)
+  house.allowPlantInside = coerceToBoolean(row.allowPlantInside, true)
+  house.allowPlantOutside = coerceToBoolean(row.allowPlantOutside, true)
+  house.photos = (row.photos and json.decode(row.photos)) or {}
+  house.description = row.description or ""
+  house.hideFromBrowser = row.hideFromBrowser
+
+  house = normalizeHouseData(house)
+
+  HouseGarages[row.name] = {
+    label = row.label,
+    takeVehicle = garage,
+    shell = garageShell,
+  }
+  return house
 end
-function L13_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L0_2 = {}
-  L1_2 = type
-  L2_2 = Config
-  L2_2 = L2_2.Houses
-  L1_2 = L1_2(L2_2)
-  if "table" ~= L1_2 then
-    L1_2 = LoopError
-    L2_2 = "Config.Houses is not a table, please check your config."
-    L3_2 = Config
-    L3_2 = L3_2.Houses
-    L1_2(L2_2, L3_2)
+
+
+-- Initialize all houses from config + database
+function InitHouses()
+  local houses = {}
+  if "table" ~= type(Config.Houses) then
+    LoopError("Config.Houses is not a table, please check your config.", Config.Houses)
     return
   end
-  L1_2 = pairs
-  L2_2 = Config
-  L2_2 = L2_2.Houses
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L6_2.coords
-    if L7_2 then
-      L7_2 = L7_2.PolyZone
-    end
-    if not L7_2 then
-      L7_2 = Error
-      L8_2 = "Please add PolyZone to this house, otherwise you cant use this house."
-      L9_2 = L5_2
-      L7_2(L8_2, L9_2)
+  -- Validate config houses and set up garages
+  for name, data in pairs(Config.Houses) do
+    local pz = data.coords and data.coords.PolyZone
+    if not pz then
+      Error("Please add PolyZone to this house, otherwise you cant use this house.", name)
+    elseif not (data.coords and data.coords.exit) then
+      Error("Please add exit coords to this house, otherwise you cant use this house.", name)
+    elseif not (data.coords and data.coords.shellCoords) then
+      Error("Please add shellCoords to this house, otherwise you cant use this house.", name)
+    elseif not (data.coords and data.coords.interiorCoords) then
+      Error("Please add interiorCoords to this house, otherwise you cant use this house.", name)
     else
-      L7_2 = L6_2.coords
-      if L7_2 then
-        L7_2 = L7_2.exit
-      end
-      if not L7_2 then
-        L7_2 = Error
-        L8_2 = "Please add exit coords to this house, otherwise you cant use this house."
-        L9_2 = L5_2
-        L7_2(L8_2, L9_2)
-      else
-        L7_2 = L6_2.coords
-        if L7_2 then
-          L7_2 = L7_2.shellCoords
-        end
-        if not L7_2 then
-          L7_2 = Error
-          L8_2 = "Please add shellCoords to this house, otherwise you cant use this house."
-          L9_2 = L5_2
-          L7_2(L8_2, L9_2)
-        else
-          L7_2 = L6_2.coords
-          if L7_2 then
-            L7_2 = L7_2.interiorCoords
-          end
-          if not L7_2 then
-            L7_2 = Error
-            L8_2 = "Please add interiorCoords to this house, otherwise you cant use this house."
-            L9_2 = L5_2
-            L7_2(L8_2, L9_2)
-          else
-            L7_2 = HouseGarages
-            L8_2 = {}
-            L8_2.label = L5_2
-            L9_2 = L6_2.garage
-            L8_2.takeVehicle = L9_2
-            L9_2 = L6_2.garageShell
-            L8_2.shell = L9_2
-            L7_2[L5_2] = L8_2
-            if L6_2 then
-              L7_2 = L6_2.assistantZoneMessagesEnabled
-              L7_2 = false ~= L7_2
-              L6_2.assistantZoneMessagesEnabled = L7_2
-              L7_2 = L6_2.allowPlantInside
-              L7_2 = false ~= L7_2
-              L6_2.allowPlantInside = L7_2
-              L7_2 = L6_2.allowPlantOutside
-              L7_2 = false ~= L7_2
-              L6_2.allowPlantOutside = L7_2
-              L0_2[L5_2] = L6_2
-            end
-          end
-        end
+      HouseGarages[name] = { label = name, takeVehicle = data.garage, shell = data.garageShell }
+      if data then
+        data.assistantZoneMessagesEnabled = false ~= data.assistantZoneMessagesEnabled
+        data.allowPlantInside = false ~= data.allowPlantInside
+        data.allowPlantOutside = false ~= data.allowPlantOutside
+        houses[name] = data
       end
     end
   end
-  L1_2 = [[
+
+  -- Load houses from database
+  local query = [[
 		SELECT houselocations.*,
 		       CASE WHEN player_houses.house IS NOT NULL THEN 1 ELSE 0 END as has_owner
 		FROM houselocations
 		LEFT JOIN player_houses ON houselocations.name = player_houses.house
 	]]
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = L2_2[1]
-  if L3_2 then
-    L3_2 = Debug
-    L4_2 = "InitHouses"
-    L5_2 = "Found houses in database, initializing.."
-    L3_2(L4_2, L5_2)
-    L3_2 = pairs
-    L4_2 = L2_2
-    L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-    for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-      L9_2 = L8_2.name
-      L10_2 = L12_1
-      L11_2 = L7_2
-      L12_2 = L8_2
-      L10_2 = L10_2(L11_2, L12_2)
-      L0_2[L9_2] = L10_2
+  local dbRows = MySQL.Sync.fetchAll(query)
+  if dbRows[1] then
+    Debug("InitHouses", "Found houses in database, initializing..")
+    for idx, row in pairs(dbRows) do
+      houses[row.name] = buildHouseFromRow(idx, row)
     end
   end
-  L3_2 = Config
-  L3_2.Houses = L0_2
-  L3_2 = TriggerHouseUpdateGarage
-  L4_2 = HouseGarages
-  L3_2(L4_2)
-  L3_2 = Debug
-  L4_2 = "Initialized houses"
-  L5_2 = #L2_2
-  L3_2(L4_2, L5_2)
+
+  Config.Houses = houses
+  TriggerHouseUpdateGarage(HouseGarages)
+  Debug("Initialized houses", #dbRows)
 end
-InitHouses = L13_1
-L13_1 = RegisterNetEvent
-L14_1 = "housing:playerConnected"
-function L15_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2
-  L0_2 = source
-  while true do
-    L1_2 = L0_1
-    if L1_2 then
-      break
-    end
-    L1_2 = Error
-    L2_2 = "Waiting for houses to be initialized"
-    L1_2(L2_2)
-    L1_2 = Wait
-    L2_2 = 100
-    L1_2(L2_2)
+
+
+-- Player connected event - wait for houses to init, then load player
+RegisterNetEvent("housing:playerConnected", function()
+  local src = source
+  while not housesInitialized do
+    Error("Waiting for houses to be initialized")
+    Wait(100)
   end
-  L1_2 = HandleLoadPlayer
-  L2_2 = L0_2
-  L1_2(L2_2)
-  L1_2 = TriggerClientEvent
-  L2_2 = "housing:syncFurnitureData"
-  L3_2 = L0_2
-  L4_2 = Config
-  L4_2 = L4_2.Furniture
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = TriggerClientEvent
-  L2_2 = "housing:syncFurnitureShops"
-  L3_2 = L0_2
-  L4_2 = Config
-  L4_2 = L4_2.FurnitureShops
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = GetIdentifier
-  L2_2 = L0_2
-  L1_2 = L1_2(L2_2)
-  if L1_2 then
-  end
-  L2_2 = Debug
-  L3_2 = "housing:playerConnected"
-  L4_2 = L0_2
-  L2_2(L3_2, L4_2)
-end
-L13_1(L14_1, L15_1)
-L13_1 = CreateThread
-function L14_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L0_2 = L6_1
-  L0_2()
-  L0_2 = L7_1
-  L0_2()
-  L0_2 = L10_1
-  L0_2()
-  L0_2 = MySQL
-  L0_2 = L0_2.Sync
-  L0_2 = L0_2.fetchAll
-  L1_2 = "SELECT * FROM house_objects"
-  L0_2 = L0_2(L1_2)
-  L1_2 = pairs
-  L2_2 = L0_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = json
-    L7_2 = L7_2.decode
-    L8_2 = L6_2.coords
-    L7_2 = L7_2(L8_2)
-    L6_2.coords = L7_2
-    L7_2 = L6_2.created
-    if L7_2 then
-      L7_2 = os
-      L7_2 = L7_2.time
-      L8_2 = os
-      L8_2 = L8_2.date
-      L9_2 = "*t"
-      L10_2 = math
-      L10_2 = L10_2.floor
-      L11_2 = L6_2.created
-      L11_2 = L11_2 / 1000
-      L10_2, L11_2 = L10_2(L11_2)
-      L8_2, L9_2, L10_2, L11_2 = L8_2(L9_2, L10_2, L11_2)
-      L7_2 = L7_2(L8_2, L9_2, L10_2, L11_2)
-      L6_2.created = L7_2
+  HandleLoadPlayer(src)
+  TriggerClientEvent("housing:syncFurnitureData", src, Config.Furniture)
+  TriggerClientEvent("housing:syncFurnitureShops", src, Config.FurnitureShops)
+  local identifier = GetIdentifier(src)
+  -- identifier loaded
+  Debug("housing:playerConnected", src)
+end)
+
+-- Main initialization thread
+CreateThread(function()
+  ensureAssistantZoneMessagesColumn()
+  ensureRentNextChargeAtColumn()
+  backfillRentNextChargeAt()
+
+  -- Load house objects from DB
+  local objects = MySQL.Sync.fetchAll("SELECT * FROM house_objects")
+  for _, obj in pairs(objects) do
+    obj.coords = json.decode(obj.coords)
+    if obj.created then
+      obj.created = os.time(os.date("*t", math.floor(obj.created / 1000)))
     end
-    L7_2 = L6_2.construction
-    if L7_2 then
-      L7_2 = Config
-      L7_2 = L7_2.Constructions
-      L8_2 = L6_2.construction
-      L7_2 = L7_2[L8_2]
+    local construction = obj.construction
+    if construction then
+      construction = Config.Constructions[obj.construction]
     end
-    L6_2.construction = L7_2
+    obj.construction = construction
   end
-  L1_1 = L0_2
-  L1_2 = Debug
-  L2_2 = "Initialized house objects"
-  L3_2 = L1_1
-  L1_2(L2_2, L3_2)
-  L1_2 = InitHouses
-  L1_2()
-  L1_2 = true
-  L0_1 = L1_2
-end
-L13_1(L14_1)
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = [[
+  houseObjects = objects
+  Debug("Initialized house objects", houseObjects)
+
+  InitHouses()
+  housesInitialized = true
+end)
+
+
+-- Initialize a single house from DB
+function InitHouse(houseName)
+  local query = [[
 		SELECT houselocations.*,
 		       CASE WHEN player_houses.house IS NOT NULL THEN 1 ELSE 0 END as has_owner
 		FROM houselocations
 		LEFT JOIN player_houses ON houselocations.name = player_houses.house
 		WHERE houselocations.name = ?
 	]]
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = L1_2
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = L2_2[1]
-  if not L3_2 then
-    L3_2 = Error
-    L4_2 = "InitHouse"
-    L5_2 = "House not found"
-    L6_2 = A0_2
-    return L3_2(L4_2, L5_2, L6_2)
+  local rows = MySQL.Sync.fetchAll(query, { houseName })
+  if not rows[1] then
+    return Error("InitHouse", "House not found", houseName)
   end
-  L3_2 = Config
-  L3_2 = L3_2.Houses
-  L4_2 = L12_1
-  L5_2 = 1
-  L6_2 = L2_2[1]
-  L4_2 = L4_2(L5_2, L6_2)
-  L3_2[A0_2] = L4_2
-  L3_2 = Debug
-  L4_2 = "config.garage"
-  L5_2 = Config
-  L5_2 = L5_2.Garage
-  L3_2(L4_2, L5_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:setHouse"
-  L5_2 = -1
-  L6_2 = A0_2
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L7_2 = L7_2[A0_2]
-  L3_2(L4_2, L5_2, L6_2, L7_2)
-  L3_2 = TriggerAddHouseGarage
-  L4_2 = A0_2
-  L5_2 = HouseGarages
-  L5_2 = L5_2[A0_2]
-  L3_2(L4_2, L5_2)
-  L3_2 = Debug
-  L4_2 = "InitHouse"
-  L5_2 = "Initialized house"
-  L6_2 = A0_2
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L7_2 = L7_2[A0_2]
-  L3_2(L4_2, L5_2, L6_2, L7_2)
+  Config.Houses[houseName] = buildHouseFromRow(1, rows[1])
+  Debug("config.garage", Config.Garage)
+  TriggerClientEvent("housing:setHouse", -1, houseName, Config.Houses[houseName])
+  TriggerAddHouseGarage(houseName, HouseGarages[houseName])
+  Debug("InitHouse", "Initialized house", houseName, Config.Houses[houseName])
 end
-InitHouse = L13_1
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = TriggerHouseUpdateGarage
-  L2_2 = HouseGarages
-  L3_2 = A0_2
-  L1_2(L2_2, L3_2)
-  L1_2 = TriggerLatentClientEvent
-  L2_2 = "housing:initHouses"
-  L3_2 = A0_2
-  L4_2 = 10485760
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L1_2(L2_2, L3_2, L4_2, L5_2)
-  L1_2 = TriggerClientEvent
-  L2_2 = "qb-houses:SetIplData"
-  L3_2 = A0_2
-  L4_2 = iplHouses
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = Debug
-  L2_2 = "PlayerLoaded"
-  L3_2 = "Player Loaded: "
-  L4_2 = A0_2
-  L1_2(L2_2, L3_2, L4_2)
+
+-- Send house data to a connecting player
+function HandleLoadPlayer(playerSource)
+  TriggerHouseUpdateGarage(HouseGarages, playerSource)
+  TriggerLatentClientEvent("housing:initHouses", playerSource, 10485760, Config.Houses)
+  TriggerClientEvent("qb-houses:SetIplData", playerSource, iplHouses)
+  Debug("PlayerLoaded", "Player Loaded: ", playerSource)
 end
-HandleLoadPlayer = L13_1
-L13_1 = RegisterCommand
-L14_1 = "houseload"
-function L15_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = A0_2
-  L4_2 = HandleLoadPlayer
-  L5_2 = L3_2
-  L4_2(L5_2)
-end
-L13_1(L14_1, L15_1)
-L13_1 = {}
-PlayerDefaultRoutings = L13_1
-L13_1 = {}
-HouseRoutings = L13_1
-L13_1 = RegisterNetEvent
-L14_1 = "housing:routePlayerToDefault"
-function L15_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = source
-  L2_2 = RouteDefault
-  L3_2 = L1_2
-  L4_2 = A0_2
-  L2_2(L3_2, L4_2)
-end
-L13_1(L14_1, L15_1)
-L13_1 = RegisterNetEvent
-L14_1 = "housing:toggleInSecurityCam"
-function L15_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = source
-  L2_2 = Debug
-  L3_2 = "housing:toggleInSecurityCam"
-  L4_2 = "Toggling security cam"
-  L5_2 = A0_2
-  L2_2(L3_2, L4_2, L5_2)
-  if not A0_2 then
-    L2_2 = L4_1
-    L2_2[L1_2] = nil
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:toggleInSecurityCam"
-    L4_2 = -1
-    L5_2 = L1_2
-    L6_2 = "deleted"
-    L2_2(L3_2, L4_2, L5_2, L6_2)
+
+RegisterCommand("houseload", function(source, args, rawCommand)
+  HandleLoadPlayer(source)
+end)
+
+
+-- Routing tables
+PlayerDefaultRoutings = {}
+HouseRoutings = {}
+
+RegisterNetEvent("housing:routePlayerToDefault", function(routeData)
+  local src = source
+  RouteDefault(src, routeData)
+end)
+
+-- Security camera toggle
+RegisterNetEvent("housing:toggleInSecurityCam", function(enabled)
+  local src = source
+  Debug("housing:toggleInSecurityCam", "Toggling security cam", enabled)
+  if not enabled then
+    securityCamState[src] = nil
+    TriggerClientEvent("housing:toggleInSecurityCam", -1, src, "deleted")
     return
   end
-  L2_2 = TriggerClientEvent
-  L3_2 = "housing:toggleInSecurityCam"
-  L4_2 = -1
-  L5_2 = L1_2
-  L6_2 = true
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L13_1(L14_1, L15_1)
-L13_1 = RegisterServerCallback
-L14_1 = "qb-houses:server:GetHouseObjects"
-function L15_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = A0_2
-  L3_2 = A1_2
-  L4_2 = L1_1
-  L3_2(L4_2)
-end
-L13_1(L14_1, L15_1)
-function L13_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = GetIdentifier
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = {}
-  L3_2.creator = L2_2
-  L4_2 = A1_2.coords
-  L3_2.coords = L4_2
-  L4_2 = A1_2.model
-  L3_2.model = L4_2
-  L4_2 = A1_2.house
-  L3_2.house = L4_2
-  L4_2 = os
-  L4_2 = L4_2.time
-  L4_2 = L4_2()
-  L3_2.created = L4_2
-  L4_2 = Config
-  L4_2 = L4_2.Construction
-  if L4_2 then
-    L4_2 = Config
-    L4_2 = L4_2.Constructions
-    L5_2 = A1_2.model
-    L4_2 = L4_2[L5_2]
-    L3_2.construction = L4_2
+  TriggerClientEvent("housing:toggleInSecurityCam", -1, src, true)
+end)
+
+-- Get house objects callback
+RegisterServerCallback("qb-houses:server:GetHouseObjects", function(source, cb)
+  cb(houseObjects)
+end)
+
+
+-- Create a house object (prop/furniture placed outside)
+function CreateHouseObject(playerSource, data)
+  local identifier = GetIdentifier(playerSource)
+  local newObj = {
+    creator = identifier,
+    coords = data.coords,
+    model = data.model,
+    house = data.house,
+    created = os.time(),
+  }
+  if Config.Construction then
+    newObj.construction = Config.Constructions[data.model]
   end
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.fetchAll
-  L5_2 = "INSERT INTO house_objects (creator, coords, model, house, construction) VALUES (?, ?, ?, ?, ?)"
-  L6_2 = {}
-  L7_2 = L2_2
-  L8_2 = json
-  L8_2 = L8_2.encode
-  L9_2 = A1_2.coords
-  L8_2 = L8_2(L9_2)
-  L9_2 = A1_2.model
-  L10_2 = A1_2.house
-  if not L10_2 then
-    L10_2 = ""
+
+  local result = MySQL.Sync.fetchAll(
+    "INSERT INTO house_objects (creator, coords, model, house, construction) VALUES (?, ?, ?, ?, ?)",
+    { identifier, json.encode(data.coords), data.model, data.house or "", (newObj.construction and data.model) or nil }
+  )
+  newObj.id = result.insertId
+  table.insert(houseObjects, newObj)
+  TriggerClientEvent("qb-houses:client:createHouseObject", -1, newObj)
+  Debug("qb-houses:server:createHouseObject", "Created house object", newObj)
+end
+
+-- Delete all house objects for a given house
+function DeleteHouseObject(houseName)
+  MySQL.query.await("DELETE FROM house_objects WHERE house = ?", { houseName })
+  houseObjects = table.filter(houseObjects, function(obj)
+    return obj.house ~= houseName
+  end)
+  TriggerClientEvent("housing:deleteHouseObject", -1, houseName)
+  Debug("housing:deleteHouseObject", "Deleted house object", houseName)
+  return true
+end
+
+
+-- Decoration mode tracking
+local decoModeState = {}
+
+RegisterNetEvent("qb-houses:UpdateDecoMode", function(houseName, upvalData)
+  local src = source
+  decoModeState[houseName] = { src = src, upval = upvalData }
+end)
+
+RegisterServerCallback("qb-houses:GetDecoMode", function(source, cb, houseName)
+  local state = decoModeState and decoModeState[houseName]
+  if state then
+    state = state.upval
   end
-  L11_2 = L3_2.construction
-  if L11_2 then
-    L11_2 = A1_2.model
-    if L11_2 then
-      goto lbl_49
+  if state then
+    return cb(false)
+  end
+  cb(true)
+end)
+
+-- Player dropped handler - cleanup state
+AddEventHandler("playerDropped", function(reason)
+  local src = source
+
+  -- Clean security cam state
+  if securityCamState[src] then
+    securityCamState[src] = nil
+    TriggerClientEvent("housing:toggleInSecurityCam", -1, src, "deleted")
+  end
+
+  -- Clean decoration mode
+  for houseName, state in pairs(decoModeState) do
+    if state.src == src then
+      decoModeState[houseName] = nil
     end
   end
-  L11_2 = nil
-  ::lbl_49::
-  L6_2[1] = L7_2
-  L6_2[2] = L8_2
-  L6_2[3] = L9_2
-  L6_2[4] = L10_2
-  L6_2[5] = L11_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = L4_2.insertId
-  L3_2.id = L5_2
-  L5_2 = table
-  L5_2 = L5_2.insert
-  L6_2 = L1_1
-  L7_2 = L3_2
-  L5_2(L6_2, L7_2)
-  L5_2 = TriggerClientEvent
-  L6_2 = "qb-houses:client:createHouseObject"
-  L7_2 = -1
-  L8_2 = L3_2
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = Debug
-  L6_2 = "qb-houses:server:createHouseObject"
-  L7_2 = "Created house object"
-  L8_2 = L3_2
-  L5_2(L6_2, L7_2, L8_2)
-end
-CreateHouseObject = L13_1
-function L13_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = MySQL
-  L1_2 = L1_2.query
-  L1_2 = L1_2.await
-  L2_2 = "DELETE FROM house_objects WHERE house = ?"
-  L3_2 = {}
-  L4_2 = A0_2
-  L3_2[1] = L4_2
-  L1_2(L2_2, L3_2)
-  L1_2 = table
-  L1_2 = L1_2.filter
-  L2_2 = L1_1
-  function L3_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = A0_3.house
-    L2_3 = A0_2
-    L1_3 = L1_3 ~= L2_3
-    return L1_3
-  end
-  L1_2 = L1_2(L2_2, L3_2)
-  L1_1 = L1_2
-  L1_2 = TriggerClientEvent
-  L2_2 = "housing:deleteHouseObject"
-  L3_2 = -1
-  L4_2 = A0_2
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = Debug
-  L2_2 = "housing:deleteHouseObject"
-  L3_2 = "Deleted house object"
-  L4_2 = A0_2
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = true
-  return L1_2
-end
-DeleteHouseObject = L13_1
-L13_1 = {}
-L14_1 = RegisterNetEvent
-L15_1 = "qb-houses:UpdateDecoMode"
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = source
-  L3_2 = L13_1
-  L4_2 = {}
-  L4_2.src = L2_2
-  L4_2.upval = A1_2
-  L3_2[A0_2] = L4_2
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerCallback
-L15_1 = "qb-houses:GetDecoMode"
-function L16_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2
-  L3_2 = L13_1
-  if L3_2 then
-    L3_2 = L3_2[A2_2]
-    if L3_2 then
-      L3_2 = L3_2.upval
-    end
-  end
-  if L3_2 then
-    L3_2 = A1_2
-    L4_2 = false
-    return L3_2(L4_2)
-  end
-  L3_2 = A1_2
-  L4_2 = true
-  L3_2(L4_2)
-end
-L14_1(L15_1, L16_1)
-L14_1 = AddEventHandler
-L15_1 = "playerDropped"
-function L16_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L1_2 = source
-  L2_2 = L4_1
-  L2_2 = L2_2[L1_2]
-  if L2_2 then
-    L2_2 = L4_1
-    L2_2[L1_2] = nil
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:toggleInSecurityCam"
-    L4_2 = -1
-    L5_2 = L1_2
-    L6_2 = "deleted"
-    L2_2(L3_2, L4_2, L5_2, L6_2)
-  end
-  L2_2 = pairs
-  L3_2 = L13_1
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2.src
-    if L8_2 == L1_2 then
-      L8_2 = L13_1
-      L8_2[L6_2] = nil
-    end
-  end
-  L2_2 = pairs
-  L3_2 = HouseRoutings
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2.players
-    L9_2 = pairs
-    L10_2 = L8_2
-    L9_2, L10_2, L11_2, L12_2 = L9_2(L10_2)
-    for L13_2, L14_2 in L9_2, L10_2, L11_2, L12_2 do
-      if L14_2 == L1_2 then
-        L15_2 = table
-        L15_2 = L15_2.remove
-        L16_2 = L8_2
-        L17_2 = L13_2
-        L15_2(L16_2, L17_2)
+
+  -- Clean house routings
+  for houseName, routing in pairs(HouseRoutings) do
+    local players = routing.players
+    for idx, pid in pairs(players) do
+      if pid == src then
+        table.remove(players, idx)
       end
     end
-    L9_2 = #L8_2
-    if 0 == L9_2 then
-      L9_2 = HouseRoutings
-      L9_2[L6_2] = nil
+    if 0 == #players then
+      HouseRoutings[houseName] = nil
     end
   end
-  L2_2 = PlayerDefaultRoutings
-  L2_2[L1_2] = nil
-  L2_2 = pairs
-  L3_2 = PlayerInHouseZones
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2[L1_2]
-    if L8_2 then
-      L8_2 = PlayerInHouseZones
-      L9_2 = table
-      L9_2 = L9_2.filter
-      L10_2 = L7_2
-      function L11_2(A0_3, A1_3)
-        local L2_3
-        L2_3 = L1_2
-        L2_3 = A1_3 ~= L2_3
-        return L2_3
-      end
-      L9_2 = L9_2(L10_2, L11_2)
-      L8_2[L6_2] = L9_2
+
+  PlayerDefaultRoutings[src] = nil
+
+  -- Clean player in house zones
+  for houseName, zonePlayers in pairs(PlayerInHouseZones) do
+    if zonePlayers[src] then
+      PlayerInHouseZones[houseName] = table.filter(zonePlayers, function(_, key)
+        return key ~= src
+      end)
     end
   end
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterNetEvent
-L15_1 = "qb-houses:SyncDoor"
-function L16_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L3_2 = source
-  L4_2 = type
-  L5_2 = A1_2
-  L4_2 = L4_2(L5_2)
-  if "table" ~= L4_2 then
-    L4_2 = {}
-    L5_2 = A1_2
-    L4_2[1] = L5_2
-    A1_2 = L4_2
+end)
+
+
+-- Sync MLO door lock state
+RegisterNetEvent("qb-houses:SyncDoor", function(houseName, doors, locked)
+  local src = source
+  if "table" ~= type(doors) then
+    doors = { doors }
   end
-  L4_2 = Debug
-  L5_2 = "sync doors"
-  L6_2 = A2_2
-  L7_2 = "mlo"
-  L8_2 = Config
-  L8_2 = L8_2.Houses
-  L8_2 = L8_2[A0_2]
-  L8_2 = L8_2.mlo
-  L9_2 = "doors"
-  L10_2 = A1_2
-  L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2)
-  L4_2 = pairs
-  L5_2 = A1_2
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = table
-    L10_2 = L10_2.find
-    L11_2 = Config
-    L11_2 = L11_2.Houses
-    L11_2 = L11_2[A0_2]
-    L11_2 = L11_2.mlo
-    function L12_2(A0_3)
-      local L1_3, L2_3
-      L1_3 = A0_3.tempHandle
-      L2_3 = L9_2.tempHandle
-      L1_3 = L1_3 == L2_3
-      return L1_3
-    end
-    L10_2, L11_2 = L10_2(L11_2, L12_2)
-    L12_2 = Debug
-    L13_2 = "door"
-    L14_2 = L10_2
-    L15_2 = L11_2
-    L12_2(L13_2, L14_2, L15_2)
-    if L10_2 then
-      L12_2 = Config
-      L12_2 = L12_2.Houses
-      L12_2 = L12_2[A0_2]
-      L12_2 = L12_2.mlo
-      L12_2 = L12_2[L11_2]
-      L12_2.locked = A2_2
+  Debug("sync doors", locked, "mlo", Config.Houses[houseName].mlo, "doors", doors)
+
+  for _, door in pairs(doors) do
+    local foundDoor, foundIdx = table.find(Config.Houses[houseName].mlo, function(mloDoor)
+      return mloDoor.tempHandle == door.tempHandle
+    end)
+    Debug("door", foundDoor, foundIdx)
+    if foundDoor then
+      Config.Houses[houseName].mlo[foundIdx].locked = locked
     end
   end
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.execute
-  L5_2 = "UPDATE houselocations SET mlo = ? WHERE name = ?"
-  L6_2 = {}
-  L7_2 = json
-  L7_2 = L7_2.encode
-  L8_2 = Config
-  L8_2 = L8_2.Houses
-  L8_2 = L8_2[A0_2]
-  L8_2 = L8_2.mlo
-  L7_2 = L7_2(L8_2)
-  L8_2 = A0_2
-  L6_2[1] = L7_2
-  L6_2[2] = L8_2
-  L4_2(L5_2, L6_2)
-  L4_2 = TriggerClientEvent
-  L5_2 = "housing:updateHouseData"
-  L6_2 = -1
-  L7_2 = A0_2
-  L8_2 = "mlo"
-  L9_2 = Config
-  L9_2 = L9_2.Houses
-  L9_2 = L9_2[A0_2]
-  L9_2 = L9_2.mlo
-  L4_2(L5_2, L6_2, L7_2, L8_2, L9_2)
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterNetEvent
-L15_1 = "qb-houses:mloToggleAllDoors"
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = source
-  L3_2 = pairs
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L4_2 = L4_2.mlo
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = Config
-    L9_2 = L9_2.Houses
-    L9_2 = L9_2[A0_2]
-    L9_2 = L9_2.mlo
-    L9_2 = L9_2[L7_2]
-    L9_2.locked = A1_2
+
+  MySQL.Sync.execute("UPDATE houselocations SET mlo = ? WHERE name = ?", { json.encode(Config.Houses[houseName].mlo), houseName })
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "mlo", Config.Houses[houseName].mlo)
+end)
+
+-- Toggle all MLO doors
+RegisterNetEvent("qb-houses:mloToggleAllDoors", function(houseName, locked)
+  local src = source
+  for idx, door in pairs(Config.Houses[houseName].mlo) do
+    Config.Houses[houseName].mlo[idx].locked = locked
   end
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "UPDATE houselocations SET mlo = ? WHERE name = ?"
-  L5_2 = {}
-  L6_2 = json
-  L6_2 = L6_2.encode
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L7_2 = L7_2[A0_2]
-  L7_2 = L7_2.mlo
-  L6_2 = L6_2(L7_2)
-  L7_2 = A0_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2(L4_2, L5_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:updateHouseData"
-  L5_2 = -1
-  L6_2 = A0_2
-  L7_2 = "mlo"
-  L8_2 = Config
-  L8_2 = L8_2.Houses
-  L8_2 = L8_2[A0_2]
-  L8_2 = L8_2.mlo
-  L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerCallback
-L15_1 = "qb-phone:server:GetPlayerHouses"
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2, L27_2, L28_2
-  L2_2 = A0_2
-  L3_2 = GetIdentifier
-  L4_2 = L2_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = GetCharacterName
-  L5_2 = L2_2
-  L4_2, L5_2 = L4_2(L5_2)
-  L6_2 = {}
-  L6_2.firstname = L4_2
-  L6_2.lastname = L5_2
-  if not L6_2 then
-    L7_2 = print
-    L8_2 = "name not exists"
-    L7_2(L8_2)
-    L7_2 = A1_2
-    L8_2 = {}
-    return L7_2(L8_2)
+  MySQL.Sync.execute("UPDATE houselocations SET mlo = ? WHERE name = ?", { json.encode(Config.Houses[houseName].mlo), houseName })
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "mlo", Config.Houses[houseName].mlo)
+end)
+
+
+-- Phone: Get player houses
+RegisterServerCallback("qb-phone:server:GetPlayerHouses", function(src, cb)
+  local identifier = GetIdentifier(src)
+  local firstName, lastName = GetCharacterName(src)
+  local charInfo = { firstname = firstName, lastname = lastName }
+
+  if not charInfo then
+    print("name not exists")
+    return cb({})
   end
-  L7_2 = {}
-  L8_2 = MySQL
-  L8_2 = L8_2.Sync
-  L8_2 = L8_2.fetchAll
-  L9_2 = "SELECT * FROM player_houses WHERE citizenid = ?"
-  L10_2 = {}
-  L11_2 = L3_2
-  L10_2[1] = L11_2
-  L8_2 = L8_2(L9_2, L10_2)
-  if L8_2 then
-    L9_2 = L8_2[1]
-    if L9_2 then
-      L9_2 = pairs
-      L10_2 = L8_2
-      L9_2, L10_2, L11_2, L12_2 = L9_2(L10_2)
-      for L13_2, L14_2 in L9_2, L10_2, L11_2, L12_2 do
-        L15_2 = Config
-        L15_2 = L15_2.Houses
-        L16_2 = L14_2.house
-        L15_2 = L15_2[L16_2]
-        L15_2 = L15_2.garage
-        L16_2 = Config
-        L16_2 = L16_2.Houses
-        L17_2 = L14_2.house
-        L16_2 = L16_2[L17_2]
-        L16_2 = L16_2.tier
-        L17_2 = #L7_2
-        L17_2 = L17_2 + 1
-        L18_2 = {}
-        L19_2 = L14_2.house
-        L18_2.name = L19_2
-        L19_2 = {}
-        L18_2.keyholders = L19_2
-        L18_2.owner = L3_2
-        L19_2 = Config
-        L19_2 = L19_2.Houses
-        L20_2 = L14_2.house
-        L19_2 = L19_2[L20_2]
-        L19_2 = L19_2.price
-        L18_2.price = L19_2
-        L19_2 = Config
-        L19_2 = L19_2.Houses
-        L20_2 = L14_2.house
-        L19_2 = L19_2[L20_2]
-        L19_2 = L19_2.address
-        L18_2.label = L19_2
-        L19_2 = L16_2 or L19_2
-        if not L16_2 then
-          L19_2 = ""
-        end
-        L18_2.tier = L19_2
-        L19_2 = L15_2.x
-        L19_2 = L15_2 or L19_2
-        if not L19_2 or not L15_2 then
-          L19_2 = nil
-        end
-        L18_2.garage = L19_2
-        L7_2[L17_2] = L18_2
-        L17_2 = L14_2.keyholders
-        if "null" ~= L17_2 then
-          L17_2 = json
-          L17_2 = L17_2.decode
-          L18_2 = L14_2.keyholders
-          L17_2 = L17_2(L18_2)
-          L14_2.keyholders = L17_2
-          L17_2 = L14_2.keyholders
-          if L17_2 then
-            L17_2 = pairs
-            L18_2 = L14_2.keyholders
-            L17_2, L18_2, L19_2, L20_2 = L17_2(L18_2)
-            for L21_2, L22_2 in L17_2, L18_2, L19_2, L20_2 do
-              L23_2 = GetCharacterFromIdentifier
-              L24_2 = L22_2
-              L23_2, L24_2 = L23_2(L24_2)
-              L25_2 = {}
-              L26_2 = {}
-              L26_2.firstname = L23_2
-              L26_2.lastname = L24_2
-              L25_2.charinfo = L26_2
-              L25_2.citizenid = L22_2
-              L26_2 = L23_2
-              L27_2 = " "
-              L28_2 = L24_2
-              L26_2 = L26_2 .. L27_2 .. L28_2
-              L25_2.name = L26_2
-              L26_2 = L7_2[L13_2]
-              L26_2 = L26_2.keyholders
-              L27_2 = L7_2[L13_2]
-              L27_2 = L27_2.keyholders
-              L27_2 = #L27_2
-              L27_2 = L27_2 + 1
-              L26_2[L27_2] = L25_2
-            end
-          else
-            L17_2 = L7_2[L13_2]
-            L17_2 = L17_2.keyholders
-            L18_2 = {}
-            L19_2 = {}
-            L20_2 = L6_2.firstname
-            L19_2.firstname = L20_2
-            L20_2 = L6_2.lastname
-            L19_2.lastname = L20_2
-            L18_2.charinfo = L19_2
-            L18_2.citizenid = L3_2
-            L19_2 = GetPlayerName
-            L20_2 = L2_2
-            L19_2 = L19_2(L20_2)
-            L18_2.name = L19_2
-            L17_2[1] = L18_2
+
+  local playerHouses = {}
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE citizenid = ?", { identifier })
+
+  if rows and rows[1] then
+    for idx, row in pairs(rows) do
+      local garageData = Config.Houses[row.house].garage
+      local tier = Config.Houses[row.house].tier
+      local houseIdx = #playerHouses + 1
+      local entry = {
+        name = row.house,
+        keyholders = {},
+        owner = identifier,
+        price = Config.Houses[row.house].price,
+        label = Config.Houses[row.house].address,
+        tier = tier or "",
+        garage = (garageData and garageData.x and garageData) or nil,
+      }
+      playerHouses[houseIdx] = entry
+
+      if "null" ~= row.keyholders then
+        row.keyholders = json.decode(row.keyholders)
+        if row.keyholders then
+          for _, khId in pairs(row.keyholders) do
+            local khFirst, khLast = GetCharacterFromIdentifier(khId)
+            local khEntry = {
+              charinfo = { firstname = khFirst, lastname = khLast },
+              citizenid = khId,
+              name = khFirst .. " " .. khLast,
+            }
+            playerHouses[idx].keyholders[#playerHouses[idx].keyholders + 1] = khEntry
           end
         else
-          L17_2 = L7_2[L13_2]
-          L17_2 = L17_2.keyholders
-          L18_2 = {}
-          L19_2 = {}
-          L20_2 = L6_2.firstname
-          L19_2.firstname = L20_2
-          L20_2 = L6_2.lastname
-          L19_2.lastname = L20_2
-          L18_2.charinfo = L19_2
-          L18_2.citizenid = L3_2
-          L19_2 = GetPlayerName
-          L20_2 = L2_2
-          L19_2 = L19_2(L20_2)
-          L18_2.name = L19_2
-          L17_2[1] = L18_2
+          playerHouses[idx].keyholders = { { charinfo = { firstname = charInfo.firstname, lastname = charInfo.lastname }, citizenid = identifier, name = GetPlayerName(src) } }
         end
+      else
+        playerHouses[idx].keyholders = { { charinfo = { firstname = charInfo.firstname, lastname = charInfo.lastname }, citizenid = identifier, name = GetPlayerName(src) } }
       end
-      L9_2 = SetTimeout
-      L10_2 = 100
-      function L11_2()
-        local L0_3, L1_3
-        L0_3 = A1_2
-        L1_3 = L7_2
-        L0_3(L1_3)
-      end
-      L9_2(L10_2, L11_2)
-  end
+    end
+    SetTimeout(100, function()
+      cb(playerHouses)
+    end)
   else
-    L9_2 = A1_2
-    L10_2 = {}
-    L9_2(L10_2)
+    cb({})
   end
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerCallback
-L15_1 = "qb-phone:GetPlayerSqlName"
-function L16_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  L3_2 = GetCharacterName
-  L4_2 = A2_2
-  L3_2, L4_2 = L3_2(L4_2)
-  L5_2 = {}
-  L5_2.firstname = L3_2
-  L5_2.lastname = L4_2
-  L6_2 = A1_2
-  L7_2 = L5_2
-  return L6_2(L7_2)
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerCallback
-L15_1 = "qb-phone:server:GetHouseKeys"
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2
-  L2_2 = A0_2
-  L3_2 = GetIdentifier
-  L4_2 = L2_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = {}
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.fetchAll
-  L6_2 = "SELECT * FROM player_houses"
-  L7_2 = {}
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = pairs
-  L7_2 = L5_2
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = L11_2.keyholders
-    if "null" ~= L12_2 then
-      L12_2 = json
-      L12_2 = L12_2.decode
-      L13_2 = L11_2.keyholders
-      L12_2 = L12_2(L13_2)
-      L11_2.keyholders = L12_2
-      L12_2 = pairs
-      L13_2 = L11_2.keyholders
-      L12_2, L13_2, L14_2, L15_2 = L12_2(L13_2)
-      for L16_2, L17_2 in L12_2, L13_2, L14_2, L15_2 do
-        if L17_2 == L3_2 then
-          L18_2 = L11_2.citizenid
-          if L18_2 ~= L3_2 then
-            L18_2 = #L4_2
-            L18_2 = L18_2 + 1
-            L19_2 = {}
-            L20_2 = Config
-            L20_2 = L20_2.Houses
-            L21_2 = L11_2.house
-            L20_2 = L20_2[L21_2]
-            L19_2.HouseData = L20_2
-            L4_2[L18_2] = L19_2
+end)
+
+
+-- Phone: Get player SQL name
+RegisterServerCallback("qb-phone:GetPlayerSqlName", function(source, cb, targetSource)
+  local firstName, lastName = GetCharacterName(targetSource)
+  return cb({ firstname = firstName, lastname = lastName })
+end)
+
+-- Phone: Get house keys
+RegisterServerCallback("qb-phone:server:GetHouseKeys", function(src, cb)
+  local identifier = GetIdentifier(src)
+  local houseKeys = {}
+  local allHouses = MySQL.Sync.fetchAll("SELECT * FROM player_houses", {})
+
+  for _, row in pairs(allHouses) do
+    if "null" ~= row.keyholders then
+      row.keyholders = json.decode(row.keyholders)
+      for _, khId in pairs(row.keyholders) do
+        if khId == identifier then
+          if row.citizenid ~= identifier then
+            houseKeys[#houseKeys + 1] = { HouseData = Config.Houses[row.house] }
           end
         end
       end
     end
-    L12_2 = L11_2.citizenid
-    if L12_2 == L3_2 then
-      L12_2 = #L4_2
-      L12_2 = L12_2 + 1
-      L13_2 = {}
-      L14_2 = Config
-      L14_2 = L14_2.Houses
-      L15_2 = L11_2.house
-      L14_2 = L14_2[L15_2]
-      L13_2.HouseData = L14_2
-      L4_2[L12_2] = L13_2
+    if row.citizenid == identifier then
+      houseKeys[#houseKeys + 1] = { HouseData = Config.Houses[row.house] }
     end
   end
-  L6_2 = A1_2
-  L7_2 = L4_2
-  L6_2(L7_2)
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerCallback
-L15_1 = "qb-houses:buyDecorationObject"
-function L16_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L3_2 = GetAccountMoney
-  L4_2 = A0_2
-  L5_2 = Config
-  L5_2 = L5_2.MoneyType
-  L3_2 = L3_2(L4_2, L5_2)
-  if A2_2 <= L3_2 then
-    L4_2 = RemoveAccountMoney
-    L5_2 = A0_2
-    L6_2 = Config
-    L6_2 = L6_2.MoneyType
-    L7_2 = A2_2
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = SendLog
-    L5_2 = DiscordWebhook
-    L6_2 = {}
-    L6_2.title = "Housing"
-    L6_2.description = "Player bought a decoration object"
-    L7_2 = {}
-    L8_2 = {}
-    L8_2.name = "Player"
-    L9_2 = GetPlayerName
-    L10_2 = A0_2
-    L9_2 = L9_2(L10_2)
-    L8_2.value = L9_2
-    L8_2.inline = true
-    L9_2 = {}
-    L9_2.name = "Price"
-    L9_2.value = A2_2
-    L9_2.inline = true
-    L7_2[1] = L8_2
-    L7_2[2] = L9_2
-    L6_2.fields = L7_2
-    L7_2 = WebhookColor
-    L6_2.color = L7_2
-    L4_2(L5_2, L6_2)
-    L4_2 = A1_2
-    L5_2 = true
-    L4_2(L5_2)
+  cb(houseKeys)
+end)
+
+-- Buy decoration object callback
+RegisterServerCallback("qb-houses:buyDecorationObject", function(src, cb, price)
+  local money = GetAccountMoney(src, Config.MoneyType)
+  if price <= money then
+    RemoveAccountMoney(src, Config.MoneyType, price)
+    SendLog(DiscordWebhook, {
+      title = "Housing",
+      description = "Player bought a decoration object",
+      fields = {
+        { name = "Player", value = GetPlayerName(src), inline = true },
+        { name = "Price", value = price, inline = true },
+      },
+      color = WebhookColor,
+    })
+    cb(true)
   else
-    L4_2 = A1_2
-    L5_2 = false
-    L4_2(L5_2)
+    cb(false)
   end
-end
-L14_1(L15_1, L16_1)
-L14_1 = RegisterServerEvent
-L15_1 = "qb-houses:server:viewHouse"
-L14_1(L15_1)
-L14_1 = AddEventHandler
-L15_1 = "qb-houses:server:viewHouse"
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2
-  L2_2 = source
-  L3_2 = GetCharacterName
-  L4_2 = L2_2
-  L3_2, L4_2 = L3_2(L4_2)
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L5_2 = L5_2[A0_2]
-  L5_2 = L5_2.price
-  if A1_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.Sync
-    L6_2 = L6_2.fetchAll
-    L7_2 = "SELECT rentPrice FROM `player_houses` WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = A0_2
-    L8_2[1] = L9_2
-    L6_2 = L6_2(L7_2, L8_2)
-    L7_2 = L6_2[1]
-    if L7_2 then
-      L7_2 = L6_2[1]
-      L7_2 = L7_2.rentPrice
-      if L7_2 then
-        L7_2 = L6_2[1]
-        L5_2 = L7_2.rentPrice
-    end
+end)
+
+
+-- View house (calculate fees and display)
+RegisterServerEvent("qb-houses:server:viewHouse")
+AddEventHandler("qb-houses:server:viewHouse", function(houseName, isRent)
+  local src = source
+  local firstName, lastName = GetCharacterName(src)
+  local price = Config.Houses[houseName].price
+
+  if isRent then
+    local rentData = MySQL.Sync.fetchAll("SELECT rentPrice FROM `player_houses` WHERE `house` = ?", { houseName })
+    if rentData[1] then
+      if rentData[1].rentPrice then
+        price = rentData[1].rentPrice
+      end
     else
-      L7_2 = print
-      L8_2 = "no rent price"
-      L7_2(L8_2)
+      print("no rent price")
       return
     end
   end
-  L6_2 = tonumber
-  L7_2 = L5_2
-  L6_2 = L6_2(L7_2)
-  L5_2 = L6_2
-  L6_2 = Config
-  L6_2 = L6_2.BrokerFee
-  L7_2 = L5_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = Config
-  L7_2 = L7_2.BankFee
-  L8_2 = L5_2
-  L7_2 = L7_2(L8_2)
-  L8_2 = Config
-  L8_2 = L8_2.Taxes
-  L9_2 = L5_2
-  L8_2 = L8_2(L9_2)
-  L9_2 = Config
-  L9_2 = L9_2.UseMathCeilOnFees
-  if L9_2 then
-    L9_2 = math
-    L9_2 = L9_2.ceil
-    L10_2 = L6_2
-    L9_2 = L9_2(L10_2)
-    L6_2 = L9_2
-    L9_2 = math
-    L9_2 = L9_2.ceil
-    L10_2 = L7_2
-    L9_2 = L9_2(L10_2)
-    L7_2 = L9_2
-    L9_2 = math
-    L9_2 = L9_2.ceil
-    L10_2 = L8_2
-    L9_2 = L9_2(L10_2)
-    L8_2 = L9_2
-    L9_2 = math
-    L9_2 = L9_2.ceil
-    L10_2 = L5_2
-    L9_2 = L9_2(L10_2)
-    L5_2 = L9_2
+
+  price = tonumber(price)
+  local brokerFee = Config.BrokerFee(price)
+  local bankFee = Config.BankFee(price)
+  local taxes = Config.Taxes(price)
+
+  if Config.UseMathCeilOnFees then
+    brokerFee = math.ceil(brokerFee)
+    bankFee = math.ceil(bankFee)
+    taxes = math.ceil(taxes)
+    price = math.ceil(price)
   end
-  L9_2 = TriggerClientEvent
-  L10_2 = "qb-houses:client:viewHouse"
-  L11_2 = L2_2
-  L12_2 = L5_2
-  L13_2 = L6_2
-  L14_2 = L7_2
-  L15_2 = L8_2
-  L16_2 = L3_2
-  L17_2 = L4_2
-  L18_2 = A1_2
-  L9_2(L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2)
+
+  TriggerClientEvent("qb-houses:client:viewHouse", src, price, brokerFee, bankFee, taxes, firstName, lastName, isRent)
+end)
+
+
+-- Count how many houses an identifier owns
+local function getOwnedHouseCount(identifier)
+  local result = MySQL.Sync.fetchAll("SELECT COUNT(*) as count FROM player_houses WHERE owner = ?", { identifier })
+  return result[1].count
 end
-L14_1(L15_1, L16_1)
-function L14_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = MySQL
-  L1_2 = L1_2.Sync
-  L1_2 = L1_2.fetchAll
-  L2_2 = "SELECT COUNT(*) as count FROM player_houses WHERE owner = ?"
-  L3_2 = {}
-  L4_2 = A0_2
-  L3_2[1] = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = L1_2[1]
-  L2_2 = L2_2.count
-  return L2_2
-end
-function L15_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2
-  L3_2 = GetIdentifier
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L5_2 = A1_2
-  L4_2 = A1_2.gsub
-  L6_2 = "-apt%-%d+"
-  L7_2 = ""
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  L5_2 = {}
-  L6_2 = Config
-  L6_2 = L6_2.CreatedRentableHousesManageable
-  if not L6_2 then
-    L3_2 = "realestate"
-    L6_2 = Debug
-    L7_2 = "BuyWholeApartment ::: We did set the identifier to realestate because you set CreatedRentableHousesManageable to false"
-    L6_2(L7_2)
+
+-- Buy a whole apartment complex
+function BuyWholeApartment(playerSource, houseName, rentPrice)
+  local identifier = GetIdentifier(playerSource)
+  local apartmentBaseName = houseName:gsub("-apt%-%d+", "")
+  local queries = {}
+
+  if not Config.CreatedRentableHousesManageable then
+    identifier = "realestate"
+    Debug("BuyWholeApartment ::: We did set the identifier to realestate because you set CreatedRentableHousesManageable to false")
   end
-  L6_2 = pairs
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = L11_2.apartmentName
-    if L12_2 == L4_2 then
-      L12_2 = L11_2.apartmentNumber
-      if "apt-0" ~= L12_2 then
-        L12_2 = HouseKeyholdersList
-        L13_2 = {}
-        L14_2 = L3_2
-        L13_2[1] = L14_2
-        L12_2[L10_2] = L13_2
-        L12_2 = table
-        L12_2 = L12_2.insert
-        L13_2 = L5_2
-        L14_2 = {}
-        L14_2.query = "INSERT INTO `player_houses` (`house`, `citizenid`, `owner`, `keyholders`, `credit`, `creditPrice`, `rentable`, `rentPrice`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        L15_2 = {}
-        L16_2 = L10_2
-        L17_2 = L3_2
-        L18_2 = L3_2
-        L19_2 = json
-        L19_2 = L19_2.encode
-        L20_2 = HouseKeyholdersList
-        L20_2 = L20_2[L10_2]
-        L19_2 = L19_2(L20_2)
-        L20_2 = 0
-        L21_2 = 0
-        L22_2 = 1
-        L23_2 = A2_2
-        L15_2[1] = L16_2
-        L15_2[2] = L17_2
-        L15_2[3] = L18_2
-        L15_2[4] = L19_2
-        L15_2[5] = L20_2
-        L15_2[6] = L21_2
-        L15_2[7] = L22_2
-        L15_2[8] = L23_2
-        L14_2.parameters = L15_2
-        L12_2(L13_2, L14_2)
-        L12_2 = HouseOwnerIdentifierList
-        L12_2[L10_2] = L3_2
-        L12_2 = HouseOwnerCitizenidList
-        L12_2[L10_2] = L3_2
-        L12_2 = OfficialHouseOwnerList
-        L12_2[L10_2] = L3_2
-        L12_2 = L2_1
-        L12_2[L10_2] = true
-        L12_2 = Config
-        L12_2 = L12_2.Houses
-        L12_2 = L12_2[L10_2]
-        L12_2.owned = true
-        L12_2 = Debug
-        L13_2 = "Bought apartment"
-        L14_2 = L10_2
-        L15_2 = "house name"
-        L16_2 = A1_2
-        L12_2(L13_2, L14_2, L15_2, L16_2)
+
+  for name, data in pairs(Config.Houses) do
+    if data.apartmentName == apartmentBaseName then
+      if "apt-0" ~= data.apartmentNumber then
+        HouseKeyholdersList[name] = { identifier }
+        table.insert(queries, {
+          query = "INSERT INTO `player_houses` (`house`, `citizenid`, `owner`, `keyholders`, `credit`, `creditPrice`, `rentable`, `rentPrice`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          parameters = { name, identifier, identifier, json.encode(HouseKeyholdersList[name]), 0, 0, 1, rentPrice },
+        })
+        HouseOwnerIdentifierList[name] = identifier
+        HouseOwnerCitizenidList[name] = identifier
+        OfficialHouseOwnerList[name] = identifier
+        rentableHousesMap[name] = true
+        Config.Houses[name].owned = true
+        Debug("Bought apartment", name, "house name", houseName)
       end
     end
   end
-  L6_2 = MySQL
-  L6_2 = L6_2.Sync
-  L6_2 = L6_2.transaction
-  L7_2 = L5_2
-  L6_2 = L6_2(L7_2)
-  if not L6_2 then
-    L7_2 = Error
-    L8_2 = "BuyWholeApartment"
-    L9_2 = "Failed to buy apartment"
-    L10_2 = A1_2
-    L7_2(L8_2, L9_2, L10_2)
+
+  local txResult = MySQL.Sync.transaction(queries)
+  if not txResult then
+    Error("BuyWholeApartment", "Failed to buy apartment", houseName)
     return
   end
-  L7_2 = Debug
-  L8_2 = "Bought whole apartment"
-  L9_2 = L4_2
-  L10_2 = "house name"
-  L11_2 = A1_2
-  L7_2(L8_2, L9_2, L10_2, L11_2)
-  L7_2 = TriggerClientEvent
-  L8_2 = "housing:refreshHouse"
-  L9_2 = A0_2
-  L10_2 = L4_2
-  L11_2 = "-apt-0"
-  L10_2 = L10_2 .. L11_2
-  L7_2(L8_2, L9_2, L10_2)
+  Debug("Bought whole apartment", apartmentBaseName, "house name", houseName)
+  TriggerClientEvent("housing:refreshHouse", playerSource, apartmentBaseName .. "-apt-0")
 end
-BuyWholeApartment = L15_1
-function L15_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2, L27_2, L28_2, L29_2, L30_2
-  L5_2 = A1_2
-  L4_2 = A1_2.gsub
-  L6_2 = "'"
-  L7_2 = ""
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  L5_2 = L4_2
-  L4_2 = L4_2.gsub
-  L6_2 = "`"
-  L7_2 = ""
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  L5_2 = L4_2
-  L4_2 = L4_2.gsub
-  L6_2 = "\""
-  L7_2 = ""
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  A1_2 = L4_2
-  L4_2 = GetIdentifier
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L5_2 = L5_2[A1_2]
-  L6_2 = L5_2.price
-  L7_2 = Config
-  L7_2 = L7_2.BrokerFee
-  L8_2 = L6_2
-  L7_2 = L7_2(L8_2)
-  L8_2 = Config
-  L8_2 = L8_2.BankFee
-  L9_2 = L6_2
-  L8_2 = L8_2(L9_2)
-  L9_2 = Config
-  L9_2 = L9_2.Taxes
-  L10_2 = L6_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = math
-  L10_2 = L10_2.ceil
-  L11_2 = L6_2 + L7_2
-  L11_2 = L11_2 + L8_2
-  L11_2 = L11_2 + L9_2
-  L10_2 = L10_2(L11_2)
-  L11_2 = Config
-  L11_2 = L11_2.CreditEq
-  L11_2 = L10_2 * L11_2
-  L12_2 = getHousePaymentMethod
-  L13_2 = A1_2
-  L12_2 = L12_2(L13_2)
-  L13_2 = GetAccountMoney
-  L14_2 = A0_2
-  L15_2 = L12_2
-  L13_2 = L13_2(L14_2, L15_2)
-  L14_2 = L14_1
-  L15_2 = L4_2
-  L14_2 = L14_2(L15_2)
-  if not A3_2 then
-    L15_2 = Config
-    L15_2 = L15_2.MaxOwnedHouses
-    if L14_2 >= L15_2 then
-      L15_2 = Notification
-      L16_2 = A0_2
-      L17_2 = i18n
-      L17_2 = L17_2.t
-      L18_2 = "max_houses_reached"
-      L19_2 = {}
-      L20_2 = Config
-      L20_2 = L20_2.MaxOwnedHouses
-      L19_2.limit = L20_2
-      L17_2 = L17_2(L18_2, L19_2)
-      L18_2 = "error"
-      L15_2(L16_2, L17_2, L18_2)
-      L15_2 = Error
-      L16_2 = "BuyHouse"
-      L17_2 = "Max houses reached"
-      L18_2 = L14_2
-      return L15_2(L16_2, L17_2, L18_2)
+
+
+-- Buy a house
+function BuyHouse(playerSource, houseName, isCredit, isRentable)
+  -- Sanitize house name
+  houseName = houseName:gsub("'", ""):gsub("`", ""):gsub('"', "")
+
+  local identifier = GetIdentifier(playerSource)
+  local houseData = Config.Houses[houseName]
+  local basePrice = houseData.price
+  local brokerFee = Config.BrokerFee(basePrice)
+  local bankFee = Config.BankFee(basePrice)
+  local taxes = Config.Taxes(basePrice)
+  local totalPrice = math.ceil(basePrice + brokerFee + bankFee + taxes)
+  local creditAmount = totalPrice * Config.CreditEq
+  local paymentMethod = getHousePaymentMethod(houseName)
+  local playerMoney = GetAccountMoney(playerSource, paymentMethod)
+  local ownedCount = getOwnedHouseCount(identifier)
+
+  if not isRentable then
+    if ownedCount >= Config.MaxOwnedHouses then
+      Notification(playerSource, i18n.t("max_houses_reached", { limit = Config.MaxOwnedHouses }), "error")
+      return Error("BuyHouse", "Max houses reached", ownedCount)
     end
-    if not A2_2 and L10_2 > L13_2 then
-      L15_2 = Notification
-      L16_2 = A0_2
-      L17_2 = i18n
-      L17_2 = L17_2.t
-      L18_2 = "no_money"
-      L19_2 = {}
-      L19_2.price = L10_2
-      L17_2 = L17_2(L18_2, L19_2)
-      L18_2 = "error"
-      L15_2(L16_2, L17_2, L18_2)
-      L15_2 = Error
-      L16_2 = "BuyHouse"
-      L17_2 = "No money"
-      L18_2 = L13_2
-      return L15_2(L16_2, L17_2, L18_2)
+    if not isCredit and totalPrice > playerMoney then
+      Notification(playerSource, i18n.t("no_money", { price = totalPrice }), "error")
+      return Error("BuyHouse", "No money", playerMoney)
     end
-    if A2_2 and L11_2 > L13_2 then
-      L15_2 = Notification
-      L16_2 = A0_2
-      L17_2 = i18n
-      L17_2 = L17_2.t
-      L18_2 = "no_money"
-      L19_2 = {}
-      L19_2.price = L11_2
-      L17_2 = L17_2(L18_2, L19_2)
-      L18_2 = "error"
-      L15_2(L16_2, L17_2, L18_2)
-      L15_2 = Error
-      L16_2 = "BuyHouse"
-      L17_2 = "No credit"
-      L18_2 = L13_2
-      return L15_2(L16_2, L17_2, L18_2)
+    if isCredit and creditAmount > playerMoney then
+      Notification(playerSource, i18n.t("no_money", { price = creditAmount }), "error")
+      return Error("BuyHouse", "No credit", playerMoney)
     end
   end
-  L15_2 = MySQL
-  L15_2 = L15_2.Sync
-  L15_2 = L15_2.fetchAll
-  L16_2 = "SELECT * FROM houselocations WHERE name = ?"
-  L17_2 = {}
-  L18_2 = A1_2
-  L17_2[1] = L18_2
-  L15_2 = L15_2(L16_2, L17_2)
-  L16_2 = L15_2[1]
-  if not L16_2 then
-    L16_2 = Error
-    L17_2 = "BuyHouse"
-    L18_2 = "House not found"
-    L19_2 = A1_2
-    L16_2(L17_2, L18_2, L19_2)
+
+  -- Check house exists in DB
+  local houseRows = MySQL.Sync.fetchAll("SELECT * FROM houselocations WHERE name = ?", { houseName })
+  if not houseRows[1] then
+    Error("BuyHouse", "House not found", houseName)
     return
   end
-  L16_2 = MySQL
-  L16_2 = L16_2.Sync
-  L16_2 = L16_2.fetchAll
-  L17_2 = "SELECT owner, purchasable, sale_furnished FROM `player_houses` WHERE `house` = ?"
-  L18_2 = {}
-  L19_2 = A1_2
-  L18_2[1] = L19_2
-  L16_2 = L16_2(L17_2, L18_2)
-  L16_2 = L16_2[1]
-  L17_2 = L16_2 or L17_2
-  if L16_2 then
-    L17_2 = L16_2.purchasable
+
+  -- Check if already owned / purchasable
+  local ownerRows = MySQL.Sync.fetchAll("SELECT owner, purchasable, sale_furnished FROM `player_houses` WHERE `house` = ?", { houseName })
+  local ownerRow = ownerRows[1]
+  local isPurchasable = ownerRow and ownerRow.purchasable
+
+  if ownerRow and not isPurchasable then
+    Notification(playerSource, i18n.t("house_already_owned") or "This house is already owned!", "error")
+    return Error("BuyHouse", "House already owned and not for sale", houseName)
   end
-  if L16_2 and not L17_2 then
-    L18_2 = Notification
-    L19_2 = A0_2
-    L20_2 = i18n
-    L20_2 = L20_2.t
-    L21_2 = "house_already_owned"
-    L20_2 = L20_2(L21_2)
-    if not L20_2 then
-      L20_2 = "This house is already owned!"
-    end
-    L21_2 = "error"
-    L18_2(L19_2, L20_2, L21_2)
-    L18_2 = Error
-    L19_2 = "BuyHouse"
-    L20_2 = "House already owned and not for sale"
-    L21_2 = A1_2
-    return L18_2(L19_2, L20_2, L21_2)
-  end
-  if L17_2 then
-    L18_2 = HouseTransactionVeto
-    L18_2 = L18_2.Run
-    L19_2 = {}
-    L19_2.action = "buy_from_player"
-    L19_2.buyerSource = A0_2
-    L20_2 = L16_2.owner
-    L19_2.sellerIdentifier = L20_2
-    L19_2.house = A1_2
-    L19_2.price = L6_2
-    L20_2 = A2_2 or L20_2
-    if not A2_2 then
-      L20_2 = false
-    end
-    L19_2.isCredit = L20_2
-    L20_2 = L16_2.sale_furnished
-    L20_2 = 1 == L20_2
-    L19_2.saleFurnished = L20_2
-    L18_2 = L18_2(L19_2)
-    L19_2 = L18_2.allowed
-    if not L19_2 then
-      L19_2 = Notification
-      L20_2 = A0_2
-      L21_2 = L18_2.reason
-      if not L21_2 then
-        L21_2 = i18n
-        L21_2 = L21_2.t
-        L22_2 = "house_already_owned"
-        L21_2 = L21_2(L22_2)
-      end
-      L22_2 = "error"
-      L19_2(L20_2, L21_2, L22_2)
+
+
+  -- Handle buying from another player
+  if isPurchasable then
+    local veto = HouseTransactionVeto.Run({
+      action = "buy_from_player",
+      buyerSource = playerSource,
+      sellerIdentifier = ownerRow.owner,
+      house = houseName,
+      price = basePrice,
+      isCredit = isCredit or false,
+      saleFurnished = 1 == ownerRow.sale_furnished,
+    })
+    if not veto.allowed then
+      Notification(playerSource, veto.reason or i18n.t("house_already_owned"), "error")
       return
     end
-    L19_2 = AddMoneyToAccount
-    L20_2 = L16_2.owner
-    L21_2 = L6_2
-    L22_2 = true
-    L19_2(L20_2, L21_2, L22_2)
-    L19_2 = GetPlayerFromIdentifier
-    L20_2 = L16_2.owner
-    L19_2 = L19_2(L20_2)
-    if L19_2 then
-      L20_2 = Notification
-      L21_2 = A0_2
-      L22_2 = i18n
-      L22_2 = L22_2.t
-      L23_2 = "sold_house"
-      L24_2 = {}
-      L24_2.price = L6_2
-      L22_2 = L22_2(L23_2, L24_2)
-      L23_2 = "success"
-      L20_2(L21_2, L22_2, L23_2)
+    -- Pay seller
+    AddMoneyToAccount(ownerRow.owner, basePrice, true)
+    local sellerSource = GetPlayerFromIdentifier(ownerRow.owner)
+    if sellerSource then
+      Notification(playerSource, i18n.t("sold_house", { price = basePrice }), "success")
     end
-    L20_2 = L16_2.sale_furnished
-    if not L20_2 then
-      L21_2 = MySQL
-      L21_2 = L21_2.Sync
-      L21_2 = L21_2.execute
-      L22_2 = "DELETE FROM house_decorations WHERE house = ?"
-      L23_2 = {}
-      L24_2 = A1_2
-      L23_2[1] = L24_2
-      L21_2(L22_2, L23_2)
-      L21_2 = ClearHouseDecoration
-      L22_2 = A1_2
-      L21_2(L22_2)
-      L21_2 = Debug
-      L22_2 = "BuyHouse"
-      L23_2 = "Deleted decorations for unfurnished sale"
-      L24_2 = A1_2
-      L21_2(L22_2, L23_2, L24_2)
+    -- Handle furniture
+    if not ownerRow.sale_furnished then
+      MySQL.Sync.execute("DELETE FROM house_decorations WHERE house = ?", { houseName })
+      ClearHouseDecoration(houseName)
+      Debug("BuyHouse", "Deleted decorations for unfurnished sale", houseName)
     else
-      L21_2 = Debug
-      L22_2 = "BuyHouse"
-      L23_2 = "Keeping decorations for furnished sale"
-      L24_2 = A1_2
-      L21_2(L22_2, L23_2, L24_2)
+      Debug("BuyHouse", "Keeping decorations for furnished sale", houseName)
     end
-    L21_2 = MySQL
-    L21_2 = L21_2.Sync
-    L21_2 = L21_2.execute
-    L22_2 = "DELETE FROM `player_houses` WHERE `house` = ?"
-    L23_2 = {}
-    L24_2 = A1_2
-    L23_2[1] = L24_2
-    L21_2(L22_2, L23_2)
-    L21_2 = TriggerClientEvent
-    L22_2 = "qb-houses:requiredLeaveHouse"
-    L23_2 = -1
-    L24_2 = A1_2
-    L21_2(L22_2, L23_2, L24_2)
-    L21_2 = L3_1
-    L21_2[A1_2] = nil
-    L21_2 = Config
-    L21_2 = L21_2.Houses
-    L21_2 = L21_2[A1_2]
-    if L21_2 then
-      L21_2 = Config
-      L21_2 = L21_2.Houses
-      L21_2 = L21_2[A1_2]
-      L21_2.saleFurnished = nil
+    -- Remove old owner record
+    MySQL.Sync.execute("DELETE FROM `player_houses` WHERE `house` = ?", { houseName })
+    TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, houseName)
+    purchasableHousesMap[houseName] = nil
+    if Config.Houses[houseName] then
+      Config.Houses[houseName].saleFurnished = nil
     end
   end
-  L18_2 = Debug
-  L19_2 = "BuyHouse creator got money"
-  L20_2 = L15_2[1]
-  L20_2 = L20_2.creatorGotMoney
-  L18_2(L19_2, L20_2)
-  if not L16_2 and not A3_2 then
-    L18_2 = L15_2[1]
-    L18_2 = L18_2.creatorGotMoney
-    if not L18_2 then
-      L18_2 = Config
-      L18_2 = L18_2.Society
-      if "none" == L18_2 then
-        L18_2 = L5_2.creator
-        if L18_2 then
-          L18_2 = AddMoneyToAccount
-          L19_2 = L5_2.creator
-          L20_2 = L10_2
-          L21_2 = true
-          L18_2(L19_2, L20_2, L21_2)
+
+
+  -- Pay creator if first sale
+  Debug("BuyHouse creator got money", houseRows[1].creatorGotMoney)
+  if not ownerRow and not isRentable then
+    if not houseRows[1].creatorGotMoney then
+      if "none" == Config.Society then
+        if houseData.creator then
+          AddMoneyToAccount(houseData.creator, totalPrice, true)
         end
       end
-      L18_2 = Config
-      L18_2 = L18_2.Houses
-      L18_2 = L18_2[A1_2]
-      L18_2 = L18_2.creatorJob
-      if L18_2 then
-        L19_2 = AddMoneyToSociety
-        L20_2 = A0_2
-        L21_2 = L18_2
-        L22_2 = Config
-        L22_2 = L22_2.SocietyCommision
-        L22_2 = L10_2 * L22_2
-        L19_2(L20_2, L21_2, L22_2)
-        L19_2 = Debug
-        L20_2 = "qb-houses:server:buyHouse"
-        L21_2 = "Added money to society"
-        L22_2 = L18_2
-        L23_2 = L10_2
-        L19_2(L20_2, L21_2, L22_2, L23_2)
+      local creatorJob = Config.Houses[houseName].creatorJob
+      if creatorJob then
+        AddMoneyToSociety(playerSource, creatorJob, totalPrice * Config.SocietyCommision)
+        Debug("qb-houses:server:buyHouse", "Added money to society", creatorJob, totalPrice)
       else
-        L19_2 = Debug
-        L20_2 = "qb-houses:server:buyHouse"
-        L21_2 = "No creator job"
-        L22_2 = L18_2
-        L19_2(L20_2, L21_2, L22_2)
+        Debug("qb-houses:server:buyHouse", "No creator job", creatorJob)
       end
     end
   end
-  L18_2 = nil
-  if A3_2 then
-    L19_2 = Config
-    L19_2 = L19_2.CreatedRentableHousesManageable
-    if not L19_2 then
-      L18_2 = true
-      L4_2 = "realestate"
-      L19_2 = Debug
-      L20_2 = "We did set the identifier to realestate because you set CreatedRentableHousesManageable to false"
-      L19_2(L20_2)
+
+  -- If rentable purchase, adjust identifier
+  local isRentableFlag = nil
+  if isRentable then
+    if not Config.CreatedRentableHousesManageable then
+      isRentableFlag = true
+      identifier = "realestate"
+      Debug("We did set the identifier to realestate because you set CreatedRentableHousesManageable to false")
     end
   end
-  L19_2 = HouseKeyholdersList
-  L20_2 = {}
-  L19_2[A1_2] = L20_2
-  L19_2 = HouseKeyholdersList
-  L19_2 = L19_2[A1_2]
-  L19_2[1] = L4_2
-  if A2_2 then
-    L19_2 = L10_2 - L11_2
-    if L19_2 then
-      goto lbl_365
-    end
+
+  -- Set keyholders
+  HouseKeyholdersList[houseName] = {}
+  HouseKeyholdersList[houseName][1] = identifier
+
+  -- Calculate credit remaining
+  local creditRemaining = (isCredit and (totalPrice - creditAmount)) or 0
+
+
+  -- Insert player_houses record
+  MySQL.Sync.execute(
+    "INSERT INTO `player_houses` (`house`, `citizenid`, `owner`, `keyholders`, `credit`, `creditPrice`, `rentable`, `rentPrice`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    { houseName, identifier, identifier, json.encode(HouseKeyholdersList[houseName]), creditRemaining, creditAmount, isRentableFlag, totalPrice }
+  )
+  MySQL.Sync.execute("UPDATE `houselocations` SET `creatorGotMoney` = 1 WHERE `name` = '" .. houseName .. "'")
+
+  -- Update state
+  HouseOwnerIdentifierList[houseName] = identifier
+  HouseOwnerCitizenidList[houseName] = identifier
+  OfficialHouseOwnerList[houseName] = identifier
+  if isRentableFlag then
+    rentableHousesMap[houseName] = true
   end
-  L19_2 = 0
-  ::lbl_365::
-  L20_2 = MySQL
-  L20_2 = L20_2.Sync
-  L20_2 = L20_2.execute
-  L21_2 = "INSERT INTO `player_houses` (`house`, `citizenid`, `owner`, `keyholders`, `credit`, `creditPrice`, `rentable`, `rentPrice`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  L22_2 = {}
-  L23_2 = A1_2
-  L24_2 = L4_2
-  L25_2 = L4_2
-  L26_2 = json
-  L26_2 = L26_2.encode
-  L27_2 = HouseKeyholdersList
-  L27_2 = L27_2[A1_2]
-  L26_2 = L26_2(L27_2)
-  L27_2 = L19_2
-  L28_2 = L11_2
-  L29_2 = L18_2
-  L30_2 = L10_2
-  L22_2[1] = L23_2
-  L22_2[2] = L24_2
-  L22_2[3] = L25_2
-  L22_2[4] = L26_2
-  L22_2[5] = L27_2
-  L22_2[6] = L28_2
-  L22_2[7] = L29_2
-  L22_2[8] = L30_2
-  L20_2(L21_2, L22_2)
-  L20_2 = MySQL
-  L20_2 = L20_2.Sync
-  L20_2 = L20_2.execute
-  L21_2 = "UPDATE `houselocations` SET `creatorGotMoney` = 1 WHERE `name` = '"
-  L22_2 = A1_2
-  L23_2 = "'"
-  L21_2 = L21_2 .. L22_2 .. L23_2
-  L20_2(L21_2)
-  L20_2 = HouseOwnerIdentifierList
-  L20_2[A1_2] = L4_2
-  L20_2 = HouseOwnerCitizenidList
-  L20_2[A1_2] = L4_2
-  L20_2 = OfficialHouseOwnerList
-  L20_2[A1_2] = L4_2
-  if L18_2 then
-    L20_2 = L2_1
-    L20_2[A1_2] = true
+
+  TriggerEvent("bb-garages:server:buyHouseGarage", houseName, identifier, playerSource)
+  Debug("Bought a house for $" .. totalPrice .. " House: ", houseName, "Creator", houseData.creator)
+
+  -- Deduct money from buyer
+  if not isRentable then
+    RemoveAccountMoney(playerSource, paymentMethod, (isCredit and creditAmount) or totalPrice)
+    TriggerEvent("housing:handleBuyHouse", playerSource, houseName, totalPrice, isCredit)
   end
-  L20_2 = TriggerEvent
-  L21_2 = "bb-garages:server:buyHouseGarage"
-  L22_2 = A1_2
-  L23_2 = L4_2
-  L24_2 = A0_2
-  L20_2(L21_2, L22_2, L23_2, L24_2)
-  L20_2 = Debug
-  L21_2 = "Bought a house for $"
-  L22_2 = L10_2
-  L23_2 = " House: "
-  L21_2 = L21_2 .. L22_2 .. L23_2
-  L22_2 = A1_2
-  L23_2 = "Creator"
-  L24_2 = L5_2.creator
-  L20_2(L21_2, L22_2, L23_2, L24_2)
-  if not A3_2 then
-    L20_2 = RemoveAccountMoney
-    L21_2 = A0_2
-    L22_2 = L12_2
-    L23_2 = L11_2 or L23_2
-    if not A2_2 or not L11_2 then
-      L23_2 = L10_2
-    end
-    L20_2(L21_2, L22_2, L23_2)
-    L20_2 = TriggerEvent
-    L21_2 = "housing:handleBuyHouse"
-    L22_2 = A0_2
-    L23_2 = A1_2
-    L24_2 = L10_2
-    L25_2 = A2_2
-    L20_2(L21_2, L22_2, L23_2, L24_2, L25_2)
-  end
-  L20_2 = InitHouse
-  L21_2 = A1_2
-  L20_2(L21_2)
-  L20_2 = GetResourceState
-  L21_2 = "qs-inventory"
-  L20_2 = L20_2(L21_2)
-  L21_2 = L20_2
-  L20_2 = L20_2.find
-  L22_2 = "started"
-  L20_2 = L20_2(L21_2, L22_2)
-  if L20_2 then
-    L20_2 = Config
-    L20_2 = L20_2.EnableQuests
-    if L20_2 then
-      L20_2 = exports
-      L20_2 = L20_2["qs-inventory"]
-      L21_2 = L20_2
-      L20_2 = L20_2.UpdateQuestProgress
-      L22_2 = A0_2
-      L23_2 = "buy_house"
-      L24_2 = 100
-      L20_2 = L20_2(L21_2, L22_2, L23_2, L24_2)
-      if L20_2 then
-        L21_2 = Debug
-        L22_2 = "Quest \"buy_house\" progress updated"
-        L21_2(L22_2)
+
+  InitHouse(houseName)
+
+  -- Quest progress
+  local qsInvState = GetResourceState("qs-inventory")
+  if qsInvState:find("started") then
+    if Config.EnableQuests then
+      local questResult = exports["qs-inventory"]:UpdateQuestProgress(playerSource, "buy_house", 100)
+      if questResult then
+        Debug("Quest \"buy_house\" progress updated")
       else
-        L21_2 = Debug
-        L22_2 = "Failed to update quest \"buy_house\""
-        L21_2(L22_2)
+        Debug("Failed to update quest \"buy_house\"")
       end
     end
   end
-  L20_2 = SendLog
-  L21_2 = DiscordWebhook
-  L22_2 = {}
-  L22_2.title = "Housing"
-  L22_2.description = "Player bought a house"
-  L23_2 = {}
-  L24_2 = {}
-  L24_2.name = "Player"
-  L25_2 = GetPlayerName
-  L26_2 = A0_2
-  L25_2 = L25_2(L26_2)
-  L24_2.value = L25_2
-  L24_2.inline = true
-  L25_2 = {}
-  L25_2.name = "House"
-  L25_2.value = A1_2
-  L25_2.inline = true
-  L26_2 = {}
-  L26_2.name = "Price"
-  L26_2.value = L10_2
-  L26_2.inline = true
-  L23_2[1] = L24_2
-  L23_2[2] = L25_2
-  L23_2[3] = L26_2
-  L22_2.fields = L23_2
-  L23_2 = WebhookColor
-  L22_2.color = L23_2
-  L20_2(L21_2, L22_2)
-  L20_2 = Config
-  L20_2 = L20_2.MInsurance
-  if L20_2 then
-    L20_2 = exports
-    L20_2 = L20_2["m-Insurance"]
-    L21_2 = L20_2
-    L20_2 = L20_2.GiveHomeInsurance
-    L22_2 = A0_2
-    L23_2 = L4_2
-    L24_2 = 1
-    L25_2 = A1_2
-    L20_2(L21_2, L22_2, L23_2, L24_2, L25_2)
+
+
+  -- Discord log
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player bought a house",
+    fields = {
+      { name = "Player", value = GetPlayerName(playerSource), inline = true },
+      { name = "House", value = houseName, inline = true },
+      { name = "Price", value = totalPrice, inline = true },
+    },
+    color = WebhookColor,
+  })
+
+  -- m-Insurance integration
+  if Config.MInsurance then
+    exports["m-Insurance"]:GiveHomeInsurance(playerSource, identifier, 1, houseName)
   end
 end
-BuyHouse = L15_1
-L15_1 = RegisterServerEvent
-L16_1 = "qb-houses:server:buyHouse"
-L15_1(L16_1)
-L15_1 = AddEventHandler
-L16_1 = "qb-houses:server:buyHouse"
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = source
-  L3_2 = BuyHouse
-  L4_2 = L2_2
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2)
+
+-- Server event wrapper for BuyHouse
+RegisterServerEvent("qb-houses:server:buyHouse")
+AddEventHandler("qb-houses:server:buyHouse", function(houseName, isCredit)
+  BuyHouse(source, houseName, isCredit)
+end)
+
+
+-- Rent a house
+function HousingRentHouse(playerSource, houseName)
+  if not Config.EnableRentable then
+    Notification(playerSource, i18n.t("rent.disabled"), "error")
+    Debug("qb-houses:rentHouse", "Rentable houses are disabled")
+    return false
+  end
+
+  local identifier = GetIdentifier(playerSource)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND rentable = 1", { houseName })
+  if not rows[1] then
+    Notification(playerSource, i18n.t("rent.cant_rent"), "error")
+    Debug("qb-houses:rentHouse", "Cant rent house", houseName)
+    return false
+  end
+
+  local rentPrice = rows[1].rentPrice
+  local money = getHouseMoney(playerSource, houseName)
+
+  if rentPrice <= money then
+    local updateQuery = "UPDATE player_houses SET citizenid = ?, rentable = NULL, rented = 1, keyholders = ?"
+    local params = { identifier, json.encode({}) }
+
+    if isMonthlyUTCAnniversaryMode() then
+      updateQuery = updateQuery .. ", rentNextChargeAt = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 MONTH)"
+    end
+    updateQuery = updateQuery .. " WHERE id = ?"
+    params[#params + 1] = rows[1].id
+
+    MySQL.Sync.execute(updateQuery, params)
+    rentableHousesMap[houseName] = nil
+    HouseOwnerIdentifierList[houseName] = identifier
+    HouseOwnerCitizenidList[houseName] = identifier
+
+    Notification(playerSource, i18n.t("rent.you_rented_house"), "success")
+    TriggerClientEvent("housing:refreshHouse", -1, houseName)
+    Debug("qb-houses:rentHouse", "Rented house", houseName)
+
+    SendLog(DiscordWebhook, {
+      title = "Housing",
+      description = "Player rented a house",
+      fields = {
+        { name = "Player", value = GetPlayerName(playerSource), inline = true },
+        { name = "House", value = houseName, inline = true },
+        { name = "Price", value = rows[1].rentPrice, inline = true },
+      },
+      color = WebhookColor,
+    })
+    return true
+  end
+
+  Notification(playerSource, i18n.t("no_money", { price = rows[1].rentPrice }), "error")
+  return false
 end
-L15_1(L16_1, L17_1)
-function L15_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L2_2 = Config
-  L2_2 = L2_2.EnableRentable
-  if not L2_2 then
-    L2_2 = Notification
-    L3_2 = A0_2
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "rent.disabled"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L2_2(L3_2, L4_2, L5_2)
-    L2_2 = Debug
-    L3_2 = "qb-houses:rentHouse"
-    L4_2 = "Rentable houses are disabled"
-    L2_2(L3_2, L4_2)
-    L2_2 = false
-    return L2_2
+
+RegisterNetEvent("qb-houses:rentHouse", function(houseName)
+  HousingRentHouse(source, houseName)
+end)
+
+
+-- Sell house to bank
+function HousingSellHouse(playerSource, houseName)
+  local identifier = GetIdentifier(playerSource)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND owner = ?", { houseName, identifier })
+  if not rows[1] then
+    Notification(playerSource, i18n.t("cant_sell_house"), "error")
+    return false
   end
-  L2_2 = GetIdentifier
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ? AND rentable = 1"
-  L5_2 = {}
-  L6_2 = A1_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = A0_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "rent.cant_rent"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = Debug
-    L5_2 = "qb-houses:rentHouse"
-    L6_2 = "Cant rent house"
-    L7_2 = A1_2
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = false
-    return L4_2
+  if 1 == rows[1].rented then
+    Notification(playerSource, i18n.t("cant_sell_rented"), "error")
+    return false
   end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.rentPrice
-  L5_2 = getHouseMoney
-  L6_2 = A0_2
-  L7_2 = A1_2
-  L5_2 = L5_2(L6_2, L7_2)
-  if L4_2 <= L5_2 then
-    L6_2 = "UPDATE player_houses SET citizenid = ?, rentable = NULL, rented = 1, keyholders = ?"
-    L7_2 = {}
-    L8_2 = L2_2
-    L9_2 = json
-    L9_2 = L9_2.encode
-    L10_2 = {}
-    L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2 = L9_2(L10_2)
-    L7_2[1] = L8_2
-    L7_2[2] = L9_2
-    L7_2[3] = L10_2
-    L7_2[4] = L11_2
-    L7_2[5] = L12_2
-    L7_2[6] = L13_2
-    L7_2[7] = L14_2
-    L7_2[8] = L15_2
-    L8_2 = L9_1
-    L8_2 = L8_2()
-    if L8_2 then
-      L8_2 = L6_2
-      L9_2 = ", rentNextChargeAt = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 MONTH)"
-      L8_2 = L8_2 .. L9_2
-      L6_2 = L8_2
+  if rows[1].credit then
+    if tonumber(rows[1].credit) > 0 then
+      Notification(playerSource, i18n.t("house_has_credit"), "error")
+      return false
     end
-    L8_2 = L6_2
-    L9_2 = " WHERE id = ?"
-    L8_2 = L8_2 .. L9_2
-    L6_2 = L8_2
-    L8_2 = #L7_2
-    L8_2 = L8_2 + 1
-    L9_2 = L3_2[1]
-    L9_2 = L9_2.id
-    L7_2[L8_2] = L9_2
-    L8_2 = MySQL
-    L8_2 = L8_2.Sync
-    L8_2 = L8_2.execute
-    L9_2 = L6_2
-    L10_2 = L7_2
-    L8_2(L9_2, L10_2)
-    L8_2 = L2_1
-    L8_2[A1_2] = nil
-    L8_2 = HouseOwnerIdentifierList
-    L8_2[A1_2] = L2_2
-    L8_2 = HouseOwnerCitizenidList
-    L8_2[A1_2] = L2_2
-    L8_2 = Notification
-    L9_2 = A0_2
-    L10_2 = i18n
-    L10_2 = L10_2.t
-    L11_2 = "rent.you_rented_house"
-    L10_2 = L10_2(L11_2)
-    L11_2 = "success"
-    L8_2(L9_2, L10_2, L11_2)
-    L8_2 = TriggerClientEvent
-    L9_2 = "housing:refreshHouse"
-    L10_2 = -1
-    L11_2 = A1_2
-    L8_2(L9_2, L10_2, L11_2)
-    L8_2 = Debug
-    L9_2 = "qb-houses:rentHouse"
-    L10_2 = "Rented house"
-    L11_2 = A1_2
-    L8_2(L9_2, L10_2, L11_2)
-    L8_2 = SendLog
-    L9_2 = DiscordWebhook
-    L10_2 = {}
-    L10_2.title = "Housing"
-    L10_2.description = "Player rented a house"
-    L11_2 = {}
-    L12_2 = {}
-    L12_2.name = "Player"
-    L13_2 = GetPlayerName
-    L14_2 = A0_2
-    L13_2 = L13_2(L14_2)
-    L12_2.value = L13_2
-    L12_2.inline = true
-    L13_2 = {}
-    L13_2.name = "House"
-    L13_2.value = A1_2
-    L13_2.inline = true
-    L14_2 = {}
-    L14_2.name = "Price"
-    L15_2 = L3_2[1]
-    L15_2 = L15_2.rentPrice
-    L14_2.value = L15_2
-    L14_2.inline = true
-    L11_2[1] = L12_2
-    L11_2[2] = L13_2
-    L11_2[3] = L14_2
-    L10_2.fields = L11_2
-    L11_2 = WebhookColor
-    L10_2.color = L11_2
-    L8_2(L9_2, L10_2)
-    L8_2 = true
-    return L8_2
   end
-  L6_2 = Notification
-  L7_2 = A0_2
-  L8_2 = i18n
-  L8_2 = L8_2.t
-  L9_2 = "no_money"
-  L10_2 = {}
-  L11_2 = L3_2[1]
-  L11_2 = L11_2.rentPrice
-  L10_2.price = L11_2
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = "error"
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = false
-  return L6_2
+
+  local veto = HouseTransactionVeto.Run({ action = "sell_bank", source = playerSource, house = houseName })
+  if not veto.allowed then
+    Notification(playerSource, veto.reason or i18n.t("cant_sell_house"), "error")
+    return false
+  end
+
+  MySQL.Sync.execute("DELETE FROM player_houses WHERE id = ?", { rows[1].id })
+  MySQL.Sync.execute("UPDATE `houselocations` SET `price` = houselocations.defaultPrice WHERE `name` = ?", { houseName })
+  Notification(playerSource, i18n.t("house_sold"), "success")
+
+  local defaultPrice = Config.Houses[houseName].defaultPrice
+  AddAccountMoney(playerSource, "bank", defaultPrice / 2)
+
+  -- Clear all state
+  HouseOwnerCitizenidList[houseName] = nil
+  HouseOwnerIdentifierList[houseName] = nil
+  OfficialHouseOwnerList[houseName] = nil
+  HouseKeyholdersList[houseName] = nil
+  rentableHousesMap[houseName] = nil
+  purchasableHousesMap[houseName] = nil
+  Config.Houses[houseName].price = Config.Houses[houseName].defaultPrice
+  Config.Houses[houseName].owned = false
+
+  InitHouse(houseName)
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, houseName)
+
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player sold a house",
+    fields = {
+      { name = "Player", value = GetPlayerName(playerSource), inline = true },
+      { name = "House", value = houseName, inline = true },
+      { name = "Price", value = defaultPrice, inline = true },
+    },
+    color = WebhookColor,
+  })
+  Debug("qb-houses:sellHouse", "Sold house", houseName)
+  return true
 end
-HousingRentHouse = L15_1
-L15_1 = RegisterNetEvent
-L16_1 = "qb-houses:rentHouse"
-function L17_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = HousingRentHouse
-  L2_2 = source
-  L3_2 = A0_2
-  L1_2(L2_2, L3_2)
+
+RegisterNetEvent("qb-houses:sellHouse", function(houseName)
+  HousingSellHouse(source, houseName)
+end)
+
+
+-- Check if player is near house entrance
+function HousingPlayerNearHouseEntrance(playerSource, houseName, maxDist)
+  local ped = GetPlayerPed(playerSource)
+  if not ped or 0 == ped then
+    return false
+  end
+  local houseData = Config.Houses[houseName]
+  if not houseData or not houseData.coords or not houseData.coords.enter then
+    return false
+  end
+  local enter = houseData.coords.enter
+  local ex = enter.x or enter[1]
+  local ey = enter.y or enter[2]
+  local ez = enter.z or enter[3] or 0.0
+  if "number" ~= type(ex) or "number" ~= type(ey) then
+    return false
+  end
+  local pedCoords = GetEntityCoords(ped)
+  maxDist = maxDist or 48.0
+  local housePos = vector3(ex + 0.0, ey + 0.0, ez + 0.0)
+  return maxDist >= #(pedCoords - housePos)
 end
-L15_1(L16_1, L17_1)
-function L15_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L2_2 = GetIdentifier
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ? AND owner = ?"
-  L5_2 = {}
-  L6_2 = A1_2
-  L7_2 = L2_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = A0_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "cant_sell_house"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = false
-    return L4_2
+
+
+-- Sell house to another player (put on market)
+RegisterNetEvent("qb-houses:sellHouseToPlayer", function(houseName, salePrice, saleOptions)
+  local src = source
+  local identifier = GetIdentifier(src)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND owner = ?", { houseName, identifier })
+  if not rows[1] then
+    return Notification(src, i18n.t("cant_sell_house"), "error")
   end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.rented
-  if 1 == L4_2 then
-    L4_2 = Notification
-    L5_2 = A0_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "cant_sell_rented"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = false
-    return L4_2
+  if 1 == rows[1].rented then
+    return Notification(src, i18n.t("cant_sell_rented"), "error")
   end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.credit
-  if L4_2 then
-    L4_2 = tonumber
-    L5_2 = L3_2[1]
-    L5_2 = L5_2.credit
-    L4_2 = L4_2(L5_2)
-    if L4_2 > 0 then
-      L4_2 = Notification
-      L5_2 = A0_2
-      L6_2 = i18n
-      L6_2 = L6_2.t
-      L7_2 = "house_has_credit"
-      L6_2 = L6_2(L7_2)
-      L7_2 = "error"
-      L4_2(L5_2, L6_2, L7_2)
-      L4_2 = false
-      return L4_2
-    end
+  if rows[1].credit and tonumber(rows[1].credit) > 0 then
+    return Notification(src, i18n.t("house_has_credit"), "error")
   end
-  L4_2 = HouseTransactionVeto
-  L4_2 = L4_2.Run
-  L5_2 = {}
-  L5_2.action = "sell_bank"
-  L5_2.source = A0_2
-  L5_2.house = A1_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = L4_2.allowed
-  if not L5_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = L4_2.reason
-    if not L7_2 then
-      L7_2 = i18n
-      L7_2 = L7_2.t
-      L8_2 = "cant_sell_house"
-      L7_2 = L7_2(L8_2)
-    end
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
+  if rentableHousesMap[houseName] then
+    return Notification(src, i18n.t("cant_sell_rentable"), "error")
   end
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.execute
-  L6_2 = "DELETE FROM player_houses WHERE id = ?"
-  L7_2 = {}
-  L8_2 = L3_2[1]
-  L8_2 = L8_2.id
-  L7_2[1] = L8_2
-  L5_2(L6_2, L7_2)
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.execute
-  L6_2 = "UPDATE `houselocations` SET `price` = houselocations.defaultPrice WHERE `name` = ?"
-  L7_2 = {}
-  L8_2 = A1_2
-  L7_2[1] = L8_2
-  L5_2(L6_2, L7_2)
-  L5_2 = Notification
-  L6_2 = A0_2
-  L7_2 = i18n
-  L7_2 = L7_2.t
-  L8_2 = "house_sold"
-  L7_2 = L7_2(L8_2)
-  L8_2 = "success"
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L5_2 = L5_2[A1_2]
-  L5_2 = L5_2.defaultPrice
-  L6_2 = AddAccountMoney
-  L7_2 = A0_2
-  L8_2 = "bank"
-  L9_2 = L5_2 / 2
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = HouseOwnerCitizenidList
-  L6_2[A1_2] = nil
-  L6_2 = HouseOwnerIdentifierList
-  L6_2[A1_2] = nil
-  L6_2 = OfficialHouseOwnerList
-  L6_2[A1_2] = nil
-  L6_2 = HouseKeyholdersList
-  L6_2[A1_2] = nil
-  L6_2 = L2_1
-  L6_2[A1_2] = nil
-  L6_2 = L3_1
-  L6_2[A1_2] = nil
-  L6_2 = Config
-  L6_2 = L6_2.Houses
-  L6_2 = L6_2[A1_2]
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L7_2 = L7_2[A1_2]
-  L7_2 = L7_2.defaultPrice
-  L6_2.price = L7_2
-  L6_2 = Config
-  L6_2 = L6_2.Houses
-  L6_2 = L6_2[A1_2]
-  L6_2.owned = false
-  L6_2 = InitHouse
-  L7_2 = A1_2
-  L6_2(L7_2)
-  L6_2 = TriggerClientEvent
-  L7_2 = "qb-houses:requiredLeaveHouse"
-  L8_2 = -1
-  L9_2 = A1_2
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = SendLog
-  L7_2 = DiscordWebhook
-  L8_2 = {}
-  L8_2.title = "Housing"
-  L8_2.description = "Player sold a house"
-  L9_2 = {}
-  L10_2 = {}
-  L10_2.name = "Player"
-  L11_2 = GetPlayerName
-  L12_2 = A0_2
-  L11_2 = L11_2(L12_2)
-  L10_2.value = L11_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "House"
-  L11_2.value = A1_2
-  L11_2.inline = true
-  L12_2 = {}
-  L12_2.name = "Price"
-  L12_2.value = L5_2
-  L12_2.inline = true
-  L9_2[1] = L10_2
-  L9_2[2] = L11_2
-  L9_2[3] = L12_2
-  L8_2.fields = L9_2
-  L9_2 = WebhookColor
-  L8_2.color = L9_2
-  L6_2(L7_2, L8_2)
-  L6_2 = Debug
-  L7_2 = "qb-houses:sellHouse"
-  L8_2 = "Sold house"
-  L9_2 = A1_2
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = true
-  return L6_2
-end
-HousingSellHouse = L15_1
-L15_1 = RegisterNetEvent
-L16_1 = "qb-houses:sellHouse"
-function L17_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = HousingSellHouse
-  L2_2 = source
-  L3_2 = A0_2
-  L1_2(L2_2, L3_2)
-end
-L15_1(L16_1, L17_1)
-function L15_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L3_2 = GetPlayerPed
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if not L3_2 or 0 == L3_2 then
-    L4_2 = false
-    return L4_2
+
+  local veto = HouseTransactionVeto.Run({
+    action = "list_player_sale",
+    source = src,
+    house = houseName,
+    price = salePrice,
+    saleOptions = saleOptions or {},
+  })
+  if not veto.allowed then
+    return Notification(src, veto.reason or i18n.t("cant_sell_house"), "error")
   end
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A1_2]
-  if L4_2 then
-    L5_2 = L4_2.coords
-    if L5_2 then
-      L5_2 = L4_2.coords
-      L5_2 = L5_2.enter
-      if L5_2 then
-        goto lbl_24
-      end
-    end
-  end
-  L5_2 = false
-  do return L5_2 end
-  ::lbl_24::
-  L5_2 = L4_2.coords
-  L5_2 = L5_2.enter
-  L6_2 = L5_2.x
-  if not L6_2 then
-    L6_2 = L5_2[1]
-  end
-  L7_2 = L5_2.y
-  if not L7_2 then
-    L7_2 = L5_2[2]
-  end
-  L8_2 = L5_2.z
-  if not L8_2 then
-    L8_2 = L5_2[3]
-    if not L8_2 then
-      L8_2 = 0.0
-    end
-  end
-  L9_2 = type
-  L10_2 = L6_2
-  L9_2 = L9_2(L10_2)
-  if "number" == L9_2 then
-    L9_2 = type
-    L10_2 = L7_2
-    L9_2 = L9_2(L10_2)
-    if "number" == L9_2 then
-      goto lbl_53
-    end
-  end
-  L9_2 = false
-  do return L9_2 end
-  ::lbl_53::
-  L9_2 = GetEntityCoords
-  L10_2 = L3_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = A2_2 or L10_2
-  if not A2_2 then
-    L10_2 = 48.0
-  end
-  L11_2 = vector3
-  L12_2 = L6_2 + 0.0
-  L13_2 = L7_2 + 0.0
-  L14_2 = L8_2 + 0.0
-  L11_2 = L11_2(L12_2, L13_2, L14_2)
-  L11_2 = L9_2 - L11_2
-  L11_2 = #L11_2
-  L11_2 = L10_2 >= L11_2
-  return L11_2
-end
-HousingPlayerNearHouseEntrance = L15_1
-L15_1 = RegisterNetEvent
-L16_1 = "qb-houses:sellHouseToPlayer"
-function L17_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2
-  L3_2 = source
-  L4_2 = GetIdentifier
-  L5_2 = L3_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.fetchAll
-  L6_2 = "SELECT * FROM player_houses WHERE house = ? AND owner = ?"
-  L7_2 = {}
-  L8_2 = A0_2
-  L9_2 = L4_2
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = L5_2[1]
-  if not L6_2 then
-    L6_2 = Notification
-    L7_2 = L3_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_sell_house"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
-  end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.rented
-  if 1 == L6_2 then
-    L6_2 = Notification
-    L7_2 = L3_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_sell_rented"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
-  end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.credit
-  if L6_2 then
-    L6_2 = tonumber
-    L7_2 = L5_2[1]
-    L7_2 = L7_2.credit
-    L6_2 = L6_2(L7_2)
-    if L6_2 > 0 then
-      L6_2 = Notification
-      L7_2 = L3_2
-      L8_2 = i18n
-      L8_2 = L8_2.t
-      L9_2 = "house_has_credit"
-      L8_2 = L8_2(L9_2)
-      L9_2 = "error"
-      return L6_2(L7_2, L8_2, L9_2)
-    end
-  end
-  L6_2 = L2_1
-  L6_2 = L6_2[A0_2]
-  if L6_2 then
-    L6_2 = Notification
-    L7_2 = L3_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_sell_rentable"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
-  end
-  L6_2 = HouseTransactionVeto
-  L6_2 = L6_2.Run
-  L7_2 = {}
-  L7_2.action = "list_player_sale"
-  L7_2.source = L3_2
-  L7_2.house = A0_2
-  L7_2.price = A1_2
-  L8_2 = A2_2 or L8_2
-  if not A2_2 then
-    L8_2 = {}
-  end
-  L7_2.saleOptions = L8_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = L6_2.allowed
-  if not L7_2 then
-    L7_2 = Notification
-    L8_2 = L3_2
-    L9_2 = L6_2.reason
-    if not L9_2 then
-      L9_2 = i18n
-      L9_2 = L9_2.t
-      L10_2 = "cant_sell_house"
-      L9_2 = L9_2(L10_2)
-    end
-    L10_2 = "error"
-    return L7_2(L8_2, L9_2, L10_2)
-  end
-  if not A2_2 then
-    L7_2 = {}
-    A2_2 = L7_2
-  end
-  L7_2 = json
-  L7_2 = L7_2.encode
-  L8_2 = A2_2.photos
-  if not L8_2 then
-    L8_2 = {}
-  end
-  L7_2 = L7_2(L8_2)
-  L8_2 = A2_2.description
-  if not L8_2 then
-    L8_2 = ""
-  end
-  L9_2 = A2_2.furnished
-  if false ~= L9_2 then
-    L9_2 = 1
-    if L9_2 then
-      goto lbl_125
-    end
-  end
-  L9_2 = 0
-  ::lbl_125::
-  L10_2 = A2_2.hideFromBrowser
-  if L10_2 then
-    L10_2 = 1
-    if L10_2 then
-      goto lbl_132
-    end
-  end
-  L10_2 = 0
-  ::lbl_132::
-  L11_2 = MySQL
-  L11_2 = L11_2.Sync
-  L11_2 = L11_2.execute
-  L12_2 = "UPDATE player_houses SET purchasable = 1, sale_furnished = ? WHERE house = ?"
-  L13_2 = {}
-  L14_2 = L9_2
-  L15_2 = A0_2
-  L13_2[1] = L14_2
-  L13_2[2] = L15_2
-  L11_2(L12_2, L13_2)
-  L11_2 = MySQL
-  L11_2 = L11_2.Sync
-  L11_2 = L11_2.execute
-  L12_2 = [[
+
+  if not saleOptions then saleOptions = {} end
+  local photosJson = json.encode(saleOptions.photos or {})
+  local description = saleOptions.description or ""
+  local furnished = (false ~= saleOptions.furnished) and 1 or 0
+  local hidden = saleOptions.hideFromBrowser and 1 or 0
+
+  MySQL.Sync.execute("UPDATE player_houses SET purchasable = 1, sale_furnished = ? WHERE house = ?", { furnished, houseName })
+  MySQL.Sync.execute([[
 		UPDATE houselocations SET
 			price = ?,
 			photos = ?,
 			description = ?,
 			hideFromBrowser = ?
 		WHERE name = ?
-	]]
-  L13_2 = {}
-  L14_2 = A1_2
-  L15_2 = L7_2
-  L16_2 = L8_2
-  L17_2 = L10_2
-  L18_2 = A0_2
-  L13_2[1] = L14_2
-  L13_2[2] = L15_2
-  L13_2[3] = L16_2
-  L13_2[4] = L17_2
-  L13_2[5] = L18_2
-  L11_2(L12_2, L13_2)
-  L11_2 = Notification
-  L12_2 = L3_2
-  L13_2 = i18n
-  L13_2 = L13_2.t
-  L14_2 = "house_is_sale_now"
-  L13_2 = L13_2(L14_2)
-  L14_2 = "info"
-  L11_2(L12_2, L13_2, L14_2)
-  L11_2 = L3_1
-  L11_2[A0_2] = true
-  L11_2 = Config
-  L11_2 = L11_2.Houses
-  L11_2 = L11_2[A0_2]
-  L11_2.price = A1_2
-  L11_2 = Config
-  L11_2 = L11_2.Houses
-  L11_2 = L11_2[A0_2]
-  L12_2 = A2_2.photos
-  if not L12_2 then
-    L12_2 = {}
+	]], { salePrice, photosJson, description, hidden, houseName })
+
+  Notification(src, i18n.t("house_is_sale_now"), "info")
+  purchasableHousesMap[houseName] = true
+  Config.Houses[houseName].price = salePrice
+  Config.Houses[houseName].photos = saleOptions.photos or {}
+  Config.Houses[houseName].description = description
+  Config.Houses[houseName].hideFromBrowser = 1 == hidden
+  Config.Houses[houseName].saleFurnished = 1 == furnished
+
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "price", salePrice)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "photos", Config.Houses[houseName].photos)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "description", Config.Houses[houseName].description)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "hideFromBrowser", Config.Houses[houseName].hideFromBrowser)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "saleFurnished", Config.Houses[houseName].saleFurnished)
+  TriggerClientEvent("housing:refreshHouse", -1, houseName)
+
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player put a house for sale",
+    fields = {
+      { name = "Player", value = GetPlayerName(src), inline = true },
+      { name = "House", value = houseName, inline = true },
+      { name = "Price", value = salePrice, inline = true },
+      { name = "Furnished", value = tostring(1 == furnished), inline = true },
+      { name = "Hidden", value = tostring(1 == hidden), inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Cancel house sale
+RegisterNetEvent("qb-houses:cancelSellHouse", function(houseName)
+  local src = source
+  local identifier = GetIdentifier(src)
+  Debug("qb-houses:cancelSellHouse", "Canceling sale", houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND owner = ?", { houseName, identifier })
+  if not rows[1] then
+    return Notification(src, i18n.t("you_are_not_owner"), "error")
   end
-  L11_2.photos = L12_2
-  L11_2 = Config
-  L11_2 = L11_2.Houses
-  L11_2 = L11_2[A0_2]
-  L11_2.description = L8_2
-  L11_2 = Config
-  L11_2 = L11_2.Houses
-  L11_2 = L11_2[A0_2]
-  L12_2 = 1 == L10_2
-  L11_2.hideFromBrowser = L12_2
-  L11_2 = Config
-  L11_2 = L11_2.Houses
-  L11_2 = L11_2[A0_2]
-  L12_2 = 1 == L9_2
-  L11_2.saleFurnished = L12_2
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:updateHouseData"
-  L13_2 = -1
-  L14_2 = A0_2
-  L15_2 = "price"
-  L16_2 = A1_2
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:updateHouseData"
-  L13_2 = -1
-  L14_2 = A0_2
-  L15_2 = "photos"
-  L16_2 = Config
-  L16_2 = L16_2.Houses
-  L16_2 = L16_2[A0_2]
-  L16_2 = L16_2.photos
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:updateHouseData"
-  L13_2 = -1
-  L14_2 = A0_2
-  L15_2 = "description"
-  L16_2 = Config
-  L16_2 = L16_2.Houses
-  L16_2 = L16_2[A0_2]
-  L16_2 = L16_2.description
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:updateHouseData"
-  L13_2 = -1
-  L14_2 = A0_2
-  L15_2 = "hideFromBrowser"
-  L16_2 = Config
-  L16_2 = L16_2.Houses
-  L16_2 = L16_2[A0_2]
-  L16_2 = L16_2.hideFromBrowser
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:updateHouseData"
-  L13_2 = -1
-  L14_2 = A0_2
-  L15_2 = "saleFurnished"
-  L16_2 = Config
-  L16_2 = L16_2.Houses
-  L16_2 = L16_2[A0_2]
-  L16_2 = L16_2.saleFurnished
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "housing:refreshHouse"
-  L13_2 = -1
-  L14_2 = A0_2
-  L11_2(L12_2, L13_2, L14_2)
-  L11_2 = SendLog
-  L12_2 = DiscordWebhook
-  L13_2 = {}
-  L13_2.title = "Housing"
-  L13_2.description = "Player put a house for sale"
-  L14_2 = {}
-  L15_2 = {}
-  L15_2.name = "Player"
-  L16_2 = GetPlayerName
-  L17_2 = L3_2
-  L16_2 = L16_2(L17_2)
-  L15_2.value = L16_2
-  L15_2.inline = true
-  L16_2 = {}
-  L16_2.name = "House"
-  L16_2.value = A0_2
-  L16_2.inline = true
-  L17_2 = {}
-  L17_2.name = "Price"
-  L17_2.value = A1_2
-  L17_2.inline = true
-  L18_2 = {}
-  L18_2.name = "Furnished"
-  L19_2 = tostring
-  L20_2 = 1 == L9_2
-  L19_2 = L19_2(L20_2)
-  L18_2.value = L19_2
-  L18_2.inline = true
-  L19_2 = {}
-  L19_2.name = "Hidden"
-  L20_2 = tostring
-  L21_2 = 1 == L10_2
-  L20_2 = L20_2(L21_2)
-  L19_2.value = L20_2
-  L19_2.inline = true
-  L14_2[1] = L15_2
-  L14_2[2] = L16_2
-  L14_2[3] = L17_2
-  L14_2[4] = L18_2
-  L14_2[5] = L19_2
-  L13_2.fields = L14_2
-  L14_2 = WebhookColor
-  L13_2.color = L14_2
-  L11_2(L12_2, L13_2)
-end
-L15_1(L16_1, L17_1)
-L15_1 = RegisterNetEvent
-L16_1 = "qb-houses:cancelSellHouse"
-function L17_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L1_2 = source
-  L2_2 = GetIdentifier
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = Debug
-  L4_2 = "qb-houses:cancelSellHouse"
-  L5_2 = "Canceling sale"
-  L6_2 = A0_2
-  L3_2(L4_2, L5_2, L6_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ? AND owner = ?"
-  L5_2 = {}
-  L6_2 = A0_2
-  L7_2 = L2_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = L1_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "you_are_not_owner"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    return L4_2(L5_2, L6_2, L7_2)
+  if 1 ~= rows[1].purchasable then
+    return Notification(src, i18n.t("house_is_not_for_sale"), "error")
   end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.purchasable
-  if 1 ~= L4_2 then
-    L4_2 = Notification
-    L5_2 = L1_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "house_is_not_for_sale"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    return L4_2(L5_2, L6_2, L7_2)
+  MySQL.Sync.execute("UPDATE player_houses SET purchasable = NULL, sale_furnished = NULL WHERE house = ?", { houseName })
+  MySQL.Sync.execute("UPDATE houselocations SET price = defaultPrice WHERE name = ?", { houseName })
+  Notification(src, i18n.t("house_no_longer_for_sale"), "info")
+  purchasableHousesMap[houseName] = nil
+  Config.Houses[houseName].price = Config.Houses[houseName].defaultPrice
+  Config.Houses[houseName].photos = {}
+  Config.Houses[houseName].description = ""
+  Config.Houses[houseName].hideFromBrowser = false
+  Config.Houses[houseName].saleFurnished = nil
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "price", Config.Houses[houseName].defaultPrice)
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, houseName)
+  TriggerClientEvent("housing:refreshHouse", -1, houseName)
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player canceled a house sale",
+    fields = {
+      { name = "Player", value = GetPlayerName(src), inline = true },
+      { name = "House", value = houseName, inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Transfer house to another player
+RegisterNetEvent("housing:transferHouse", function(targetSource, houseName)
+  local src = source
+  local srcIdentifier = GetIdentifier(src)
+  local targetIdentifier = GetIdentifier(targetSource)
+  if not targetIdentifier then
+    return Notification(src, i18n.t("player_not_found"), "error")
   end
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.execute
-  L5_2 = "UPDATE player_houses SET purchasable = NULL, sale_furnished = NULL WHERE house = ?"
-  L6_2 = {}
-  L7_2 = A0_2
-  L6_2[1] = L7_2
-  L4_2(L5_2, L6_2)
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.execute
-  L5_2 = "UPDATE houselocations SET price = defaultPrice WHERE name = ?"
-  L6_2 = {}
-  L7_2 = A0_2
-  L6_2[1] = L7_2
-  L4_2(L5_2, L6_2)
-  L4_2 = Notification
-  L5_2 = L1_2
-  L6_2 = i18n
-  L6_2 = L6_2.t
-  L7_2 = "house_no_longer_for_sale"
-  L6_2 = L6_2(L7_2)
-  L7_2 = "info"
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = L3_1
-  L4_2[A0_2] = nil
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L5_2 = L5_2[A0_2]
-  L5_2 = L5_2.defaultPrice
-  L4_2.price = L5_2
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L5_2 = {}
-  L4_2.photos = L5_2
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L4_2.description = ""
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L4_2.hideFromBrowser = false
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[A0_2]
-  L4_2.saleFurnished = nil
-  L4_2 = TriggerClientEvent
-  L5_2 = "housing:updateHouseData"
-  L6_2 = -1
-  L7_2 = A0_2
-  L8_2 = "price"
-  L9_2 = Config
-  L9_2 = L9_2.Houses
-  L9_2 = L9_2[A0_2]
-  L9_2 = L9_2.defaultPrice
-  L4_2(L5_2, L6_2, L7_2, L8_2, L9_2)
-  L4_2 = TriggerClientEvent
-  L5_2 = "qb-houses:requiredLeaveHouse"
-  L6_2 = -1
-  L7_2 = A0_2
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = TriggerClientEvent
-  L5_2 = "housing:refreshHouse"
-  L6_2 = -1
-  L7_2 = A0_2
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = SendLog
-  L5_2 = DiscordWebhook
-  L6_2 = {}
-  L6_2.title = "Housing"
-  L6_2.description = "Player canceled a house sale"
-  L7_2 = {}
-  L8_2 = {}
-  L8_2.name = "Player"
-  L9_2 = GetPlayerName
-  L10_2 = L1_2
-  L9_2 = L9_2(L10_2)
-  L8_2.value = L9_2
-  L8_2.inline = true
-  L9_2 = {}
-  L9_2.name = "House"
-  L9_2.value = A0_2
-  L9_2.inline = true
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L6_2.fields = L7_2
-  L7_2 = WebhookColor
-  L6_2.color = L7_2
-  L4_2(L5_2, L6_2)
-end
-L15_1(L16_1, L17_1)
-L15_1 = RegisterNetEvent
-L16_1 = "housing:transferHouse"
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2
-  L2_2 = source
-  L3_2 = GetIdentifier
-  L4_2 = L2_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = GetIdentifier
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    L5_2 = Notification
-    L6_2 = L2_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "player_not_found"
-    L7_2 = L7_2(L8_2)
-    L8_2 = "error"
-    return L5_2(L6_2, L7_2, L8_2)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND owner = ?", { houseName, srcIdentifier })
+  if not rows[1] then
+    return Notification(src, i18n.t("you_are_not_owner"), "error")
   end
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.fetchAll
-  L6_2 = "SELECT * FROM player_houses WHERE house = ? AND owner = ?"
-  L7_2 = {}
-  L8_2 = A1_2
-  L9_2 = L3_2
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = L5_2[1]
-  if not L6_2 then
-    L6_2 = Notification
-    L7_2 = L2_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "you_are_not_owner"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
+  if 1 == rows[1].rented then
+    return Notification(src, i18n.t("cant_transfer_rented"), "error")
   end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.rented
-  if 1 == L6_2 then
-    L6_2 = Notification
-    L7_2 = L2_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_transfer_rented"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
+  if rows[1].credit and tonumber(rows[1].credit) > 0 then
+    return Notification(src, i18n.t("house_has_credit"), "error")
   end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.credit
-  if L6_2 then
-    L6_2 = tonumber
-    L7_2 = L5_2[1]
-    L7_2 = L7_2.credit
-    L6_2 = L6_2(L7_2)
-    if L6_2 > 0 then
-      L6_2 = Notification
-      L7_2 = L2_2
-      L8_2 = i18n
-      L8_2 = L8_2.t
-      L9_2 = "house_has_credit"
-      L8_2 = L8_2(L9_2)
-      L9_2 = "error"
-      return L6_2(L7_2, L8_2, L9_2)
+  if 1 == rows[1].purchasable then
+    return Notification(src, i18n.t("cant_transfer_for_sale"), "error")
+  end
+  if 1 == rows[1].rentable then
+    return Notification(src, i18n.t("cant_transfer_for_rent"), "error")
+  end
+
+  local veto = HouseTransactionVeto.Run({
+    action = "transfer",
+    fromSource = src,
+    toSource = targetSource,
+    toIdentifier = targetIdentifier,
+    house = houseName,
+  })
+  if not veto.allowed then
+    return Notification(src, veto.reason or i18n.t("cant_transfer_rented"), "error")
+  end
+
+  MySQL.Sync.execute("UPDATE player_houses SET owner = ?, citizenid = ? WHERE house = ?", { targetIdentifier, targetIdentifier, houseName })
+  HouseOwnerIdentifierList[houseName] = targetIdentifier
+  HouseOwnerCitizenidList[houseName] = targetIdentifier
+  OfficialHouseOwnerList[houseName] = targetIdentifier
+  HouseKeyholdersList[houseName] = nil
+
+  local targetFirst, targetLast = GetCharacterName(targetSource)
+  local targetName
+  if targetFirst and targetLast then
+    targetName = targetFirst .. " " .. targetLast
+  else
+    targetName = GetPlayerName(targetSource)
+  end
+
+  Notification(src, i18n.t("house_transferred", { player = targetName }), "success")
+  Notification(targetSource, i18n.t("house_received", { house = Config.Houses[houseName].address or houseName }), "success")
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", src, houseName)
+  TriggerClientEvent("housing:refreshHouse", -1, houseName)
+
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player transferred a house to another player",
+    fields = {
+      { name = "From", value = GetPlayerName(src), inline = true },
+      { name = "To", value = targetName, inline = true },
+      { name = "House", value = houseName, inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Delete apartment (all units)
+local function deleteApartmentHouses(houseName)
+  local baseName = houseName:gsub("-apt%-%d+", "")
+  local queries = {}
+  local deletedNames = {}
+
+  for name, data in pairs(Config.Houses) do
+    if data.apartmentName == baseName then
+      table.insert(queries, { query = "DELETE FROM player_houses WHERE house = ?", parameters = { name } })
+      table.insert(queries, { query = "DELETE FROM `houselocations` WHERE `name` = ?", parameters = { name } })
+      table.insert(queries, { query = "DELETE FROM house_decorations WHERE house = ?", parameters = { name } })
+      ClearHouseDecoration(name)
+      table.insert(deletedNames, name)
+      HouseOwnerCitizenidList[name] = nil
+      HouseOwnerIdentifierList[name] = nil
+      OfficialHouseOwnerList[name] = nil
+      HouseKeyholdersList[name] = nil
+      rentableHousesMap[name] = nil
+      purchasableHousesMap[name] = nil
+      Config.Houses[name] = nil
+      Debug("Delete Apartment House", "Deleted house", name)
     end
   end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.purchasable
-  if 1 == L6_2 then
-    L6_2 = Notification
-    L7_2 = L2_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_transfer_for_sale"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
+
+  local txResult = MySQL.Sync.transaction(queries)
+  if not txResult then
+    Debug("DeleteHouse", "Failed to delete apartment houses", houseName)
+    return false
   end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.rentable
-  if 1 == L6_2 then
-    L6_2 = Notification
-    L7_2 = L2_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cant_transfer_for_rent"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    return L6_2(L7_2, L8_2, L9_2)
+
+  for i = 1, #deletedNames do
+    HousingBatteryBridge_Unregister(deletedNames[i])
   end
-  L6_2 = HouseTransactionVeto
-  L6_2 = L6_2.Run
-  L7_2 = {}
-  L7_2.action = "transfer"
-  L7_2.fromSource = L2_2
-  L7_2.toSource = A0_2
-  L7_2.toIdentifier = L4_2
-  L7_2.house = A1_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = L6_2.allowed
-  if not L7_2 then
-    L7_2 = Notification
-    L8_2 = L2_2
-    L9_2 = L6_2.reason
-    if not L9_2 then
-      L9_2 = i18n
-      L9_2 = L9_2.t
-      L10_2 = "cant_transfer_rented"
-      L9_2 = L9_2(L10_2)
-    end
-    L10_2 = "error"
-    return L7_2(L8_2, L9_2, L10_2)
-  end
-  L7_2 = MySQL
-  L7_2 = L7_2.Sync
-  L7_2 = L7_2.execute
-  L8_2 = "UPDATE player_houses SET owner = ?, citizenid = ? WHERE house = ?"
-  L9_2 = {}
-  L10_2 = L4_2
-  L11_2 = L4_2
-  L12_2 = A1_2
-  L9_2[1] = L10_2
-  L9_2[2] = L11_2
-  L9_2[3] = L12_2
-  L7_2(L8_2, L9_2)
-  L7_2 = HouseOwnerIdentifierList
-  L7_2[A1_2] = L4_2
-  L7_2 = HouseOwnerCitizenidList
-  L7_2[A1_2] = L4_2
-  L7_2 = OfficialHouseOwnerList
-  L7_2[A1_2] = L4_2
-  L7_2 = HouseKeyholdersList
-  L7_2[A1_2] = nil
-  L7_2 = GetCharacterName
-  L8_2 = A0_2
-  L7_2, L8_2 = L7_2(L8_2)
-  if L7_2 and L8_2 then
-    L9_2 = L7_2
-    L10_2 = " "
-    L11_2 = L8_2
-    L9_2 = L9_2 .. L10_2 .. L11_2
-    if L9_2 then
-      goto lbl_159
-    end
-  end
-  L9_2 = GetPlayerName
-  L10_2 = A0_2
-  L9_2 = L9_2(L10_2)
-  ::lbl_159::
-  L10_2 = Notification
-  L11_2 = L2_2
-  L12_2 = i18n
-  L12_2 = L12_2.t
-  L13_2 = "house_transferred"
-  L14_2 = {}
-  L14_2.player = L9_2
-  L12_2 = L12_2(L13_2, L14_2)
-  L13_2 = "success"
-  L10_2(L11_2, L12_2, L13_2)
-  L10_2 = Notification
-  L11_2 = A0_2
-  L12_2 = i18n
-  L12_2 = L12_2.t
-  L13_2 = "house_received"
-  L14_2 = {}
-  L15_2 = Config
-  L15_2 = L15_2.Houses
-  L15_2 = L15_2[A1_2]
-  L15_2 = L15_2.address
-  if not L15_2 then
-    L15_2 = A1_2
-  end
-  L14_2.house = L15_2
-  L12_2 = L12_2(L13_2, L14_2)
-  L13_2 = "success"
-  L10_2(L11_2, L12_2, L13_2)
-  L10_2 = TriggerClientEvent
-  L11_2 = "qb-houses:requiredLeaveHouse"
-  L12_2 = L2_2
-  L13_2 = A1_2
-  L10_2(L11_2, L12_2, L13_2)
-  L10_2 = TriggerClientEvent
-  L11_2 = "housing:refreshHouse"
-  L12_2 = -1
-  L13_2 = A1_2
-  L10_2(L11_2, L12_2, L13_2)
-  L10_2 = SendLog
-  L11_2 = DiscordWebhook
-  L12_2 = {}
-  L12_2.title = "Housing"
-  L12_2.description = "Player transferred a house to another player"
-  L13_2 = {}
-  L14_2 = {}
-  L14_2.name = "From"
-  L15_2 = GetPlayerName
-  L16_2 = L2_2
-  L15_2 = L15_2(L16_2)
-  L14_2.value = L15_2
-  L14_2.inline = true
-  L15_2 = {}
-  L15_2.name = "To"
-  L15_2.value = L9_2
-  L15_2.inline = true
-  L16_2 = {}
-  L16_2.name = "House"
-  L16_2.value = A1_2
-  L16_2.inline = true
-  L13_2[1] = L14_2
-  L13_2[2] = L15_2
-  L13_2[3] = L16_2
-  L12_2.fields = L13_2
-  L13_2 = WebhookColor
-  L12_2.color = L13_2
-  L10_2(L11_2, L12_2)
+  TriggerClientEvent("housing:setHouse", -1, deletedNames, nil)
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, deletedNames)
+  return true
 end
-L15_1(L16_1, L17_1)
-function L15_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L2_2 = A0_2
-  L1_2 = A0_2.gsub
-  L3_2 = "-apt%-%d+"
-  L4_2 = ""
-  L1_2 = L1_2(L2_2, L3_2, L4_2)
-  L2_2 = {}
-  L3_2 = {}
-  L4_2 = pairs
-  L5_2 = Config
-  L5_2 = L5_2.Houses
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = L9_2.apartmentName
-    if L10_2 == L1_2 then
-      L10_2 = table
-      L10_2 = L10_2.insert
-      L11_2 = L2_2
-      L12_2 = {}
-      L12_2.query = "DELETE FROM player_houses WHERE house = ?"
-      L13_2 = {}
-      L14_2 = L8_2
-      L13_2[1] = L14_2
-      L12_2.parameters = L13_2
-      L10_2(L11_2, L12_2)
-      L10_2 = table
-      L10_2 = L10_2.insert
-      L11_2 = L2_2
-      L12_2 = {}
-      L12_2.query = "DELETE FROM `houselocations` WHERE `name` = ?"
-      L13_2 = {}
-      L14_2 = L8_2
-      L13_2[1] = L14_2
-      L12_2.parameters = L13_2
-      L10_2(L11_2, L12_2)
-      L10_2 = table
-      L10_2 = L10_2.insert
-      L11_2 = L2_2
-      L12_2 = {}
-      L12_2.query = "DELETE FROM house_decorations WHERE house = ?"
-      L13_2 = {}
-      L14_2 = L8_2
-      L13_2[1] = L14_2
-      L12_2.parameters = L13_2
-      L10_2(L11_2, L12_2)
-      L10_2 = ClearHouseDecoration
-      L11_2 = L8_2
-      L10_2(L11_2)
-      L10_2 = table
-      L10_2 = L10_2.insert
-      L11_2 = L3_2
-      L12_2 = L8_2
-      L10_2(L11_2, L12_2)
-      L10_2 = HouseOwnerCitizenidList
-      L10_2[L8_2] = nil
-      L10_2 = HouseOwnerIdentifierList
-      L10_2[L8_2] = nil
-      L10_2 = OfficialHouseOwnerList
-      L10_2[L8_2] = nil
-      L10_2 = HouseKeyholdersList
-      L10_2[L8_2] = nil
-      L10_2 = L2_1
-      L10_2[L8_2] = nil
-      L10_2 = L3_1
-      L10_2[L8_2] = nil
-      L10_2 = Config
-      L10_2 = L10_2.Houses
-      L10_2[L8_2] = nil
-      L10_2 = Debug
-      L11_2 = "Delete Apartment House"
-      L12_2 = "Deleted house"
-      L13_2 = L8_2
-      L10_2(L11_2, L12_2, L13_2)
-    end
+
+
+-- Delete a single house
+function DeleteHouse(houseName)
+  local houseData = Config.Houses[houseName]
+  if not houseData then
+    Error("DeleteHouse", "House not found", houseName)
+    return false
   end
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.transaction
-  L5_2 = L2_2
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    L5_2 = Debug
-    L6_2 = "DeleteHouse"
-    L7_2 = "Failed to delete apartment houses"
-    L8_2 = A0_2
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
+  if houseData.apartmentNumber then
+    return deleteApartmentHouses(houseName)
   end
-  L5_2 = 1
-  L6_2 = #L3_2
-  L7_2 = 1
-  for L8_2 = L5_2, L6_2, L7_2 do
-    L9_2 = HousingBatteryBridge_Unregister
-    L10_2 = L3_2[L8_2]
-    L9_2(L10_2)
+
+  DeleteHouseObject(houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM houselocations WHERE name = ?", { houseName })
+  if not rows[1] then
+    return false
   end
-  L5_2 = TriggerClientEvent
-  L6_2 = "housing:setHouse"
-  L7_2 = -1
-  L8_2 = L3_2
-  L9_2 = nil
-  L5_2(L6_2, L7_2, L8_2, L9_2)
-  L5_2 = TriggerClientEvent
-  L6_2 = "qb-houses:requiredLeaveHouse"
-  L7_2 = -1
-  L8_2 = L3_2
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = true
-  return L5_2
+  MySQL.Sync.execute("DELETE FROM player_houses WHERE house = ?", { houseName })
+  MySQL.Sync.execute("DELETE FROM `houselocations` WHERE `name` = ?", { houseName })
+  db.deleteAllObjects(houseName)
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, houseName)
+  HouseOwnerCitizenidList[houseName] = nil
+  HouseOwnerIdentifierList[houseName] = nil
+  OfficialHouseOwnerList[houseName] = nil
+  HouseKeyholdersList[houseName] = nil
+  rentableHousesMap[houseName] = nil
+  purchasableHousesMap[houseName] = nil
+  HousingBatteryBridge_Unregister(houseName)
+  Config.Houses[houseName] = nil
+  TriggerHouseRemoveGarage(houseName)
+  TriggerClientEvent("housing:setHouse", -1, houseName, nil)
+  Debug("DeleteHouse", "Deleted house", houseName)
+  return true
 end
-function L16_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = Config
-  L1_2 = L1_2.Houses
-  L1_2 = L1_2[A0_2]
-  if not L1_2 then
-    L2_2 = Error
-    L3_2 = "DeleteHouse"
-    L4_2 = "House not found"
-    L5_2 = A0_2
-    L2_2(L3_2, L4_2, L5_2)
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = L1_2.apartmentNumber
-  if L2_2 then
-    L2_2 = L15_1
-    L3_2 = A0_2
-    return L2_2(L3_2)
-  end
-  L2_2 = DeleteHouseObject
-  L3_2 = A0_2
-  L2_2(L3_2)
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "SELECT * FROM houselocations WHERE name = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = L2_2[1]
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "DELETE FROM player_houses WHERE house = ?"
-  L5_2 = {}
-  L6_2 = A0_2
-  L5_2[1] = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "DELETE FROM `houselocations` WHERE `name` = ?"
-  L5_2 = {}
-  L6_2 = A0_2
-  L5_2[1] = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = db
-  L3_2 = L3_2.deleteAllObjects
-  L4_2 = A0_2
-  L3_2(L4_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "qb-houses:requiredLeaveHouse"
-  L5_2 = -1
-  L6_2 = A0_2
-  L3_2(L4_2, L5_2, L6_2)
-  L3_2 = HouseOwnerCitizenidList
-  L3_2[A0_2] = nil
-  L3_2 = HouseOwnerIdentifierList
-  L3_2[A0_2] = nil
-  L3_2 = OfficialHouseOwnerList
-  L3_2[A0_2] = nil
-  L3_2 = HouseKeyholdersList
-  L3_2[A0_2] = nil
-  L3_2 = L2_1
-  L3_2[A0_2] = nil
-  L3_2 = L3_1
-  L3_2[A0_2] = nil
-  L3_2 = HousingBatteryBridge_Unregister
-  L4_2 = A0_2
-  L3_2(L4_2)
-  L3_2 = Config
-  L3_2 = L3_2.Houses
-  L3_2[A0_2] = nil
-  L3_2 = TriggerHouseRemoveGarage
-  L4_2 = A0_2
-  L3_2(L4_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:setHouse"
-  L5_2 = -1
-  L6_2 = A0_2
-  L7_2 = nil
-  L3_2(L4_2, L5_2, L6_2, L7_2)
-  L3_2 = Debug
-  L4_2 = "DeleteHouse"
-  L5_2 = "Deleted house"
-  L6_2 = A0_2
-  L3_2(L4_2, L5_2, L6_2)
-  L3_2 = true
-  return L3_2
-end
-DeleteHouse = L16_1
-L16_1 = RegisterNetEvent
-L17_1 = "qb-houses:deleteHouse"
-function L18_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = source
-  L2_2 = HasPermission
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = print
-    L3_2 = L1_2
-    L4_2 = "Tried to exploit qb-houses:deleteHouse"
-    L2_2(L3_2, L4_2)
+
+RegisterNetEvent("qb-houses:deleteHouse", function(houseName)
+  local src = source
+  if not HasPermission(src) then
+    print(src, "Tried to exploit qb-houses:deleteHouse")
     return
   end
-  L2_2 = DeleteHouse
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L3_2 = Notification
-    L4_2 = source
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "house_not_found"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    return L3_2(L4_2, L5_2, L6_2)
+  local success = DeleteHouse(houseName)
+  if not success then
+    return Notification(source, i18n.t("house_not_found"), "error")
   end
-  L3_2 = Notification
-  L4_2 = source
-  L5_2 = i18n
-  L5_2 = L5_2.t
-  L6_2 = "house_deleted"
-  L5_2 = L5_2(L6_2)
-  L6_2 = "success"
-  L3_2(L4_2, L5_2, L6_2)
-end
-L16_1(L17_1, L18_1)
-L16_1 = exports
-L17_1 = "deleteHouse"
-L18_1 = DeleteHouse
-L16_1(L17_1, L18_1)
-function L16_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = Debug
-  L3_2 = "removeRenter"
-  L4_2 = "Removing renter"
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.execute
-  L3_2 = "UPDATE player_houses SET citizenid = player_houses.owner, rented = NULL, rentable = ?, rent_furnished = NULL, stash = NULL, outfit = NULL, logout = NULL, decorateStash = NULL, charge = NULL, tablet = NULL, rentNextChargeAt = NULL WHERE house = ?"
-  L4_2 = {}
-  if A1_2 then
-    L5_2 = 1
-    if L5_2 then
-      goto lbl_19
-    end
-  end
-  L5_2 = nil
-  ::lbl_19::
-  L6_2 = A0_2
-  L4_2[1] = L5_2
-  L4_2[2] = L6_2
-  L2_2(L3_2, L4_2)
-  L2_2 = HousingBatteryBridge_Unregister
-  L3_2 = A0_2
-  L2_2(L3_2)
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.execute
-  L3_2 = "DELETE FROM house_rents WHERE house = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2(L3_2, L4_2)
-  if not A1_2 then
-    L2_2 = MySQL
-    L2_2 = L2_2.Sync
-    L2_2 = L2_2.execute
-    L3_2 = [[
+  Notification(source, i18n.t("house_deleted"), "success")
+end)
+
+exports("deleteHouse", DeleteHouse)
+
+
+-- Remove renter from a house
+local function removeRenter(houseName, keepRentable)
+  Debug("removeRenter", "Removing renter", houseName, keepRentable)
+  MySQL.Sync.execute(
+    "UPDATE player_houses SET citizenid = player_houses.owner, rented = NULL, rentable = ?, rent_furnished = NULL, stash = NULL, outfit = NULL, logout = NULL, decorateStash = NULL, charge = NULL, tablet = NULL, rentNextChargeAt = NULL WHERE house = ?",
+    { keepRentable and 1 or nil, houseName }
+  )
+  HousingBatteryBridge_Unregister(houseName)
+  MySQL.Sync.execute("DELETE FROM house_rents WHERE house = ?", { houseName })
+
+  if not keepRentable then
+    MySQL.Sync.execute([[
 			UPDATE houselocations SET
 				photos = '[]',
 				description = '',
 				hideFromBrowser = 0
 			WHERE name = ?
-		]]
-    L4_2 = {}
-    L5_2 = A0_2
-    L4_2[1] = L5_2
-    L2_2(L3_2, L4_2)
-    L2_2 = Config
-    L2_2 = L2_2.Houses
-    L2_2 = L2_2[A0_2]
-    L3_2 = {}
-    L2_2.photos = L3_2
-    L2_2 = Config
-    L2_2 = L2_2.Houses
-    L2_2 = L2_2[A0_2]
-    L2_2.description = ""
-    L2_2 = Config
-    L2_2 = L2_2.Houses
-    L2_2 = L2_2[A0_2]
-    L2_2.hideFromBrowser = false
-    L2_2 = Config
-    L2_2 = L2_2.Houses
-    L2_2 = L2_2[A0_2]
-    L2_2.rentFurnished = nil
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:updateHouseData"
-    L4_2 = -1
-    L5_2 = A0_2
-    L6_2 = "photos"
-    L7_2 = {}
-    L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:updateHouseData"
-    L4_2 = -1
-    L5_2 = A0_2
-    L6_2 = "description"
-    L7_2 = ""
-    L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:updateHouseData"
-    L4_2 = -1
-    L5_2 = A0_2
-    L6_2 = "hideFromBrowser"
-    L7_2 = false
-    L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-    L2_2 = TriggerClientEvent
-    L3_2 = "housing:updateHouseData"
-    L4_2 = -1
-    L5_2 = A0_2
-    L6_2 = "rentFurnished"
-    L7_2 = nil
-    L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
+		]], { houseName })
+    Config.Houses[houseName].photos = {}
+    Config.Houses[houseName].description = ""
+    Config.Houses[houseName].hideFromBrowser = false
+    Config.Houses[houseName].rentFurnished = nil
+    TriggerClientEvent("housing:updateHouseData", -1, houseName, "photos", {})
+    TriggerClientEvent("housing:updateHouseData", -1, houseName, "description", "")
+    TriggerClientEvent("housing:updateHouseData", -1, houseName, "hideFromBrowser", false)
+    TriggerClientEvent("housing:updateHouseData", -1, houseName, "rentFurnished", nil)
   end
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "SELECT * FROM player_houses WHERE house = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = HouseOwnerIdentifierList
-  L4_2 = L2_2[1]
-  L4_2 = L4_2.owner
-  L3_2[A0_2] = L4_2
-  L3_2 = HouseOwnerCitizenidList
-  L4_2 = L2_2[1]
-  L4_2 = L4_2.owner
-  L3_2[A0_2] = L4_2
-  L3_2 = OfficialHouseOwnerList
-  L4_2 = L2_2[1]
-  L4_2 = L4_2.owner
-  L3_2[A0_2] = L4_2
-  L3_2 = L2_1
-  L3_2[A0_2] = A1_2
-  L3_2 = SendLog
-  L4_2 = DiscordWebhook
-  L5_2 = {}
-  L5_2.title = "Housing"
-  L5_2.description = "Player removed a renter from a house"
-  L6_2 = {}
-  L7_2 = {}
-  L7_2.name = "House"
-  L7_2.value = A0_2
-  L7_2.inline = true
-  L8_2 = {}
-  L8_2.name = "Owner"
-  L9_2 = L2_2[1]
-  L9_2 = L9_2.owner
-  L8_2.value = L9_2
-  L8_2.inline = true
-  L6_2[1] = L7_2
-  L6_2[2] = L8_2
-  L5_2.fields = L6_2
-  L6_2 = WebhookColor
-  L5_2.color = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:refreshHouse"
-  L5_2 = -1
-  L6_2 = A0_2
-  L3_2(L4_2, L5_2, L6_2)
+
+  local updatedRows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ?", { houseName })
+  HouseOwnerIdentifierList[houseName] = updatedRows[1].owner
+  HouseOwnerCitizenidList[houseName] = updatedRows[1].owner
+  OfficialHouseOwnerList[houseName] = updatedRows[1].owner
+  rentableHousesMap[houseName] = keepRentable
+
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player removed a renter from a house",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = updatedRows[1].owner, inline = true },
+    },
+    color = WebhookColor,
+  })
+  TriggerClientEvent("housing:refreshHouse", -1, houseName)
 end
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:isAdmin"
-function L19_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = PlayerIsAdmin
-  L2_2 = A0_2
-  return L1_2(L2_2)
-end
-L17_1(L18_1, L19_1)
-L17_1 = RegisterNetEvent
-L18_1 = "housing:hireRenter"
-function L19_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L1_2 = source
-  L2_2 = PlayerIsAdmin
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = Notification
-    L3_2 = L1_2
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "no_permission"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    return L2_2(L3_2, L4_2, L5_2)
+
+
+-- Admin check callback
+lib.callback.register("housing:isAdmin", function(source)
+  return PlayerIsAdmin(source)
+end)
+
+-- Admin: evict renter
+RegisterNetEvent("housing:hireRenter", function(houseName)
+  local src = source
+  if not PlayerIsAdmin(src) then
+    return Notification(src, i18n.t("no_permission"), "error")
   end
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "SELECT * FROM player_houses WHERE house = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = L2_2[1]
-  if not L3_2 then
-    L3_2 = Notification
-    L4_2 = L1_2
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "house_not_found"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    return L3_2(L4_2, L5_2, L6_2)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ?", { houseName })
+  if not rows[1] then
+    return Notification(src, i18n.t("house_not_found"), "error")
   end
-  L3_2 = L2_2[1]
-  L3_2 = L3_2.rentable
-  if L3_2 then
-    L3_2 = L2_2[1]
-    L3_2 = L3_2.rented
-    if not L3_2 then
-      L3_2 = L16_1
-      L4_2 = A0_2
-      L5_2 = false
-      L3_2(L4_2, L5_2)
-      L3_2 = Notification
-      L4_2 = L1_2
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "rent.house_is_no_longer_rented"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "success"
-      L3_2(L4_2, L5_2, L6_2)
-      return
-    end
-  end
-  L3_2 = L2_2[1]
-  L3_2 = L3_2.rented
-  if not L3_2 then
-    L3_2 = Notification
-    L4_2 = L1_2
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "rent.house_is_not_rented"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    return L3_2(L4_2, L5_2, L6_2)
-  end
-  L3_2 = GetPlayerSourceFromIdentifier
-  L4_2 = L2_2[1]
-  L4_2 = L4_2.citizenid
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = Notification
-    L5_2 = L3_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "rent.hired_by_admin"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "info"
-    L4_2(L5_2, L6_2, L7_2)
-  end
-  L4_2 = L16_1
-  L5_2 = A0_2
-  L6_2 = true
-  L4_2(L5_2, L6_2)
-  L4_2 = Notification
-  L5_2 = L1_2
-  L6_2 = i18n
-  L6_2 = L6_2.t
-  L7_2 = "rent.hired_success"
-  L6_2 = L6_2(L7_2)
-  L7_2 = "info"
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = SendLog
-  L5_2 = DiscordWebhook
-  L6_2 = {}
-  L6_2.title = "Housing"
-  L6_2.description = "Admin evicted a renter from a house"
-  L7_2 = {}
-  L8_2 = {}
-  L8_2.name = "House"
-  L8_2.value = A0_2
-  L8_2.inline = true
-  L9_2 = {}
-  L9_2.name = "Owner"
-  L10_2 = L2_2[1]
-  L10_2 = L10_2.owner
-  L9_2.value = L10_2
-  L9_2.inline = true
-  L10_2 = {}
-  L10_2.name = "Tenant"
-  L11_2 = L2_2[1]
-  L11_2 = L11_2.citizenid
-  L10_2.value = L11_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "Admin"
-  L12_2 = GetPlayerName
-  L13_2 = L1_2
-  L12_2 = L12_2(L13_2)
-  L11_2.value = L12_2
-  L11_2.inline = true
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L7_2[3] = L10_2
-  L7_2[4] = L11_2
-  L6_2.fields = L7_2
-  L7_2 = WebhookColor
-  L6_2.color = L7_2
-  L4_2(L5_2, L6_2)
-end
-L17_1(L18_1, L19_1)
-L17_1 = RegisterNetEvent
-L18_1 = "qb-houses:disspossesHouse"
-function L19_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L1_2 = source
-  L2_2 = GetIdentifier
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ? AND owner = ?"
-  L5_2 = {}
-  L6_2 = A0_2
-  L7_2 = L2_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = L1_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "you_are_not_owner"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    return L4_2(L5_2, L6_2, L7_2)
-  end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.rentable
-  if L4_2 then
-    L4_2 = L3_2[1]
-    L4_2 = L4_2.rented
-    if not L4_2 then
-      L4_2 = L16_1
-      L5_2 = A0_2
-      L6_2 = false
-      L4_2(L5_2, L6_2)
-      L4_2 = Notification
-      L5_2 = L1_2
-      L6_2 = i18n
-      L6_2 = L6_2.t
-      L7_2 = "rent.house_is_no_longer_rented"
-      L6_2 = L6_2(L7_2)
-      L7_2 = "success"
-      L4_2(L5_2, L6_2, L7_2)
-      return
-    end
-  end
-  L4_2 = L3_2[1]
-  L4_2 = L4_2.rented
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = L1_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "rent.house_is_not_rented"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    return L4_2(L5_2, L6_2, L7_2)
-  end
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.fetchAll
-  L5_2 = "SELECT * FROM house_rents WHERE house = ? AND payed = 0"
-  L6_2 = {}
-  L7_2 = A0_2
-  L6_2[1] = L7_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = L4_2[1]
-  if not L5_2 then
-    L5_2 = Notification
-    L6_2 = L1_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "rent.cant_evict_renter"
-    L7_2 = L7_2(L8_2)
-    L8_2 = "info"
-    return L5_2(L6_2, L7_2, L8_2)
-  end
-  L5_2 = GetPlayerSourceFromIdentifier
-  L6_2 = L3_2[1]
-  L6_2 = L6_2.citizenid
-  L5_2 = L5_2(L6_2)
-  if L5_2 then
-    L6_2 = Notification
-    L7_2 = L5_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "rent.evict_success"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "info"
-    L6_2(L7_2, L8_2, L9_2)
-  end
-  L6_2 = L16_1
-  L7_2 = A0_2
-  L8_2 = true
-  L6_2(L7_2, L8_2)
-  L6_2 = Notification
-  L7_2 = L1_2
-  L8_2 = i18n
-  L8_2 = L8_2.t
-  L9_2 = "left_house"
-  L8_2 = L8_2(L9_2)
-  L9_2 = "info"
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = SendLog
-  L7_2 = DiscordWebhook
-  L8_2 = {}
-  L8_2.title = "Housing"
-  L8_2.description = "Player evicted a renter from a house"
-  L9_2 = {}
-  L10_2 = {}
-  L10_2.name = "House"
-  L10_2.value = A0_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "Owner"
-  L12_2 = L3_2[1]
-  L12_2 = L12_2.owner
-  L11_2.value = L12_2
-  L11_2.inline = true
-  L12_2 = {}
-  L12_2.name = "Tenant"
-  L13_2 = L3_2[1]
-  L13_2 = L13_2.citizenid
-  L12_2.value = L13_2
-  L12_2.inline = true
-  L9_2[1] = L10_2
-  L9_2[2] = L11_2
-  L9_2[3] = L12_2
-  L8_2.fields = L9_2
-  L9_2 = WebhookColor
-  L8_2.color = L9_2
-  L6_2(L7_2, L8_2)
-end
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L3_2 = getHouseMoney
-  L4_2 = A0_2
-  L5_2 = A2_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.fetchAll
-  L5_2 = "SELECT * FROM house_rents WHERE id = ? AND house = ?"
-  L6_2 = {}
-  L7_2 = A1_2
-  L8_2 = A2_2
-  L6_2[1] = L7_2
-  L6_2[2] = L8_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = L4_2[1]
-  if not L5_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "rent.not_found"
-    L7_2 = L7_2(L8_2)
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = L4_2[1]
-  L5_2 = L5_2.payed
-  if 1 == L5_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "rent.already_paid"
-    L7_2 = L7_2(L8_2)
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.fetchAll
-  L6_2 = "SELECT * FROM player_houses WHERE house = ? AND citizenid = ? AND rented = 1"
-  L7_2 = {}
-  L8_2 = A2_2
-  L9_2 = GetIdentifier
-  L10_2 = A0_2
-  L9_2, L10_2, L11_2, L12_2, L13_2, L14_2 = L9_2(L10_2)
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L7_2[3] = L10_2
-  L7_2[4] = L11_2
-  L7_2[5] = L12_2
-  L7_2[6] = L13_2
-  L7_2[7] = L14_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = L5_2[1]
-  if not L6_2 then
-    L6_2 = Notification
-    L7_2 = A0_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "rent.you_are_not_tenant"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    L6_2(L7_2, L8_2, L9_2)
-    L6_2 = false
-    return L6_2
-  end
-  L6_2 = L5_2[1]
-  L6_2 = L6_2.rentPrice
-  if L3_2 < L6_2 then
-    L6_2 = Notification
-    L7_2 = A0_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "no_money"
-    L10_2 = {}
-    L11_2 = L5_2[1]
-    L11_2 = L11_2.rentPrice
-    L10_2.price = L11_2
-    L8_2 = L8_2(L9_2, L10_2)
-    L9_2 = "error"
-    L6_2(L7_2, L8_2, L9_2)
-    L6_2 = false
-    return L6_2
-  end
-  L6_2 = removeHouseMoney
-  L7_2 = A0_2
-  L8_2 = A2_2
-  L9_2 = L5_2[1]
-  L9_2 = L9_2.rentPrice
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = MySQL
-  L6_2 = L6_2.Sync
-  L6_2 = L6_2.execute
-  L7_2 = "UPDATE house_rents SET payed = 1 WHERE id = ?"
-  L8_2 = {}
-  L9_2 = A1_2
-  L8_2[1] = L9_2
-  L6_2(L7_2, L8_2)
-  L6_2 = Notification
-  L7_2 = A0_2
-  L8_2 = i18n
-  L8_2 = L8_2.t
-  L9_2 = "rent.payment_success"
-  L10_2 = {}
-  L11_2 = L5_2[1]
-  L11_2 = L11_2.rentPrice
-  L10_2.price = L11_2
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = "success"
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = SendLog
-  L7_2 = DiscordWebhook
-  L8_2 = {}
-  L8_2.title = "Housing"
-  L8_2.description = "Player paid the rent"
-  L9_2 = {}
-  L10_2 = {}
-  L10_2.name = "House"
-  L10_2.value = A2_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "Owner"
-  L12_2 = L5_2[1]
-  L12_2 = L12_2.owner
-  L11_2.value = L12_2
-  L11_2.inline = true
-  L12_2 = {}
-  L12_2.name = "Tenant"
-  L13_2 = GetPlayerName
-  L14_2 = A0_2
-  L13_2 = L13_2(L14_2)
-  L12_2.value = L13_2
-  L12_2.inline = true
-  L13_2 = {}
-  L13_2.name = "Price"
-  L14_2 = L5_2[1]
-  L14_2 = L14_2.rentPrice
-  L13_2.value = L14_2
-  L13_2.inline = true
-  L9_2[1] = L10_2
-  L9_2[2] = L11_2
-  L9_2[3] = L12_2
-  L9_2[4] = L13_2
-  L8_2.fields = L9_2
-  L9_2 = WebhookColor
-  L8_2.color = L9_2
-  L6_2(L7_2, L8_2)
-  L6_2 = Debug
-  L7_2 = "housing:payRent"
-  L8_2 = "Paid rent"
-  L9_2 = A2_2
-  L10_2 = "rent id"
-  L11_2 = A1_2
-  L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
-  L6_2 = true
-  return L6_2
-end
-HousingPayRent = L17_1
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:payRent"
-L19_1 = HousingPayRent
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L3_2 = GetAccountMoney
-  L4_2 = A0_2
-  L5_2 = Config
-  L5_2 = L5_2.MoneyType
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = db
-  L4_2 = L4_2.getBill
-  L5_2 = A1_2
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = "Bill not found"
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = L4_2.payed
-  if L5_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = "Bill already paid"
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = tonumber
-  L6_2 = L4_2.total
-  L5_2 = L5_2(L6_2)
-  if not L5_2 then
-    L5_2 = 0
-  end
-  if L3_2 < L5_2 then
-    L6_2 = Notification
-    L7_2 = A0_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "no_money"
-    L10_2 = {}
-    L10_2.price = L5_2
-    L8_2 = L8_2(L9_2, L10_2)
-    L9_2 = "error"
-    L6_2(L7_2, L8_2, L9_2)
-    L6_2 = false
-    return L6_2
-  end
-  L6_2 = RemoveAccountMoney
-  L7_2 = A0_2
-  L8_2 = Config
-  L8_2 = L8_2.MoneyType
-  L9_2 = L5_2
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = db
-  L7_2 = L6_2
-  L6_2 = L6_2.payBill
-  L8_2 = A1_2
-  L9_2 = A2_2
-  L10_2 = GetIdentifier
-  L11_2 = A0_2
-  L10_2, L11_2, L12_2, L13_2 = L10_2(L11_2)
-  L6_2(L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2)
-  L6_2 = Notification
-  L7_2 = A0_2
-  L8_2 = i18n
-  L8_2 = L8_2.t
-  L9_2 = "management.bills.you_paid_bills"
-  L10_2 = {}
-  L10_2.price = L5_2
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = "success"
-  L6_2(L7_2, L8_2, L9_2)
-  L6_2 = SendLog
-  L7_2 = DiscordWebhook
-  L8_2 = {}
-  L8_2.title = "Housing"
-  L8_2.description = "Player paid the house bills"
-  L9_2 = {}
-  L10_2 = {}
-  L10_2.name = "House"
-  L10_2.value = A2_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "Tenant"
-  L12_2 = GetPlayerName
-  L13_2 = A0_2
-  L12_2 = L12_2(L13_2)
-  L11_2.value = L12_2
-  L11_2.inline = true
-  L12_2 = {}
-  L12_2.name = "Total"
-  L12_2.value = L5_2
-  L12_2.inline = true
-  L9_2[1] = L10_2
-  L9_2[2] = L11_2
-  L9_2[3] = L12_2
-  L8_2.fields = L9_2
-  L9_2 = WebhookColor
-  L8_2.color = L9_2
-  L6_2(L7_2, L8_2)
-  L6_2 = Debug
-  L7_2 = "housing:payBill"
-  L8_2 = "Paid bill"
-  L9_2 = A2_2
-  L10_2 = "bill id"
-  L11_2 = A1_2
-  L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
-  L6_2 = true
-  return L6_2
-end
-HousingPayBill = L17_1
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:payBill"
-L19_1 = HousingPayBill
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L2_2 = GetAccountMoney
-  L3_2 = A0_2
-  L4_2 = Config
-  L4_2 = L4_2.MoneyType
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = db
-  L4_2 = L3_2
-  L3_2 = L3_2.getBills
-  L5_2 = A1_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = {}
-  L5_2 = ipairs
-  L6_2 = L3_2
-  L5_2, L6_2, L7_2, L8_2 = L5_2(L6_2)
-  for L9_2, L10_2 in L5_2, L6_2, L7_2, L8_2 do
-    L11_2 = L10_2.payed
-    if not L11_2 then
-      L11_2 = table
-      L11_2 = L11_2.insert
-      L12_2 = L4_2
-      L13_2 = L10_2
-      L11_2(L12_2, L13_2)
-    end
-  end
-  L5_2 = #L4_2
-  if 0 == L5_2 then
-    L5_2 = Notification
-    L6_2 = A0_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "management.bills.no_unpaid_bills"
-    L7_2 = L7_2(L8_2)
-    L8_2 = "info"
-    L5_2(L6_2, L7_2, L8_2)
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = 0
-  L6_2 = ipairs
-  L7_2 = L4_2
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = tonumber
-    L13_2 = L11_2.total
-    L12_2 = L12_2(L13_2)
-    if not L12_2 then
-      L12_2 = 0
-    end
-    L5_2 = L5_2 + L12_2
-  end
-  if L2_2 < L5_2 then
-    L6_2 = Notification
-    L7_2 = A0_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "no_money"
-    L10_2 = {}
-    L10_2.price = L5_2
-    L8_2 = L8_2(L9_2, L10_2)
-    L9_2 = "error"
-    L6_2(L7_2, L8_2, L9_2)
-    L6_2 = false
-    return L6_2
-  end
-  L6_2 = GetIdentifier
-  L7_2 = A0_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = db
-  L8_2 = L7_2
-  L7_2 = L7_2.payAllBills
-  L9_2 = A1_2
-  L10_2 = L6_2
-  L7_2(L8_2, L9_2, L10_2)
-  L7_2 = RemoveAccountMoney
-  L8_2 = A0_2
-  L9_2 = Config
-  L9_2 = L9_2.MoneyType
-  L10_2 = L5_2
-  L7_2(L8_2, L9_2, L10_2)
-  L7_2 = Notification
-  L8_2 = A0_2
-  L9_2 = i18n
-  L9_2 = L9_2.t
-  L10_2 = "management.bills.you_paid_all_bills"
-  L11_2 = {}
-  L11_2.price = L5_2
-  L12_2 = #L4_2
-  L11_2.count = L12_2
-  L9_2 = L9_2(L10_2, L11_2)
-  L10_2 = "success"
-  L7_2(L8_2, L9_2, L10_2)
-  L7_2 = SendLog
-  L8_2 = DiscordWebhook
-  L9_2 = {}
-  L9_2.title = "Housing"
-  L9_2.description = "Player paid all house bills"
-  L10_2 = {}
-  L11_2 = {}
-  L11_2.name = "House"
-  L11_2.value = A1_2
-  L11_2.inline = true
-  L12_2 = {}
-  L12_2.name = "Player"
-  L13_2 = GetPlayerName
-  L14_2 = A0_2
-  L13_2 = L13_2(L14_2)
-  L12_2.value = L13_2
-  L12_2.inline = true
-  L13_2 = {}
-  L13_2.name = "Total"
-  L13_2.value = L5_2
-  L13_2.inline = true
-  L14_2 = {}
-  L14_2.name = "Count"
-  L15_2 = #L4_2
-  L14_2.value = L15_2
-  L14_2.inline = true
-  L10_2[1] = L11_2
-  L10_2[2] = L12_2
-  L10_2[3] = L13_2
-  L10_2[4] = L14_2
-  L9_2.fields = L10_2
-  L10_2 = WebhookColor
-  L9_2.color = L10_2
-  L7_2(L8_2, L9_2)
-  L7_2 = Debug
-  L8_2 = "housing:payAllBills"
-  L9_2 = "Paid all bills"
-  L10_2 = A1_2
-  L11_2 = "total"
-  L12_2 = L5_2
-  L13_2 = "count"
-  L14_2 = #L4_2
-  L7_2(L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L7_2 = true
-  return L7_2
-end
-HousingPayAllBills = L17_1
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:payAllBills"
-L19_1 = HousingPayAllBills
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L2_2 = type
-  L3_2 = A1_2
-  L2_2 = L2_2(L3_2)
-  if "string" ~= L2_2 or "" == A1_2 then
-    L2_2 = nil
-    return L2_2
-  end
-  L2_2 = GetIdentifier
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L3_2 = nil
-    return L3_2
-  end
-  L3_2 = MySQL
-  L3_2 = L3_2.single
-  L3_2 = L3_2.await
-  L4_2 = "SELECT citizenid, rented, owner FROM player_houses WHERE house = ? LIMIT 1"
-  L5_2 = {}
-  L6_2 = A1_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = OfficialHouseOwnerList
-  L4_2 = L4_2[A1_2]
-  L4_2 = L4_2 == L2_2
-  L5_2 = L3_2 or L5_2
-  if L3_2 then
-    L5_2 = tonumber
-    L6_2 = L3_2.rented
-    L5_2 = L5_2(L6_2)
-    L5_2 = 1 == L5_2
-  end
-  L6_2 = CheckHasKey
-  L7_2 = L2_2
-  L8_2 = L2_2
-  L9_2 = A1_2
-  L10_2 = A0_2
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2)
-  if not L4_2 and not L5_2 and not L6_2 then
-    L7_2 = Notification
-    L8_2 = A0_2
-    L9_2 = i18n
-    L9_2 = L9_2.t
-    L10_2 = "not_have_keys"
-    L9_2 = L9_2(L10_2)
-    L10_2 = "error"
-    L7_2(L8_2, L9_2, L10_2)
-    L7_2 = nil
-    return L7_2
-  end
-  L7_2 = db
-  L8_2 = L7_2
-  L7_2 = L7_2.getBills
-  L9_2 = A1_2
-  L7_2 = L7_2(L8_2, L9_2)
-  L8_2 = GetRents
-  L9_2 = A1_2
-  L8_2 = L8_2(L9_2)
-  if L5_2 and not L4_2 then
-    L9_2 = {}
-    L9_2.bills = L7_2
-    L9_2.rents = L8_2
-    L10_2 = {}
-    L9_2.keyholders = L10_2
-    L10_2 = {}
-    L9_2.metaKeys = L10_2
-    return L9_2
-  end
-  if L4_2 then
-    L9_2 = {}
-    L10_2 = Config
-    L10_2 = L10_2.EnableMetaKey
-    if L10_2 then
-      L10_2 = GetHouseMetaKeys
-      L11_2 = A1_2
-      L10_2 = L10_2(L11_2)
-      L9_2 = L10_2 or L9_2
-      if not L10_2 then
-        L10_2 = {}
-        L9_2 = L10_2
-      end
-    end
-    L10_2 = {}
-    L10_2.bills = L7_2
-    L10_2.rents = L8_2
-    L11_2 = GetKeyHolders
-    L12_2 = A0_2
-    L13_2 = A1_2
-    L11_2 = L11_2(L12_2, L13_2)
-    L10_2.keyholders = L11_2
-    L10_2.metaKeys = L9_2
-    return L10_2
-  end
-  L9_2 = {}
-  L10_2 = {}
-  L9_2.bills = L10_2
-  L10_2 = {}
-  L9_2.rents = L10_2
-  L10_2 = {}
-  L9_2.keyholders = L10_2
-  L10_2 = {}
-  L9_2.metaKeys = L10_2
-  return L9_2
-end
-GetHousingManagementData = L17_1
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:getManagementData"
-L19_1 = GetHousingManagementData
-L17_1(L18_1, L19_1)
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:getLightsStatus"
-function L19_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  if not A1_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = MySQL
-  L2_2 = L2_2.query
-  L2_2 = L2_2.await
-  L3_2 = "SELECT lights_on FROM player_houses WHERE house = ?"
-  L4_2 = {}
-  L5_2 = A1_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  if L2_2 then
-    L3_2 = L2_2[1]
-    if L3_2 then
-      L3_2 = L2_2[1]
-      L3_2 = L3_2.lights_on
-      return L3_2
-    end
-  end
-  L3_2 = false
-  return L3_2
-end
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  if not A1_2 then
-    L2_2 = nil
-    return L2_2
-  end
-  L2_2 = GetIdentifier
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L3_2 = nil
-    return L3_2
-  end
-  L3_2 = HouseKeyholdersList
-  L3_2 = L3_2[A1_2]
-  if not L3_2 then
-    L3_2 = {}
-  end
-  L4_2 = table
-  L4_2 = L4_2.includes
-  L5_2 = L3_2
-  L6_2 = L2_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = HouseOwnerIdentifierList
-  L5_2 = L5_2[A1_2]
-  L5_2 = L5_2 == L2_2
-  if not L4_2 and not L5_2 then
-    L6_2 = Notification
-    L7_2 = A0_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "not_have_keys"
-    L8_2 = L8_2(L9_2)
-    L9_2 = "error"
-    L6_2(L7_2, L8_2, L9_2)
-    L6_2 = nil
-    return L6_2
-  end
-  L6_2 = MySQL
-  L6_2 = L6_2.query
-  L6_2 = L6_2.await
-  L7_2 = "SELECT lights_on, lights_on_since FROM player_houses WHERE house = ?"
-  L8_2 = {}
-  L9_2 = A1_2
-  L8_2[1] = L9_2
-  L6_2 = L6_2(L7_2, L8_2)
-  if L6_2 then
-    L7_2 = L6_2[1]
-    if L7_2 then
-      goto lbl_59
-    end
-  end
-  L7_2 = nil
-  do return L7_2 end
-  ::lbl_59::
-  L7_2 = L6_2[1]
-  L7_2 = L7_2.lights_on
-  L8_2 = not L7_2
-  if L8_2 then
-    L9_2 = MySQL
-    L9_2 = L9_2.update
-    L9_2 = L9_2.await
-    L10_2 = "UPDATE player_houses SET lights_on = 1, lights_on_since = ? WHERE house = ?"
-    L11_2 = {}
-    L12_2 = os
-    L12_2 = L12_2.time
-    L12_2 = L12_2()
-    L13_2 = A1_2
-    L11_2[1] = L12_2
-    L11_2[2] = L13_2
-    L9_2(L10_2, L11_2)
-  else
-    L9_2 = MySQL
-    L9_2 = L9_2.update
-    L9_2 = L9_2.await
-    L10_2 = "UPDATE player_houses SET lights_on = 0, lights_on_since = NULL WHERE house = ?"
-    L11_2 = {}
-    L12_2 = A1_2
-    L11_2[1] = L12_2
-    L9_2(L10_2, L11_2)
-  end
-  L9_2 = TriggerClientEvent
-  L10_2 = "housing:syncLightsStatus"
-  L11_2 = -1
-  L12_2 = A1_2
-  L13_2 = L8_2
-  L9_2(L10_2, L11_2, L12_2, L13_2)
-  L9_2 = Debug
-  L10_2 = "housing:toggleLights"
-  L11_2 = "Toggled lights"
-  L12_2 = A1_2
-  L13_2 = "newStatus"
-  L14_2 = L8_2
-  L9_2(L10_2, L11_2, L12_2, L13_2, L14_2)
-  return L8_2
-end
-HousingToggleLights = L17_1
-L17_1 = lib
-L17_1 = L17_1.callback
-L17_1 = L17_1.register
-L18_1 = "housing:toggleLights"
-L19_1 = HousingToggleLights
-L17_1(L18_1, L19_1)
-function L17_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = HouseOwnerIdentifierList
-  L2_2 = L2_2[A0_2]
-  if not L2_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = HouseOwnerIdentifierList
-  L2_2 = L2_2[A0_2]
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "DELETE FROM player_houses WHERE house = ?"
-  L5_2 = {}
-  L6_2 = A0_2
-  L5_2[1] = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "DELETE FROM house_bills WHERE house = ? AND payed = 0"
-  L5_2 = {}
-  L6_2 = A0_2
-  L5_2[1] = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = HouseOwnerCitizenidList
-  L3_2[A0_2] = nil
-  L3_2 = HouseOwnerIdentifierList
-  L3_2[A0_2] = nil
-  L3_2 = OfficialHouseOwnerList
-  L3_2[A0_2] = nil
-  L3_2 = HouseKeyholdersList
-  L3_2[A0_2] = nil
-  L3_2 = L2_1
-  L3_2[A0_2] = nil
-  L3_2 = L3_1
-  L3_2[A0_2] = nil
-  L3_2 = TriggerClientEvent
-  L4_2 = "qb-houses:requiredLeaveHouse"
-  L5_2 = -1
-  L6_2 = A0_2
-  L3_2(L4_2, L5_2, L6_2)
-  L3_2 = InitHouse
-  L4_2 = A0_2
-  L3_2(L4_2)
-  L3_2 = Config
-  L3_2 = L3_2.Bills
-  L3_2 = L3_2.AutoEviction
-  L3_2 = L3_2.NotifyOnEviction
-  if L3_2 then
-    L3_2 = GetPlayerSourceFromIdentifier
-    L4_2 = L2_2
-    L3_2 = L3_2(L4_2)
-    if L3_2 then
-      L4_2 = Notification
-      L5_2 = L3_2
-      L6_2 = i18n
-      L6_2 = L6_2.t
-      L7_2 = "management.bills.auto_eviction_notice"
-      L8_2 = {}
-      L8_2.house = A0_2
-      L8_2.count = A1_2
-      L6_2 = L6_2(L7_2, L8_2)
-      L7_2 = "error"
-      L4_2(L5_2, L6_2, L7_2)
-    end
-  end
-  L3_2 = SendLog
-  L4_2 = DiscordWebhook
-  L5_2 = {}
-  L5_2.title = "Housing - Auto Eviction"
-  L5_2.description = "House owner was automatically evicted due to unpaid bills"
-  L6_2 = {}
-  L7_2 = {}
-  L7_2.name = "House"
-  L7_2.value = A0_2
-  L7_2.inline = true
-  L8_2 = {}
-  L8_2.name = "Owner"
-  L8_2.value = L2_2
-  L8_2.inline = true
-  L9_2 = {}
-  L9_2.name = "Unpaid Bills"
-  L10_2 = tostring
-  L11_2 = A1_2
-  L10_2 = L10_2(L11_2)
-  L9_2.value = L10_2
-  L9_2.inline = true
-  L6_2[1] = L7_2
-  L6_2[2] = L8_2
-  L6_2[3] = L9_2
-  L5_2.fields = L6_2
-  L5_2.color = 15158332
-  L3_2(L4_2, L5_2)
-  L3_2 = Debug
-  L4_2 = "AutoEviction"
-  L5_2 = "Evicted owner from house"
-  L6_2 = A0_2
-  L7_2 = "unpaid bills:"
-  L8_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-  L3_2 = true
-  return L3_2
-end
-function L18_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L3_2 = HouseOwnerIdentifierList
-  L3_2 = L3_2[A0_2]
-  if not L3_2 then
+  if rows[1].rentable and not rows[1].rented then
+    removeRenter(houseName, false)
+    Notification(src, i18n.t("rent.house_is_no_longer_rented"), "success")
     return
   end
-  L4_2 = GetPlayerSourceFromIdentifier
-  L5_2 = L3_2
-  L4_2 = L4_2(L5_2)
-  if L4_2 then
-    L5_2 = A2_2 - A1_2
-    L6_2 = Notification
-    L7_2 = L4_2
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "management.bills.eviction_warning"
-    L10_2 = {}
-    L10_2.house = A0_2
-    L10_2.unpaid = A1_2
-    L10_2.remaining = L5_2
-    L8_2 = L8_2(L9_2, L10_2)
-    L9_2 = "info"
-    L6_2(L7_2, L8_2, L9_2)
+  if not rows[1].rented then
+    return Notification(src, i18n.t("rent.house_is_not_rented"), "error")
+  end
+  local tenantSource = GetPlayerSourceFromIdentifier(rows[1].citizenid)
+  if tenantSource then
+    Notification(tenantSource, i18n.t("rent.hired_by_admin"), "info")
+  end
+  removeRenter(houseName, true)
+  Notification(src, i18n.t("rent.hired_success"), "info")
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Admin evicted a renter from a house",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = rows[1].owner, inline = true },
+      { name = "Tenant", value = rows[1].citizenid, inline = true },
+      { name = "Admin", value = GetPlayerName(src), inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Owner dispossess (evict) renter
+RegisterNetEvent("qb-houses:disspossesHouse", function(houseName)
+  local src = source
+  local identifier = GetIdentifier(src)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND owner = ?", { houseName, identifier })
+  if not rows[1] then
+    return Notification(src, i18n.t("you_are_not_owner"), "error")
+  end
+  if rows[1].rentable and not rows[1].rented then
+    removeRenter(houseName, false)
+    Notification(src, i18n.t("rent.house_is_no_longer_rented"), "success")
+    return
+  end
+  if not rows[1].rented then
+    return Notification(src, i18n.t("rent.house_is_not_rented"), "error")
+  end
+  -- Check for unpaid rents
+  local unpaidRents = MySQL.Sync.fetchAll("SELECT * FROM house_rents WHERE house = ? AND payed = 0", { houseName })
+  if not unpaidRents[1] then
+    return Notification(src, i18n.t("rent.cant_evict_renter"), "info")
+  end
+  local tenantSource = GetPlayerSourceFromIdentifier(rows[1].citizenid)
+  if tenantSource then
+    Notification(tenantSource, i18n.t("rent.evict_success"), "info")
+  end
+  removeRenter(houseName, true)
+  Notification(src, i18n.t("left_house"), "info")
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player evicted a renter from a house",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = rows[1].owner, inline = true },
+      { name = "Tenant", value = rows[1].citizenid, inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Pay rent
+function HousingPayRent(playerSource, rentId, houseName)
+  local money = getHouseMoney(playerSource, houseName)
+  local rentRows = MySQL.Sync.fetchAll("SELECT * FROM house_rents WHERE id = ? AND house = ?", { rentId, houseName })
+  if not rentRows[1] then
+    Notification(playerSource, i18n.t("rent.not_found"), "error")
+    return false
+  end
+  if 1 == rentRows[1].payed then
+    Notification(playerSource, i18n.t("rent.already_paid"), "error")
+    return false
+  end
+  local houseRows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND citizenid = ? AND rented = 1", { houseName, GetIdentifier(playerSource) })
+  if not houseRows[1] then
+    Notification(playerSource, i18n.t("rent.you_are_not_tenant"), "error")
+    return false
+  end
+  local rentPrice = houseRows[1].rentPrice
+  if money < rentPrice then
+    Notification(playerSource, i18n.t("no_money", { price = houseRows[1].rentPrice }), "error")
+    return false
+  end
+  removeHouseMoney(playerSource, houseName, houseRows[1].rentPrice)
+  MySQL.Sync.execute("UPDATE house_rents SET payed = 1 WHERE id = ?", { rentId })
+  Notification(playerSource, i18n.t("rent.payment_success", { price = houseRows[1].rentPrice }), "success")
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player paid the rent",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = houseRows[1].owner, inline = true },
+      { name = "Tenant", value = GetPlayerName(playerSource), inline = true },
+      { name = "Price", value = houseRows[1].rentPrice, inline = true },
+    },
+    color = WebhookColor,
+  })
+  Debug("housing:payRent", "Paid rent", houseName, "rent id", rentId)
+  return true
+end
+
+lib.callback.register("housing:payRent", HousingPayRent)
+
+
+-- Pay a single bill
+function HousingPayBill(playerSource, billId, houseName)
+  local money = GetAccountMoney(playerSource, Config.MoneyType)
+  local bill = db.getBill(billId)
+  if not bill then
+    Notification(playerSource, "Bill not found", "error")
+    return false
+  end
+  if bill.payed then
+    Notification(playerSource, "Bill already paid", "error")
+    return false
+  end
+  local total = tonumber(bill.total) or 0
+  if money < total then
+    Notification(playerSource, i18n.t("no_money", { price = total }), "error")
+    return false
+  end
+  RemoveAccountMoney(playerSource, Config.MoneyType, total)
+  db:payBill(billId, houseName, GetIdentifier(playerSource))
+  Notification(playerSource, i18n.t("management.bills.you_paid_bills", { price = total }), "success")
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player paid the house bills",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Tenant", value = GetPlayerName(playerSource), inline = true },
+      { name = "Total", value = total, inline = true },
+    },
+    color = WebhookColor,
+  })
+  Debug("housing:payBill", "Paid bill", houseName, "bill id", billId)
+  return true
+end
+
+lib.callback.register("housing:payBill", HousingPayBill)
+
+
+-- Pay all bills
+function HousingPayAllBills(playerSource, houseName)
+  local money = GetAccountMoney(playerSource, Config.MoneyType)
+  local allBills = db:getBills(houseName)
+  local unpaidBills = {}
+  for _, bill in ipairs(allBills) do
+    if not bill.payed then
+      table.insert(unpaidBills, bill)
+    end
+  end
+  if 0 == #unpaidBills then
+    Notification(playerSource, i18n.t("management.bills.no_unpaid_bills"), "info")
+    return false
+  end
+  local total = 0
+  for _, bill in ipairs(unpaidBills) do
+    total = total + (tonumber(bill.total) or 0)
+  end
+  if money < total then
+    Notification(playerSource, i18n.t("no_money", { price = total }), "error")
+    return false
+  end
+  local identifier = GetIdentifier(playerSource)
+  db:payAllBills(houseName, identifier)
+  RemoveAccountMoney(playerSource, Config.MoneyType, total)
+  Notification(playerSource, i18n.t("management.bills.you_paid_all_bills", { price = total, count = #unpaidBills }), "success")
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player paid all house bills",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Player", value = GetPlayerName(playerSource), inline = true },
+      { name = "Total", value = total, inline = true },
+      { name = "Count", value = #unpaidBills, inline = true },
+    },
+    color = WebhookColor,
+  })
+  Debug("housing:payAllBills", "Paid all bills", houseName, "total", total, "count", #unpaidBills)
+  return true
+end
+
+lib.callback.register("housing:payAllBills", HousingPayAllBills)
+
+
+-- Get management data for a house
+function GetHousingManagementData(playerSource, houseName)
+  if "string" ~= type(houseName) or "" == houseName then
+    return nil
+  end
+  local identifier = GetIdentifier(playerSource)
+  if not identifier then
+    return nil
+  end
+  local row = MySQL.single.await("SELECT citizenid, rented, owner FROM player_houses WHERE house = ? LIMIT 1", { houseName })
+  local isOwner = OfficialHouseOwnerList[houseName] == identifier
+  local isRented = row and (1 == tonumber(row.rented))
+  local hasKey = CheckHasKey(identifier, identifier, houseName, playerSource)
+
+  if not isOwner and not isRented and not hasKey then
+    Notification(playerSource, i18n.t("not_have_keys"), "error")
+    return nil
+  end
+
+  local bills = db:getBills(houseName)
+  local rents = GetRents(houseName)
+
+  if isRented and not isOwner then
+    return { bills = bills, rents = rents, keyholders = {}, metaKeys = {} }
+  end
+  if isOwner then
+    local metaKeys = {}
+    if Config.EnableMetaKey then
+      metaKeys = GetHouseMetaKeys(houseName) or {}
+    end
+    return { bills = bills, rents = rents, keyholders = GetKeyHolders(playerSource, houseName), metaKeys = metaKeys }
+  end
+  return { bills = {}, rents = {}, keyholders = {}, metaKeys = {} }
+end
+
+lib.callback.register("housing:getManagementData", GetHousingManagementData)
+
+
+-- Get lights status
+lib.callback.register("housing:getLightsStatus", function(source, houseName)
+  if not houseName then return false end
+  local result = MySQL.query.await("SELECT lights_on FROM player_houses WHERE house = ?", { houseName })
+  if result and result[1] then
+    return result[1].lights_on
+  end
+  return false
+end)
+
+-- Toggle lights
+function HousingToggleLights(playerSource, houseName)
+  if not houseName then return nil end
+  local identifier = GetIdentifier(playerSource)
+  if not identifier then return nil end
+
+  local keyholders = HouseKeyholdersList[houseName] or {}
+  local hasKey = table.includes(keyholders, identifier)
+  local isOwner = HouseOwnerIdentifierList[houseName] == identifier
+  if not hasKey and not isOwner then
+    Notification(playerSource, i18n.t("not_have_keys"), "error")
+    return nil
+  end
+
+  local result = MySQL.query.await("SELECT lights_on, lights_on_since FROM player_houses WHERE house = ?", { houseName })
+  if not result or not result[1] then
+    return nil
+  end
+
+  local currentState = result[1].lights_on
+  local newState = not currentState
+  if newState then
+    MySQL.update.await("UPDATE player_houses SET lights_on = 1, lights_on_since = ? WHERE house = ?", { os.time(), houseName })
+  else
+    MySQL.update.await("UPDATE player_houses SET lights_on = 0, lights_on_since = NULL WHERE house = ?", { houseName })
+  end
+  TriggerClientEvent("housing:syncLightsStatus", -1, houseName, newState)
+  Debug("housing:toggleLights", "Toggled lights", houseName, "newStatus", newState)
+  return newState
+end
+
+lib.callback.register("housing:toggleLights", HousingToggleLights)
+
+
+-- Auto eviction for unpaid bills
+local function autoEvictOwner(houseName, unpaidCount)
+  local ownerIdentifier = HouseOwnerIdentifierList[houseName]
+  if not ownerIdentifier then return false end
+
+  MySQL.Sync.execute("DELETE FROM player_houses WHERE house = ?", { houseName })
+  MySQL.Sync.execute("DELETE FROM house_bills WHERE house = ? AND payed = 0", { houseName })
+  HouseOwnerCitizenidList[houseName] = nil
+  HouseOwnerIdentifierList[houseName] = nil
+  OfficialHouseOwnerList[houseName] = nil
+  HouseKeyholdersList[houseName] = nil
+  rentableHousesMap[houseName] = nil
+  purchasableHousesMap[houseName] = nil
+  TriggerClientEvent("qb-houses:requiredLeaveHouse", -1, houseName)
+  InitHouse(houseName)
+
+  if Config.Bills.AutoEviction.NotifyOnEviction then
+    local ownerSource = GetPlayerSourceFromIdentifier(ownerIdentifier)
+    if ownerSource then
+      Notification(ownerSource, i18n.t("management.bills.auto_eviction_notice", { house = houseName, count = unpaidCount }), "error")
+    end
+  end
+
+  SendLog(DiscordWebhook, {
+    title = "Housing - Auto Eviction",
+    description = "House owner was automatically evicted due to unpaid bills",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = ownerIdentifier, inline = true },
+      { name = "Unpaid Bills", value = tostring(unpaidCount), inline = true },
+    },
+    color = 15158332,
+  })
+  Debug("AutoEviction", "Evicted owner from house", houseName, "unpaid bills:", unpaidCount)
+  return true
+end
+
+-- Warn owner about pending eviction
+local function warnOwnerAboutEviction(houseName, unpaidCount, maxUnpaid)
+  local ownerIdentifier = HouseOwnerIdentifierList[houseName]
+  if not ownerIdentifier then return end
+  local ownerSource = GetPlayerSourceFromIdentifier(ownerIdentifier)
+  if ownerSource then
+    Notification(ownerSource, i18n.t("management.bills.eviction_warning", { house = houseName, unpaid = unpaidCount, remaining = maxUnpaid - unpaidCount }), "info")
   end
 end
-L19_1 = Config
-L19_1 = L19_1.Bills
-if L19_1 then
-  L19_1 = Config
-  L19_1 = L19_1.Bills
-  L19_1 = L19_1.Enabled
-  if L19_1 then
-    L19_1 = CreateThread
-    function L20_1()
-      local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2
-      L0_2 = Config
-      L0_2 = L0_2.Bills
-      L0_2 = L0_2.IntervalHours
-      if not L0_2 then
-        L0_2 = 72
+
+
+-- Bills generation thread
+if Config.Bills and Config.Bills.Enabled then
+  CreateThread(function()
+    local intervalMs = (Config.Bills.IntervalHours or 72) * 60 * 60 * 1000
+    while true do
+      Wait(intervalMs)
+      local billQueries = {}
+      local updateQueries = {}
+      local houseRows = MySQL.query.await("SELECT house, lights_on, lights_on_since FROM player_houses")
+      local now = os.time()
+      local autoEvictEnabled = Config.Bills.AutoEviction and Config.Bills.AutoEviction.Enabled
+      local maxUnpaid = (Config.Bills.AutoEviction and Config.Bills.AutoEviction.MaxUnpaidBills) or 60
+      local notifyAtBills = (Config.Bills.AutoEviction and Config.Bills.AutoEviction.NotifyOwnerAtBills) or {}
+      local unpaidCounts = {}
+
+      if autoEvictEnabled then
+        local unpaidRows = MySQL.query.await("SELECT house, COUNT(*) as count FROM house_bills WHERE payed = 0 GROUP BY house")
+        for _, row in ipairs(unpaidRows or {}) do
+          unpaidCounts[row.house] = row.count
+        end
       end
-      L0_2 = L0_2 * 60
-      L0_2 = L0_2 * 60
-      L0_2 = L0_2 * 1000
-      while true do
-        L1_2 = Wait
-        L2_2 = L0_2
-        L1_2(L2_2)
-        L1_2 = {}
-        L2_2 = {}
-        L3_2 = MySQL
-        L3_2 = L3_2.query
-        L3_2 = L3_2.await
-        L4_2 = "SELECT house, lights_on, lights_on_since FROM player_houses"
-        L3_2 = L3_2(L4_2)
-        L4_2 = os
-        L4_2 = L4_2.time
-        L4_2 = L4_2()
-        L5_2 = Config
-        L5_2 = L5_2.Bills
-        L5_2 = L5_2.AutoEviction
-        if L5_2 then
-          L5_2 = Config
-          L5_2 = L5_2.Bills
-          L5_2 = L5_2.AutoEviction
-          L5_2 = L5_2.Enabled
-        end
-        L6_2 = Config
-        L6_2 = L6_2.Bills
-        L6_2 = L6_2.AutoEviction
-        if L6_2 then
-          L6_2 = Config
-          L6_2 = L6_2.Bills
-          L6_2 = L6_2.AutoEviction
-          L6_2 = L6_2.MaxUnpaidBills
-          if L6_2 then
-            goto lbl_49
-          end
-        end
-        L6_2 = 60
-        ::lbl_49::
-        L7_2 = Config
-        L7_2 = L7_2.Bills
-        L7_2 = L7_2.AutoEviction
-        if L7_2 then
-          L7_2 = Config
-          L7_2 = L7_2.Bills
-          L7_2 = L7_2.AutoEviction
-          L7_2 = L7_2.NotifyOwnerAtBills
-          if L7_2 then
-            goto lbl_62
-          end
-        end
-        L7_2 = {}
-        ::lbl_62::
-        L8_2 = {}
-        if L5_2 then
-          L9_2 = MySQL
-          L9_2 = L9_2.query
-          L9_2 = L9_2.await
-          L10_2 = "SELECT house, COUNT(*) as count FROM house_bills WHERE payed = 0 GROUP BY house"
-          L9_2 = L9_2(L10_2)
-          L10_2 = ipairs
-          L11_2 = L9_2 or L11_2
-          if not L9_2 then
-            L11_2 = {}
-          end
-          L10_2, L11_2, L12_2, L13_2 = L10_2(L11_2)
-          for L14_2, L15_2 in L10_2, L11_2, L12_2, L13_2 do
-            L16_2 = L15_2.house
-            L17_2 = L15_2.count
-            L8_2[L16_2] = L17_2
-          end
-        end
-        L9_2 = 1
-        L10_2 = #L3_2
-        L11_2 = 1
-        for L12_2 = L9_2, L10_2, L11_2 do
-          L13_2 = L3_2[L12_2]
-          L14_2 = L13_2.house
-          if L14_2 then
-            if L5_2 then
-              L15_2 = L8_2[L14_2]
-              if not L15_2 then
-                L15_2 = 0
+
+      for i = 1, #houseRows do
+        local row = houseRows[i]
+        local houseName = row.house
+        if houseName then
+          if autoEvictEnabled then
+            local count = (unpaidCounts[houseName] or 0) + 1
+            if maxUnpaid <= count then
+              Debug("AutoEviction", "Checking eviction for", houseName, "unpaid:", count, "max:", maxUnpaid)
+              if autoEvictOwner(houseName, count) then
+                -- evicted, skip bill generation
               end
-              L15_2 = L15_2 + 1
-              if L6_2 <= L15_2 then
-                L16_2 = Debug
-                L17_2 = "AutoEviction"
-                L18_2 = "Checking eviction for"
-                L19_2 = L14_2
-                L20_2 = "unpaid:"
-                L21_2 = L15_2
-                L22_2 = "max:"
-                L23_2 = L6_2
-                L16_2(L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2)
-                L16_2 = L17_1
-                L17_2 = L14_2
-                L18_2 = L15_2
-                L16_2 = L16_2(L17_2, L18_2)
-                if L16_2 then
-              end
-              else
-                L16_2 = ipairs
-                L17_2 = L7_2
-                L16_2, L17_2, L18_2, L19_2 = L16_2(L17_2)
-                for L20_2, L21_2 in L16_2, L17_2, L18_2, L19_2 do
-                  if L15_2 == L21_2 then
-                    L22_2 = L18_1
-                    L23_2 = L14_2
-                    L24_2 = L15_2
-                    L25_2 = L6_2
-                    L22_2(L23_2, L24_2, L25_2)
-                    break
-                  end
+            else
+              -- Check warning thresholds
+              for _, threshold in ipairs(notifyAtBills) do
+                if count == threshold then
+                  warnOwnerAboutEviction(houseName, count, maxUnpaid)
+                  break
                 end
-                L15_2 = 0
-                L16_2 = L13_2.lights_on
-                if L16_2 then
-                  L16_2 = L13_2.lights_on_since
-                  if L16_2 then
-                    L16_2 = L13_2.lights_on_since
-                    L16_2 = L4_2 - L16_2
-                    L16_2 = L16_2 / 3600
-                    L17_2 = Config
-                    L17_2 = L17_2.Bills
-                    L17_2 = L17_2.Electricity
-                    if L17_2 then
-                      L17_2 = Config
-                      L17_2 = L17_2.Bills
-                      L17_2 = L17_2.Electricity
-                      L17_2 = L17_2.kilowattPerHour
-                      if L17_2 then
-                        goto lbl_157
-                      end
-                    end
-                    L17_2 = 1.5
-                    ::lbl_157::
-                    L18_2 = Config
-                    L18_2 = L18_2.Bills
-                    L18_2 = L18_2.Electricity
-                    if L18_2 then
-                      L18_2 = Config
-                      L18_2 = L18_2.Bills
-                      L18_2 = L18_2.Electricity
-                      L18_2 = L18_2.pricePerKilowatt
-                      if L18_2 then
-                        goto lbl_169
-                      end
-                    end
-                    L18_2 = 50
-                    ::lbl_169::
-                    L19_2 = math
-                    L19_2 = L19_2.floor
-                    L20_2 = L16_2 * L17_2
-                    L20_2 = L20_2 * L18_2
-                    L19_2 = L19_2(L20_2)
-                    L15_2 = L19_2
-                    L19_2 = #L2_2
-                    L19_2 = L19_2 + 1
-                    L20_2 = {}
-                    L20_2.query = "UPDATE player_houses SET lights_on_since = ? WHERE house = ?"
-                    L21_2 = {}
-                    L22_2 = L4_2
-                    L23_2 = L14_2
-                    L21_2[1] = L22_2
-                    L21_2[2] = L23_2
-                    L20_2.parameters = L21_2
-                    L2_2[L19_2] = L20_2
-                  end
-                end
-                L16_2 = math
-                L16_2 = L16_2.random
-                L17_2 = Config
-                L17_2 = L17_2.Bills
-                L17_2 = L17_2.RandomRanges
-                L17_2 = L17_2.water
-                L17_2 = L17_2.min
-                L18_2 = Config
-                L18_2 = L18_2.Bills
-                L18_2 = L18_2.RandomRanges
-                L18_2 = L18_2.water
-                L18_2 = L18_2.max
-                L16_2 = L16_2(L17_2, L18_2)
-                L17_2 = math
-                L17_2 = L17_2.random
-                L18_2 = Config
-                L18_2 = L18_2.Bills
-                L18_2 = L18_2.RandomRanges
-                L18_2 = L18_2.internet
-                L18_2 = L18_2.min
-                L19_2 = Config
-                L19_2 = L19_2.Bills
-                L19_2 = L19_2.RandomRanges
-                L19_2 = L19_2.internet
-                L19_2 = L19_2.max
-                L17_2 = L17_2(L18_2, L19_2)
-                L18_2 = L15_2 + L16_2
-                L18_2 = L18_2 + L17_2
-                L19_2 = json
-                L19_2 = L19_2.encode
-                L20_2 = {}
-                L20_2.electricity = L15_2
-                L20_2.water = L16_2
-                L20_2.internet = L17_2
-                L19_2 = L19_2(L20_2)
-                L20_2 = #L1_2
-                L20_2 = L20_2 + 1
-                L21_2 = {}
-                L21_2.query = "INSERT INTO house_bills (house, total, breakdown, payed) VALUES (?, ?, ?, 0)"
-                L22_2 = {}
-                L23_2 = L14_2
-                L24_2 = L18_2
-                L25_2 = L19_2
-                L22_2[1] = L23_2
-                L22_2[2] = L24_2
-                L22_2[3] = L25_2
-                L21_2.parameters = L22_2
-                L1_2[L20_2] = L21_2
-                L20_2 = Debug
-                L21_2 = "bills"
-                L22_2 = "created"
-                L23_2 = L14_2
-                L24_2 = L18_2
-                L25_2 = "electricity"
-                L26_2 = L15_2
-                L20_2(L21_2, L22_2, L23_2, L24_2, L25_2, L26_2)
               end
+              -- Calculate electricity cost
+              local electricity = 0
+              if row.lights_on and row.lights_on_since then
+                local hoursOn = (now - row.lights_on_since) / 3600
+                local kwPerHour = (Config.Bills.Electricity and Config.Bills.Electricity.kilowattPerHour) or 1.5
+                local pricePerKw = (Config.Bills.Electricity and Config.Bills.Electricity.pricePerKilowatt) or 50
+                electricity = math.floor(hoursOn * kwPerHour * pricePerKw)
+                updateQueries[#updateQueries + 1] = { query = "UPDATE player_houses SET lights_on_since = ? WHERE house = ?", parameters = { now, houseName } }
+              end
+              local water = math.random(Config.Bills.RandomRanges.water.min, Config.Bills.RandomRanges.water.max)
+              local internet = math.random(Config.Bills.RandomRanges.internet.min, Config.Bills.RandomRanges.internet.max)
+              local total = electricity + water + internet
+              local breakdown = json.encode({ electricity = electricity, water = water, internet = internet })
+              billQueries[#billQueries + 1] = { query = "INSERT INTO house_bills (house, total, breakdown, payed) VALUES (?, ?, ?, 0)", parameters = { houseName, total, breakdown } }
+              Debug("bills", "created", houseName, total, "electricity", electricity)
             end
           end
         end
-        L9_2 = #L1_2
-        if L9_2 > 0 then
-          L9_2 = MySQL
-          L9_2 = L9_2.transaction
-          L9_2 = L9_2.await
-          L10_2 = L1_2
-          L9_2(L10_2)
-        end
-        L9_2 = #L2_2
-        if L9_2 > 0 then
-          L9_2 = MySQL
-          L9_2 = L9_2.transaction
-          L9_2 = L9_2.await
-          L10_2 = L2_2
-          L9_2(L10_2)
-        end
-        L9_2 = db
-        L10_2 = L9_2
-        L9_2 = L9_2.clearCache
-        L11_2 = "bills"
-        L9_2(L10_2, L11_2)
       end
+
+      if #billQueries > 0 then
+        MySQL.transaction.await(billQueries)
+      end
+      if #updateQueries > 0 then
+        MySQL.transaction.await(updateQueries)
+      end
+      db:clearCache("bills")
     end
-    L19_1(L20_1)
-  end
+  end)
 end
-L19_1 = RegisterNetEvent
-L20_1 = "qb-houses:leftHouse"
-function L21_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L1_2 = source
-  L2_2 = GetIdentifier
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ? AND citizenid = ? AND rented = 1"
-  L5_2 = {}
-  L6_2 = A0_2
-  L7_2 = L2_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = L1_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "rent.you_are_not_tenant"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    return L4_2(L5_2, L6_2, L7_2)
+
+
+-- Tenant leaves rented house voluntarily
+RegisterNetEvent("qb-houses:leftHouse", function(houseName)
+  local src = source
+  local identifier = GetIdentifier(src)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ? AND citizenid = ? AND rented = 1", { houseName, identifier })
+  if not rows[1] then
+    return Notification(src, i18n.t("rent.you_are_not_tenant"), "error")
   end
-  L4_2 = Notification
-  L5_2 = L1_2
-  L6_2 = i18n
-  L6_2 = L6_2.t
-  L7_2 = "left_house"
-  L6_2 = L6_2(L7_2)
-  L7_2 = "info"
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = GetPlayerSourceFromIdentifier
-  L5_2 = L3_2[1]
-  L5_2 = L5_2.owner
-  L4_2 = L4_2(L5_2)
-  if L4_2 then
-    L5_2 = Notification
-    L6_2 = L4_2
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "rent.tenant_left"
-    L9_2 = {}
-    L9_2.house = A0_2
-    L7_2 = L7_2(L8_2, L9_2)
-    L8_2 = "error"
-    L5_2(L6_2, L7_2, L8_2)
+  Notification(src, i18n.t("left_house"), "info")
+  local ownerSource = GetPlayerSourceFromIdentifier(rows[1].owner)
+  if ownerSource then
+    Notification(ownerSource, i18n.t("rent.tenant_left", { house = houseName }), "error")
   end
-  L5_2 = SendLog
-  L6_2 = DiscordWebhook
-  L7_2 = {}
-  L7_2.title = "Housing"
-  L7_2.description = "Player left a rented house"
-  L8_2 = {}
-  L9_2 = {}
-  L9_2.name = "House"
-  L9_2.value = A0_2
-  L9_2.inline = true
-  L10_2 = {}
-  L10_2.name = "Owner"
-  L11_2 = L3_2[1]
-  L11_2 = L11_2.owner
-  L10_2.value = L11_2
-  L10_2.inline = true
-  L11_2 = {}
-  L11_2.name = "Tenant"
-  L12_2 = GetPlayerName
-  L13_2 = L1_2
-  L12_2 = L12_2(L13_2)
-  L11_2.value = L12_2
-  L11_2.inline = true
-  L8_2[1] = L9_2
-  L8_2[2] = L10_2
-  L8_2[3] = L11_2
-  L7_2.fields = L8_2
-  L8_2 = WebhookColor
-  L7_2.color = L8_2
-  L5_2(L6_2, L7_2)
-  L5_2 = L16_1
-  L6_2 = A0_2
-  L7_2 = true
-  L5_2(L6_2, L7_2)
-end
-L19_1(L20_1, L21_1)
-L19_1 = RegisterNetEvent
-L20_1 = "housing:lease"
-function L21_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2
-  L3_2 = source
-  L4_2 = Config
-  L4_2 = L4_2.EnableRentable
-  if not L4_2 then
-    L4_2 = Notification
-    L5_2 = L3_2
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "rent.disabled"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L4_2(L5_2, L6_2, L7_2)
-    L4_2 = Debug
-    L5_2 = "housing:lease"
-    L6_2 = "Rentable houses are disabled"
-    L4_2(L5_2, L6_2)
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player left a rented house",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = rows[1].owner, inline = true },
+      { name = "Tenant", value = GetPlayerName(src), inline = true },
+    },
+    color = WebhookColor,
+  })
+  removeRenter(houseName, true)
+end)
+
+
+-- Lease house (put up for rent)
+RegisterNetEvent("housing:lease", function(houseName, rentPrice, leaseOptions)
+  local src = source
+  if not Config.EnableRentable then
+    Notification(src, i18n.t("rent.disabled"), "error")
+    Debug("housing:lease", "Rentable houses are disabled")
     return
   end
-  L4_2 = GetIdentifier
-  L5_2 = L3_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = HasPermission
-  L6_2 = L3_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = [[
-		SELECT * FROM player_houses WHERE house = ? AND owner = ? AND rented IS NULL
-	]]
-  L7_2 = {}
-  L8_2 = A0_2
-  L9_2 = L4_2
-  L7_2[1] = L8_2
-  L7_2[2] = L9_2
-  L8_2 = Config
-  L8_2 = L8_2.CreatedRentableHousesManageable
-  if not L8_2 and L5_2 then
-    L6_2 = [[
-			SELECT * FROM player_houses WHERE house = ? AND rented IS NULL
-		]]
-    L8_2 = {}
-    L9_2 = A0_2
-    L8_2[1] = L9_2
-    L7_2 = L8_2
-    L8_2 = Debug
-    L9_2 = "housing:lease"
-    L10_2 = "Realestate is leasing"
-    L8_2(L9_2, L10_2)
+  local identifier = GetIdentifier(src)
+  local hasPermission = HasPermission(src)
+
+  local query = "SELECT * FROM player_houses WHERE house = ? AND owner = ? AND rented IS NULL"
+  local params = { houseName, identifier }
+
+  if not Config.CreatedRentableHousesManageable and hasPermission then
+    query = "SELECT * FROM player_houses WHERE house = ? AND rented IS NULL"
+    params = { houseName }
+    Debug("housing:lease", "Realestate is leasing")
   end
-  L8_2 = MySQL
-  L8_2 = L8_2.Sync
-  L8_2 = L8_2.fetchAll
-  L9_2 = L6_2
-  L10_2 = L7_2
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = L8_2[1]
-  if not L9_2 then
-    L9_2 = Notification
-    L10_2 = L3_2
-    L11_2 = i18n
-    L11_2 = L11_2.t
-    L12_2 = "rent.no_owner_or_renter"
-    L11_2 = L11_2(L12_2)
-    L12_2 = "error"
-    return L9_2(L10_2, L11_2, L12_2)
+
+  local rows = MySQL.Sync.fetchAll(query, params)
+  if not rows[1] then
+    return Notification(src, i18n.t("rent.no_owner_or_renter"), "error")
   end
-  L9_2 = L3_1
-  L9_2 = L9_2[A0_2]
-  if L9_2 then
-    L9_2 = Notification
-    L10_2 = L3_2
-    L11_2 = i18n
-    L11_2 = L11_2.t
-    L12_2 = "rent.in_sell"
-    L11_2 = L11_2(L12_2)
-    L12_2 = "error"
-    return L9_2(L10_2, L11_2, L12_2)
+  if purchasableHousesMap[houseName] then
+    return Notification(src, i18n.t("rent.in_sell"), "error")
   end
-  if not A2_2 then
-    L9_2 = {}
-    A2_2 = L9_2
-  end
-  L9_2 = json
-  L9_2 = L9_2.encode
-  L10_2 = A2_2.photos
-  if not L10_2 then
-    L10_2 = {}
-  end
-  L9_2 = L9_2(L10_2)
-  L10_2 = A2_2.description
-  if not L10_2 then
-    L10_2 = ""
-  end
-  L11_2 = A2_2.furnished
-  if false ~= L11_2 then
-    L11_2 = 1
-    if L11_2 then
-      goto lbl_102
-    end
-  end
-  L11_2 = 0
-  ::lbl_102::
-  L12_2 = A2_2.hideFromBrowser
-  if L12_2 then
-    L12_2 = 1
-    if L12_2 then
-      goto lbl_109
-    end
-  end
-  L12_2 = 0
-  ::lbl_109::
-  L13_2 = MySQL
-  L13_2 = L13_2.Sync
-  L13_2 = L13_2.execute
-  L14_2 = "UPDATE player_houses SET citizenid = player_houses.owner, rentable = 1, rentPrice = ?, rent_furnished = ? WHERE id = ?"
-  L15_2 = {}
-  L16_2 = A1_2
-  L17_2 = L11_2
-  L18_2 = L8_2[1]
-  L18_2 = L18_2.id
-  L15_2[1] = L16_2
-  L15_2[2] = L17_2
-  L15_2[3] = L18_2
-  L13_2(L14_2, L15_2)
-  L13_2 = MySQL
-  L13_2 = L13_2.Sync
-  L13_2 = L13_2.execute
-  L14_2 = [[
+
+  if not leaseOptions then leaseOptions = {} end
+  local photosJson = json.encode(leaseOptions.photos or {})
+  local description = leaseOptions.description or ""
+  local furnished = (false ~= leaseOptions.furnished) and 1 or 0
+  local hidden = leaseOptions.hideFromBrowser and 1 or 0
+
+  MySQL.Sync.execute("UPDATE player_houses SET citizenid = player_houses.owner, rentable = 1, rentPrice = ?, rent_furnished = ? WHERE id = ?", { rentPrice, furnished, rows[1].id })
+  MySQL.Sync.execute([[
 		UPDATE houselocations SET
 			photos = ?,
 			description = ?,
 			hideFromBrowser = ?
 		WHERE name = ?
-	]]
-  L15_2 = {}
-  L16_2 = L9_2
-  L17_2 = L10_2
-  L18_2 = L12_2
-  L19_2 = A0_2
-  L15_2[1] = L16_2
-  L15_2[2] = L17_2
-  L15_2[3] = L18_2
-  L15_2[4] = L19_2
-  L13_2(L14_2, L15_2)
-  L13_2 = L2_1
-  L13_2[A0_2] = true
-  L13_2 = Config
-  L13_2 = L13_2.Houses
-  L13_2 = L13_2[A0_2]
-  L14_2 = A2_2.photos
-  if not L14_2 then
-    L14_2 = {}
+	]], { photosJson, description, hidden, houseName })
+
+  rentableHousesMap[houseName] = true
+  Config.Houses[houseName].photos = leaseOptions.photos or {}
+  Config.Houses[houseName].description = description
+  Config.Houses[houseName].hideFromBrowser = 1 == hidden
+  Config.Houses[houseName].rentFurnished = 1 == furnished
+
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "photos", Config.Houses[houseName].photos)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "description", Config.Houses[houseName].description)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "hideFromBrowser", Config.Houses[houseName].hideFromBrowser)
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "rentFurnished", Config.Houses[houseName].rentFurnished)
+  Notification(src, i18n.t("rent.rented"), "success")
+  TriggerClientEvent("housing:refreshHouse", -1, houseName)
+
+  SendLog(DiscordWebhook, {
+    title = "Housing",
+    description = "Player rented a house",
+    fields = {
+      { name = "House", value = houseName, inline = true },
+      { name = "Owner", value = rows[1].owner, inline = true },
+      { name = "Tenant", value = GetPlayerName(src), inline = true },
+      { name = "Price", value = rentPrice, inline = true },
+      { name = "Furnished", value = tostring(1 == furnished), inline = true },
+      { name = "Hidden", value = tostring(1 == hidden), inline = true },
+    },
+    color = WebhookColor,
+  })
+end)
+
+
+-- Get rents for a house
+function GetRents(houseName)
+  local rents = {}
+  local houseRows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ?", { houseName })
+  if not houseRows[1] then
+    Debug("housing:getRents", "No house found", houseName)
+    return rents
   end
-  L13_2.photos = L14_2
-  L13_2 = Config
-  L13_2 = L13_2.Houses
-  L13_2 = L13_2[A0_2]
-  L13_2.description = L10_2
-  L13_2 = Config
-  L13_2 = L13_2.Houses
-  L13_2 = L13_2[A0_2]
-  L14_2 = 1 == L12_2
-  L13_2.hideFromBrowser = L14_2
-  L13_2 = Config
-  L13_2 = L13_2.Houses
-  L13_2 = L13_2[A0_2]
-  L14_2 = 1 == L11_2
-  L13_2.rentFurnished = L14_2
-  L13_2 = TriggerClientEvent
-  L14_2 = "housing:updateHouseData"
-  L15_2 = -1
-  L16_2 = A0_2
-  L17_2 = "photos"
-  L18_2 = Config
-  L18_2 = L18_2.Houses
-  L18_2 = L18_2[A0_2]
-  L18_2 = L18_2.photos
-  L13_2(L14_2, L15_2, L16_2, L17_2, L18_2)
-  L13_2 = TriggerClientEvent
-  L14_2 = "housing:updateHouseData"
-  L15_2 = -1
-  L16_2 = A0_2
-  L17_2 = "description"
-  L18_2 = Config
-  L18_2 = L18_2.Houses
-  L18_2 = L18_2[A0_2]
-  L18_2 = L18_2.description
-  L13_2(L14_2, L15_2, L16_2, L17_2, L18_2)
-  L13_2 = TriggerClientEvent
-  L14_2 = "housing:updateHouseData"
-  L15_2 = -1
-  L16_2 = A0_2
-  L17_2 = "hideFromBrowser"
-  L18_2 = Config
-  L18_2 = L18_2.Houses
-  L18_2 = L18_2[A0_2]
-  L18_2 = L18_2.hideFromBrowser
-  L13_2(L14_2, L15_2, L16_2, L17_2, L18_2)
-  L13_2 = TriggerClientEvent
-  L14_2 = "housing:updateHouseData"
-  L15_2 = -1
-  L16_2 = A0_2
-  L17_2 = "rentFurnished"
-  L18_2 = Config
-  L18_2 = L18_2.Houses
-  L18_2 = L18_2[A0_2]
-  L18_2 = L18_2.rentFurnished
-  L13_2(L14_2, L15_2, L16_2, L17_2, L18_2)
-  L13_2 = Notification
-  L14_2 = L3_2
-  L15_2 = i18n
-  L15_2 = L15_2.t
-  L16_2 = "rent.rented"
-  L15_2 = L15_2(L16_2)
-  L16_2 = "success"
-  L13_2(L14_2, L15_2, L16_2)
-  L13_2 = TriggerClientEvent
-  L14_2 = "housing:refreshHouse"
-  L15_2 = -1
-  L16_2 = A0_2
-  L13_2(L14_2, L15_2, L16_2)
-  L13_2 = SendLog
-  L14_2 = DiscordWebhook
-  L15_2 = {}
-  L15_2.title = "Housing"
-  L15_2.description = "Player rented a house"
-  L16_2 = {}
-  L17_2 = {}
-  L17_2.name = "House"
-  L17_2.value = A0_2
-  L17_2.inline = true
-  L18_2 = {}
-  L18_2.name = "Owner"
-  L19_2 = L8_2[1]
-  L19_2 = L19_2.owner
-  L18_2.value = L19_2
-  L18_2.inline = true
-  L19_2 = {}
-  L19_2.name = "Tenant"
-  L20_2 = GetPlayerName
-  L21_2 = L3_2
-  L20_2 = L20_2(L21_2)
-  L19_2.value = L20_2
-  L19_2.inline = true
-  L20_2 = {}
-  L20_2.name = "Price"
-  L20_2.value = A1_2
-  L20_2.inline = true
-  L21_2 = {}
-  L21_2.name = "Furnished"
-  L22_2 = tostring
-  L23_2 = 1 == L11_2
-  L22_2 = L22_2(L23_2)
-  L21_2.value = L22_2
-  L21_2.inline = true
-  L22_2 = {}
-  L22_2.name = "Hidden"
-  L23_2 = tostring
-  L24_2 = 1 == L12_2
-  L23_2 = L23_2(L24_2)
-  L22_2.value = L23_2
-  L22_2.inline = true
-  L16_2[1] = L17_2
-  L16_2[2] = L18_2
-  L16_2[3] = L19_2
-  L16_2[4] = L20_2
-  L16_2[5] = L21_2
-  L16_2[6] = L22_2
-  L15_2.fields = L16_2
-  L16_2 = WebhookColor
-  L15_2.color = L16_2
-  L13_2(L14_2, L15_2)
+  local rentRows = MySQL.Sync.fetchAll("SELECT * FROM house_rents WHERE house = ? ORDER BY payed ASC, date DESC LIMIT 50", { houseName })
+  if not rentRows[1] then
+    return rents
+  end
+  local firstName, lastName = GetCharacterFromIdentifier(rentRows[1].identifier)
+  for _, row in pairs(rentRows) do
+    table.insert(rents, {
+      id = row.id,
+      name = firstName .. " " .. lastName,
+      identifier = row.identifier,
+      payed = 1 == row.payed,
+      date = row.date,
+      price = houseRows[1].rentPrice,
+    })
+  end
+  return rents
 end
-L19_1(L20_1, L21_1)
-function L19_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L1_2 = {}
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "SELECT * FROM player_houses WHERE house = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = L2_2[1]
-  if not L3_2 then
-    L3_2 = Debug
-    L4_2 = "housing:getRents"
-    L5_2 = "No house found"
-    L6_2 = A0_2
-    L3_2(L4_2, L5_2, L6_2)
-    return L1_2
-  end
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM house_rents WHERE house = ? ORDER BY payed ASC, date DESC LIMIT 50"
-  L5_2 = {}
-  L6_2 = A0_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if not L4_2 then
-    return L1_2
-  end
-  L4_2 = GetCharacterFromIdentifier
-  L5_2 = L3_2[1]
-  L5_2 = L5_2.identifier
-  L4_2, L5_2 = L4_2(L5_2)
-  L6_2 = pairs
-  L7_2 = L3_2
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = table
-    L12_2 = L12_2.insert
-    L13_2 = L1_2
-    L14_2 = {}
-    L15_2 = L11_2.id
-    L14_2.id = L15_2
-    L15_2 = L4_2
-    L16_2 = " "
-    L17_2 = L5_2
-    L15_2 = L15_2 .. L16_2 .. L17_2
-    L14_2.name = L15_2
-    L15_2 = L11_2.identifier
-    L14_2.identifier = L15_2
-    L15_2 = L11_2.payed
-    L15_2 = 1 == L15_2
-    L14_2.payed = L15_2
-    L15_2 = L11_2.date
-    L14_2.date = L15_2
-    L15_2 = L2_2[1]
-    L15_2 = L15_2.rentPrice
-    L14_2.price = L15_2
-    L12_2(L13_2, L14_2)
-  end
-  return L1_2
+
+-- Create a rent record
+function CreateHouseRent(houseName, identifier, payed)
+  local payedVal = payed and 1 or 0
+  MySQL.Sync.execute("INSERT INTO house_rents (house, identifier, payed) VALUES (?, ?, ?)", { houseName, identifier, payedVal })
+  TriggerEvent("housing:handleRentPayment", houseName, identifier, payedVal)
 end
-GetRents = L19_1
-function L19_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  if A2_2 then
-    L3_2 = 1
-    if L3_2 then
-      goto lbl_7
-      A2_2 = L3_2 or A2_2
-    end
-  end
-  A2_2 = 0
-  ::lbl_7::
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "INSERT INTO house_rents (house, identifier, payed) VALUES (?, ?, ?)"
-  L5_2 = {}
-  L6_2 = A0_2
-  L7_2 = A1_2
-  L8_2 = A2_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L5_2[3] = L8_2
-  L3_2(L4_2, L5_2)
-  L3_2 = TriggerEvent
-  L4_2 = "housing:handleRentPayment"
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L7_2 = A2_2
-  L3_2(L4_2, L5_2, L6_2, L7_2)
-end
-CreateHouseRent = L19_1
-function L19_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L2_2 = A0_2.rentPrice
-  L3_2 = A0_2.house
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L4_2 = L4_2[L3_2]
-  if not L4_2 or not L2_2 then
-    return
-  end
-  L5_2 = L4_2.creator
-  L6_2 = A0_2.owner
-  L5_2 = L5_2 == L6_2
-  L6_2 = getHousePaymentMethod
-  L7_2 = L3_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = GetPlayerSourceFromIdentifier
-  L8_2 = A0_2.citizenid
-  L7_2 = L7_2(L8_2)
-  L8_2 = false
-  if L7_2 then
-    L9_2 = GetAccountMoney
-    L10_2 = L7_2
-    L11_2 = L6_2
-    L9_2 = L9_2(L10_2, L11_2)
-    if L2_2 <= L9_2 then
-      L9_2 = RemoveAccountMoney
-      L10_2 = L7_2
-      L11_2 = L6_2
-      L12_2 = L2_2
-      L9_2(L10_2, L11_2, L12_2)
-      L9_2 = Notification
-      L10_2 = L7_2
-      L11_2 = i18n
-      L11_2 = L11_2.t
-      L12_2 = "rent.payment_success"
-      L13_2 = {}
-      L13_2.price = L2_2
-      L11_2 = L11_2(L12_2, L13_2)
-      L12_2 = "success"
-      L9_2(L10_2, L11_2, L12_2)
-      L8_2 = true
+
+
+-- Process rent charge for a single house
+local function processRentCharge(houseRow, updateDueDate)
+  local rentPrice = houseRow.rentPrice
+  local houseName = houseRow.house
+  local houseConfig = Config.Houses[houseName]
+  if not houseConfig or not rentPrice then return end
+
+  local isCreatorOwned = houseConfig.creator == houseRow.owner
+  local payMethod = getHousePaymentMethod(houseName)
+  local tenantSource = GetPlayerSourceFromIdentifier(houseRow.citizenid)
+  local paid = false
+
+  if tenantSource then
+    local money = GetAccountMoney(tenantSource, payMethod)
+    if rentPrice <= money then
+      RemoveAccountMoney(tenantSource, payMethod, rentPrice)
+      Notification(tenantSource, i18n.t("rent.payment_success", { price = rentPrice }), "success")
+      paid = true
     else
-      L9_2 = CreateHouseRent
-      L10_2 = L3_2
-      L11_2 = A0_2.citizenid
-      L12_2 = false
-      L9_2(L10_2, L11_2, L12_2)
-      L9_2 = Notification
-      L10_2 = L7_2
-      L11_2 = i18n
-      L11_2 = L11_2.t
-      L12_2 = "rent.payment_failed"
-      L13_2 = {}
-      L13_2.price = L2_2
-      L11_2 = L11_2(L12_2, L13_2)
-      L12_2 = "error"
-      L9_2(L10_2, L11_2, L12_2)
+      CreateHouseRent(houseName, houseRow.citizenid, false)
+      Notification(tenantSource, i18n.t("rent.payment_failed", { price = rentPrice }), "error")
     end
   else
-    L9_2 = removeHouseMoneyFromIdentifier
-    L10_2 = A0_2.citizenid
-    L11_2 = L3_2
-    L12_2 = L2_2
-    L9_2 = L9_2(L10_2, L11_2, L12_2)
-    L8_2 = true == L9_2
-    if not L8_2 then
-      L9_2 = CreateHouseRent
-      L10_2 = L3_2
-      L11_2 = A0_2.citizenid
-      L12_2 = false
-      L9_2(L10_2, L11_2, L12_2)
+    local result = removeHouseMoneyFromIdentifier(houseRow.citizenid, houseName, rentPrice)
+    paid = true == result
+    if not paid then
+      CreateHouseRent(houseName, houseRow.citizenid, false)
     end
   end
-  if L8_2 then
-    if L5_2 then
-      L9_2 = Config
-      L9_2 = L9_2.Society
-      if "none" == L9_2 then
-        L9_2 = L4_2.creator
-        if L9_2 then
-          L9_2 = Debug
-          L10_2 = "Please specify a society in the config otherwise realestate jobs will not get the money"
-          L9_2(L10_2)
-        end
+
+  if paid then
+    if isCreatorOwned then
+      if "none" == Config.Society and houseConfig.creator then
+        Debug("Please specify a society in the config otherwise realestate jobs will not get the money")
       end
-      L9_2 = L4_2.creatorJob
-      if L9_2 then
-        L10_2 = AddMoneyToSociety
-        L11_2 = L7_2 or L11_2
-        if not L7_2 then
-          L11_2 = A0_2.citizenid
-        end
-        L12_2 = L9_2
-        L13_2 = L2_2
-        L10_2(L11_2, L12_2, L13_2)
-        L10_2 = Debug
-        L11_2 = "processRentCharge"
-        L12_2 = "Added money to society"
-        L13_2 = L9_2
-        L14_2 = L2_2
-        L10_2(L11_2, L12_2, L13_2, L14_2)
+      if houseConfig.creatorJob then
+        AddMoneyToSociety(tenantSource or houseRow.citizenid, houseConfig.creatorJob, rentPrice)
+        Debug("processRentCharge", "Added money to society", houseConfig.creatorJob, rentPrice)
       else
-        L10_2 = Debug
-        L11_2 = "processRentCharge"
-        L12_2 = "No creator job"
-        L13_2 = L9_2
-        L10_2(L11_2, L12_2, L13_2)
+        Debug("processRentCharge", "No creator job", houseConfig.creatorJob)
       end
     else
-      L9_2 = AddMoneyToAccount
-      L10_2 = A0_2.owner
-      L11_2 = L2_2
-      L9_2(L10_2, L11_2)
+      AddMoneyToAccount(houseRow.owner, rentPrice)
     end
-    L9_2 = CreateHouseRent
-    L10_2 = L3_2
-    L11_2 = A0_2.citizenid
-    L12_2 = true
-    L9_2(L10_2, L11_2, L12_2)
+    CreateHouseRent(houseName, houseRow.citizenid, true)
   end
-  if A1_2 then
-    L9_2 = A0_2.id
-    if L9_2 then
-      L9_2 = MySQL
-      L9_2 = L9_2.update
-      L9_2 = L9_2.await
-      L10_2 = "UPDATE player_houses SET rentNextChargeAt = DATE_ADD(COALESCE(rentNextChargeAt, UTC_TIMESTAMP()), INTERVAL 1 MONTH) WHERE id = ?"
-      L11_2 = {}
-      L12_2 = A0_2.id
-      L11_2[1] = L12_2
-      L9_2(L10_2, L11_2)
-    end
+
+  if updateDueDate and houseRow.id then
+    MySQL.update.await("UPDATE player_houses SET rentNextChargeAt = DATE_ADD(COALESCE(rentNextChargeAt, UTC_TIMESTAMP()), INTERVAL 1 MONTH) WHERE id = ?", { houseRow.id })
   end
 end
-function L20_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = MySQL
-  L0_2 = L0_2.Sync
-  L0_2 = L0_2.fetchAll
-  L1_2 = "SELECT id, house, rentPrice, citizenid, owner FROM player_houses WHERE rented = 1"
-  L0_2 = L0_2(L1_2)
-  L1_2 = pairs
-  L2_2 = L0_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L19_1
-    L8_2 = L6_2
-    L9_2 = false
-    L7_2(L8_2, L9_2)
+
+
+-- Charge all rented houses (legacy mode)
+local function chargeAllRentedHouses()
+  local rows = MySQL.Sync.fetchAll("SELECT id, house, rentPrice, citizenid, owner FROM player_houses WHERE rented = 1")
+  for _, row in pairs(rows) do
+    processRentCharge(row, false)
   end
 end
-function L21_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = MySQL
-  L0_2 = L0_2.Sync
-  L0_2 = L0_2.fetchAll
-  L1_2 = [[
+
+-- Charge due rented houses (anniversary mode)
+local function chargeDueRentedHouses()
+  local rows = MySQL.Sync.fetchAll([[
 		SELECT id, house, rentPrice, citizenid, owner
 		FROM player_houses
 		WHERE rented = 1 AND rentNextChargeAt IS NOT NULL AND rentNextChargeAt <= UTC_TIMESTAMP()
-	]]
-  L0_2 = L0_2(L1_2)
-  L1_2 = pairs
-  L2_2 = L0_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L19_1
-    L8_2 = L6_2
-    L9_2 = true
-    L7_2(L8_2, L9_2)
+	]])
+  for _, row in pairs(rows) do
+    processRentCharge(row, true)
   end
 end
-function L22_1()
-  local L0_2, L1_2
-  L0_2 = L9_1
-  L0_2 = L0_2()
-  if L0_2 then
-    L0_2 = L21_1
-    L0_2()
+
+-- Run the appropriate rent charge logic
+local function runRentCharges()
+  if isMonthlyUTCAnniversaryMode() then
+    chargeDueRentedHouses()
   else
-    L0_2 = L20_1
-    L0_2()
+    chargeAllRentedHouses()
   end
 end
-function L23_1()
-  local L0_2, L1_2
-  L0_2 = MySQL
-  L0_2 = L0_2.Sync
-  L0_2 = L0_2.execute
-  L1_2 = "DELETE FROM house_rents WHERE date < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 10 DAY) AND payed = 0"
-  L0_2(L1_2)
+
+-- Clean old unpaid rent records
+local function cleanOldRentRecords()
+  MySQL.Sync.execute("DELETE FROM house_rents WHERE date < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 10 DAY) AND payed = 0")
 end
-L24_1 = Config
-L24_1 = L24_1.EnableRentable
-if L24_1 then
-  L24_1 = CreateThread
-  function L25_1()
-    local L0_2, L1_2, L2_2
-    L0_2 = Wait
-    L1_2 = 5000
-    L0_2(L1_2)
-    L0_2 = L9_1
-    L0_2 = L0_2()
-    if L0_2 then
-      L0_2 = Config
-      L0_2 = L0_2.RentScheduler
-      if L0_2 then
-        L0_2 = Config
-        L0_2 = L0_2.RentScheduler
-        L0_2 = L0_2.PollMinutes
-        if L0_2 then
-          goto lbl_18
-        end
-      end
-      L0_2 = 5
-      ::lbl_18::
-      if L0_2 < 1 then
-        L0_2 = 1
-      end
+
+-- Rent scheduler thread
+if Config.EnableRentable then
+  CreateThread(function()
+    Wait(5000)
+    if isMonthlyUTCAnniversaryMode() then
+      local pollMinutes = (Config.RentScheduler and Config.RentScheduler.PollMinutes) or 5
+      if pollMinutes < 1 then pollMinutes = 1 end
       while true do
-        L1_2 = Wait
-        L2_2 = L0_2 * 60000
-        L1_2(L2_2)
-        L1_2 = L22_1
-        L1_2()
-        L1_2 = L23_1
-        L1_2()
+        Wait(pollMinutes * 60000)
+        runRentCharges()
+        cleanOldRentRecords()
       end
     else
       while true do
-        L0_2 = Wait
-        L1_2 = Config
-        L1_2 = L1_2.RentTime
-        L1_2 = L1_2 * 60000
-        L0_2(L1_2)
-        L0_2 = L22_1
-        L0_2()
-        L0_2 = L23_1
-        L0_2()
+        Wait(Config.RentTime * 60000)
+        runRentCharges()
+        cleanOldRentRecords()
       end
     end
-  end
-  L24_1(L25_1)
+  end)
 end
-L24_1 = CreateThread
-function L25_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
+
+
+-- Credit payment thread
+CreateThread(function()
   while true do
-    L0_2 = Wait
-    L1_2 = Config
-    L1_2 = L1_2.CreditTime
-    L1_2 = L1_2 * 60000
-    L0_2(L1_2)
-    L0_2 = MySQL
-    L0_2 = L0_2.Sync
-    L0_2 = L0_2.fetchAll
-    L1_2 = "SELECT credit, creditPrice, citizenid, house FROM player_houses"
-    L0_2 = L0_2(L1_2)
-    L1_2 = 1
-    L2_2 = #L0_2
-    L3_2 = 1
-    for L4_2 = L1_2, L2_2, L3_2 do
-      L5_2 = L0_2[L4_2]
-      L5_2 = L5_2.credit
-      if L5_2 then
-        L5_2 = L0_2[L4_2]
-        L5_2 = L5_2.credit
-        if "" ~= L5_2 then
-          L5_2 = tonumber
-          L6_2 = L0_2[L4_2]
-          L6_2 = L6_2.credit
-          L5_2 = L5_2(L6_2)
-          L6_2 = tonumber
-          L7_2 = L0_2[L4_2]
-          L7_2 = L7_2.creditPrice
-          L6_2 = L6_2(L7_2)
-          if L5_2 > 0 and L6_2 then
-            L7_2 = GetPlayerSourceFromIdentifier
-            L8_2 = L0_2[L4_2]
-            L8_2 = L8_2.citizenid
-            L7_2 = L7_2(L8_2)
-            if L7_2 then
-              L8_2 = RemoveAccountMoney
-              L9_2 = L7_2
-              L10_2 = "bank"
-              L11_2 = L6_2
-              L8_2(L9_2, L10_2, L11_2)
-              L8_2 = Notification
-              L9_2 = L7_2
-              L10_2 = i18n
-              L10_2 = L10_2.t
-              L11_2 = "rent.pay_mortgage"
-              L12_2 = {}
-              L12_2.price = L6_2
-              L13_2 = L5_2 - L6_2
-              L12_2.remaining = L13_2
-              L10_2 = L10_2(L11_2, L12_2)
-              L11_2 = "success"
-              L8_2(L9_2, L10_2, L11_2)
-              L8_2 = L5_2 - L6_2
-              if L8_2 < 0 then
-                L8_2 = AddAccountMoney
-                L9_2 = L7_2
-                L10_2 = "bank"
-                L11_2 = L6_2 - L5_2
-                L8_2(L9_2, L10_2, L11_2)
-                L8_2 = Notification
-                L9_2 = L7_2
-                L10_2 = i18n
-                L10_2 = L10_2.t
-                L11_2 = "rent.transfer_account"
-                L12_2 = {}
-                L13_2 = L6_2 - L5_2
-                L12_2.price = L13_2
-                L10_2 = L10_2(L11_2, L12_2)
-                L11_2 = "info"
-                L8_2(L9_2, L10_2, L11_2)
-              end
-            else
-              L8_2 = L5_2 - L6_2
-              if L8_2 < 0 then
-                L8_2 = L6_2 - L5_2
-                if L8_2 then
-                  goto lbl_94
-                end
-              end
-              L8_2 = 0
-              ::lbl_94::
-              L9_2 = RemoveMoneyFromAccount
-              L10_2 = L0_2[L4_2]
-              L10_2 = L10_2.citizenid
-              L11_2 = L6_2
-              L12_2 = true
-              L9_2(L10_2, L11_2, L12_2)
-              L9_2 = AddMoneyToAccount
-              L10_2 = L0_2[L4_2]
-              L10_2 = L10_2.citizenid
-              L11_2 = L8_2
-              L9_2(L10_2, L11_2)
+    Wait(Config.CreditTime * 60000)
+    local rows = MySQL.Sync.fetchAll("SELECT credit, creditPrice, citizenid, house FROM player_houses")
+    for i = 1, #rows do
+      local credit = rows[i].credit
+      if credit and "" ~= credit then
+        local creditRemaining = tonumber(rows[i].credit)
+        local creditPayment = tonumber(rows[i].creditPrice)
+        if creditRemaining > 0 and creditPayment then
+          local playerSource = GetPlayerSourceFromIdentifier(rows[i].citizenid)
+          if playerSource then
+            RemoveAccountMoney(playerSource, "bank", creditPayment)
+            Notification(playerSource, i18n.t("rent.pay_mortgage", { price = creditPayment, remaining = creditRemaining - creditPayment }), "success")
+            if creditRemaining - creditPayment < 0 then
+              AddAccountMoney(playerSource, "bank", creditPayment - creditRemaining)
+              Notification(playerSource, i18n.t("rent.transfer_account", { price = creditPayment - creditRemaining }), "info")
             end
-            L8_2 = MySQL
-            L8_2 = L8_2.Sync
-            L8_2 = L8_2.execute
-            L9_2 = "UPDATE player_houses SET credit = ? WHERE house = ?"
-            L10_2 = {}
-            L11_2 = L5_2 - L6_2
-            if L11_2 <= 0 then
-              L11_2 = 0
-              if L11_2 then
-                goto lbl_120
-              end
-            end
-            L11_2 = L5_2 - L6_2
-            ::lbl_120::
-            L12_2 = L0_2[L4_2]
-            L12_2 = L12_2.house
-            L10_2[1] = L11_2
-            L10_2[2] = L12_2
-            L8_2(L9_2, L10_2)
+          else
+            local refund = (creditRemaining - creditPayment < 0) and (creditPayment - creditRemaining) or 0
+            RemoveMoneyFromAccount(rows[i].citizenid, creditPayment, true)
+            AddMoneyToAccount(rows[i].citizenid, refund)
           end
+          local newCredit = (creditRemaining - creditPayment <= 0) and 0 or (creditRemaining - creditPayment)
+          MySQL.Sync.execute("UPDATE player_houses SET credit = ? WHERE house = ?", { newCredit, rows[i].house })
         end
       end
     end
   end
-end
-L24_1(L25_1)
-L24_1 = RegisterServerCallback
-L25_1 = "qb-phone:server:TransferCid"
-function L26_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L4_2 = GetIdentifier
-  L5_2 = A2_2
-  L4_2 = L4_2(L5_2)
-  if L4_2 then
-    L5_2 = GetPlayerSQLDataFromIdentifier
-    L6_2 = L4_2
-    L5_2 = L5_2(L6_2)
-    if L5_2 then
-      L6_2 = A3_2.name
-      L7_2 = MySQL
-      L7_2 = L7_2.Sync
-      L7_2 = L7_2.execute
-      L8_2 = "UPDATE player_houses SET citizenid = @iden, keyholders = @keyholders WHERE house = @house"
-      L9_2 = {}
-      L9_2["@iden"] = L4_2
-      L9_2["@keyholders"] = "null"
-      L9_2["@house"] = L6_2
-      L7_2(L8_2, L9_2)
-      L7_2 = TriggerClientEvent
-      L8_2 = "qb-phone:client:sendMessageee"
-      L9_2 = A2_2
-      L7_2(L8_2, L9_2)
-      L7_2 = HouseKeyholdersList
-      L8_2 = {}
-      L7_2[L6_2] = L8_2
-      L7_2 = HouseKeyholdersList
-      L7_2 = L7_2[L6_2]
-      L7_2[1] = L4_2
-      L7_2 = HouseOwnerCitizenidList
-      L7_2[L6_2] = L4_2
-      L7_2 = HouseOwnerIdentifierList
-      L7_2[L6_2] = L4_2
-      L7_2 = OfficialHouseOwnerList
-      L7_2[L6_2] = L4_2
-      L7_2 = TriggerClientEvent
-      L8_2 = "housing:refreshHouse"
-      L9_2 = -1
-      L10_2 = L6_2
-      L7_2(L8_2, L9_2, L10_2)
-      L7_2 = A1_2
-      L8_2 = true
-      L7_2(L8_2)
+end)
+
+
+-- Transfer house via phone
+RegisterServerCallback("qb-phone:server:TransferCid", function(source, cb, targetSource, houseData)
+  local targetIdentifier = GetIdentifier(targetSource)
+  if targetIdentifier then
+    local playerData = GetPlayerSQLDataFromIdentifier(targetIdentifier)
+    if playerData then
+      local houseName = houseData.name
+      MySQL.Sync.execute("UPDATE player_houses SET citizenid = @iden, keyholders = @keyholders WHERE house = @house", { ["@iden"] = targetIdentifier, ["@keyholders"] = "null", ["@house"] = houseName })
+      TriggerClientEvent("qb-phone:client:sendMessageee", targetSource)
+      HouseKeyholdersList[houseName] = { targetIdentifier }
+      HouseOwnerCitizenidList[houseName] = targetIdentifier
+      HouseOwnerIdentifierList[houseName] = targetIdentifier
+      OfficialHouseOwnerList[houseName] = targetIdentifier
+      TriggerClientEvent("housing:refreshHouse", -1, houseName)
+      cb(true)
     else
-      L6_2 = A1_2
-      L7_2 = false
-      L6_2(L7_2)
+      cb(false)
     end
   else
-    L5_2 = A1_2
-    L6_2 = false
-    L5_2(L6_2)
+    cb(false)
   end
+end)
+
+-- Lock/unlock house
+RegisterServerEvent("qb-houses:server:lockHouse")
+AddEventHandler("qb-houses:server:lockHouse", function(houseName, locked)
+  TriggerClientEvent("qb-houses:client:lockHouse", -1, houseName, locked)
+end)
+
+-- Set ram state
+RegisterServerEvent("qb-houses:server:SetRamState")
+AddEventHandler("qb-houses:server:SetRamState", function(state, houseName)
+  Config.Houses[houseName].IsRaming = state
+  TriggerClientEvent("qb-houses:server:SetRamState", -1, state, houseName)
+end)
+
+
+-- Check if player has key access to a house
+local function playerHasKeyAccess(playerSource, identifier, houseName)
+  local hasKey = CheckHasKey(identifier, identifier, houseName, playerSource)
+  return hasKey and true or false
 end
-L24_1(L25_1, L26_1)
-L24_1 = RegisterServerEvent
-L25_1 = "qb-houses:server:lockHouse"
-L24_1(L25_1)
-L24_1 = AddEventHandler
-L25_1 = "qb-houses:server:lockHouse"
-function L26_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = TriggerClientEvent
-  L3_2 = "qb-houses:client:lockHouse"
-  L4_2 = -1
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L24_1(L25_1, L26_1)
-L24_1 = RegisterServerEvent
-L25_1 = "qb-houses:server:SetRamState"
-L24_1(L25_1)
-L24_1 = AddEventHandler
-L25_1 = "qb-houses:server:SetRamState"
-function L26_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = Config
-  L2_2 = L2_2.Houses
-  L2_2 = L2_2[A1_2]
-  L2_2.IsRaming = A0_2
-  L2_2 = TriggerClientEvent
-  L3_2 = "qb-houses:server:SetRamState"
-  L4_2 = -1
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L24_1(L25_1, L26_1)
-function L24_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  L3_2 = CheckHasKey
-  L4_2 = A1_2
-  L5_2 = A1_2
-  L6_2 = A2_2
-  L7_2 = A0_2
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2)
-  if L3_2 then
-    L3_2 = true
-    return L3_2
+
+-- Get house data callback
+RegisterServerCallback("houses:getHouseData", function(src, cb, houseName)
+  local identifier = GetIdentifier(src)
+  local hasKey = playerHasKeyAccess(src, identifier, houseName)
+  local isOwned = nil ~= HouseOwnerIdentifierList[houseName]
+  local isRentable = rentableHousesMap[houseName]
+  local isPurchasable = purchasableHousesMap[houseName]
+  local isOfficialOwner = nil ~= OfficialHouseOwnerList[houseName]
+  local isOwnedByMe = HouseOwnerIdentifierList[houseName] == identifier
+
+  local unpaidBills = table.filter(db:getBills(houseName), function(bill) return not bill.payed end)
+  local billsCutOff = #unpaidBills > 1
+
+  local lightsOn = false
+  local lightsResult = MySQL.query.await("SELECT lights_on FROM player_houses WHERE house = ?", { houseName })
+  if lightsResult and lightsResult[1] then
+    lightsOn = lightsResult[1].lights_on
   end
-  L3_2 = false
-  return L3_2
-end
-L25_1 = RegisterServerCallback
-L26_1 = "houses:getHouseData"
-function L27_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L3_2 = GetIdentifier
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = L24_1
-  L5_2 = A0_2
-  L6_2 = L3_2
-  L7_2 = A2_2
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  L5_2 = HouseOwnerIdentifierList
-  L5_2 = L5_2[A2_2]
-  L5_2 = nil ~= L5_2
-  L6_2 = L2_1
-  L6_2 = L6_2[A2_2]
-  L7_2 = L3_1
-  L7_2 = L7_2[A2_2]
-  L8_2 = OfficialHouseOwnerList
-  L8_2 = L8_2[A2_2]
-  L8_2 = nil ~= L8_2
-  L9_2 = HouseOwnerIdentifierList
-  L9_2 = L9_2[A2_2]
-  L9_2 = L9_2 == L3_2
-  L10_2 = table
-  L10_2 = L10_2.filter
-  L11_2 = db
-  L12_2 = L11_2
-  L11_2 = L11_2.getBills
-  L13_2 = A2_2
-  L11_2 = L11_2(L12_2, L13_2)
-  function L12_2(A0_3)
-    local L1_3
-    L1_3 = A0_3.payed
-    L1_3 = not L1_3
-    return L1_3
+
+  cb({
+    haskey = hasKey,
+    isOwned = isOwned,
+    rentable = isRentable,
+    purchasable = isPurchasable,
+    isOfficialOwner = isOfficialOwner,
+    isOwnedByMe = isOwnedByMe,
+    billsCutOff = billsCutOff,
+    lightsOn = lightsOn,
+  })
+end)
+
+
+-- Build browser data map for all houses
+function HousingBuildBrowserDataMap()
+  local browserData = {}
+  -- Get sale_furnished data
+  local saleFurnishedMap = {}
+  local saleRows = MySQL.Sync.fetchAll("SELECT house, sale_furnished FROM player_houses WHERE purchasable = 1")
+  for _, row in ipairs(saleRows or {}) do
+    saleFurnishedMap[row.house] = row.sale_furnished
   end
-  L10_2 = L10_2(L11_2, L12_2)
-  L10_2 = #L10_2
-  L10_2 = L10_2 > 1
-  L11_2 = false
-  L12_2 = MySQL
-  L12_2 = L12_2.query
-  L12_2 = L12_2.await
-  L13_2 = "SELECT lights_on FROM player_houses WHERE house = ?"
-  L14_2 = {}
-  L15_2 = A2_2
-  L14_2[1] = L15_2
-  L12_2 = L12_2(L13_2, L14_2)
-  if L12_2 then
-    L13_2 = L12_2[1]
-    if L13_2 then
-      L13_2 = L12_2[1]
-      L11_2 = L13_2.lights_on
-    end
-  end
-  L13_2 = A1_2
-  L14_2 = {}
-  L14_2.haskey = L4_2
-  L14_2.isOwned = L5_2
-  L14_2.rentable = L6_2
-  L14_2.purchasable = L7_2
-  L14_2.isOfficialOwner = L8_2
-  L14_2.isOwnedByMe = L9_2
-  L14_2.billsCutOff = L10_2
-  L14_2.lightsOn = L11_2
-  L13_2(L14_2)
-end
-L25_1(L26_1, L27_1)
-function L25_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2
-  L0_2 = {}
-  L1_2 = {}
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = [[
-		SELECT house, sale_furnished
-		FROM player_houses
-		WHERE purchasable = 1
-	]]
-  L2_2 = L2_2(L3_2)
-  L3_2 = ipairs
-  L4_2 = L2_2 or L4_2
-  if not L2_2 then
-    L4_2 = {}
-  end
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.house
-    L10_2 = L8_2.sale_furnished
-    L1_2[L9_2] = L10_2
-  end
-  L3_2 = pairs
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.apartmentNumber
-    if L9_2 then
-      L9_2 = L8_2.apartmentNumber
-      if "apt-0" ~= L9_2 then
-    end
+
+  for name, data in pairs(Config.Houses) do
+    -- Skip apartment sub-units (not apt-0)
+    if data.apartmentNumber and "apt-0" ~= data.apartmentNumber then
+      -- skip
     else
-      L9_2 = HouseOwnerIdentifierList
-      L9_2 = L9_2[L7_2]
-      L9_2 = nil ~= L9_2
-      L10_2 = L2_1
-      L10_2 = L10_2[L7_2]
-      if not L10_2 then
-        L10_2 = false
-      end
-      L11_2 = L3_1
-      L11_2 = L11_2[L7_2]
-      if not L11_2 then
-        L11_2 = false
-      end
-      L12_2 = L8_2.apartmentCount
-      if L12_2 then
-        L12_2 = L8_2.apartmentCount
-        if L12_2 > 0 then
-          L12_2 = L8_2.apartmentName
-          if not L12_2 then
-            L13_2 = L7_2
-            L12_2 = L7_2.gsub
-            L14_2 = "-apt%-0$"
-            L15_2 = ""
-            L12_2 = L12_2(L13_2, L14_2, L15_2)
+      local isOwned = nil ~= HouseOwnerIdentifierList[name]
+      local isRentable = rentableHousesMap[name] or false
+      local isPurchasable = purchasableHousesMap[name] or false
+
+      -- Handle apartment complexes
+      if data.apartmentCount and data.apartmentCount > 0 then
+        local aptBase = data.apartmentName or name:gsub("-apt%-0$", "")
+        local anyRentable = false
+        local anyPurchasable = false
+        local ownedUnits = 0
+        for unit = 1, data.apartmentCount do
+          local unitName = aptBase .. "-apt-" .. unit
+          if rentableHousesMap[unitName] then anyRentable = true end
+          if purchasableHousesMap[unitName] then anyPurchasable = true end
+          if nil ~= HouseOwnerIdentifierList[unitName] and nil ~= HouseOwnerCitizenidList[unitName] then
+            ownedUnits = ownedUnits + 1
           end
-          L13_2 = false
-          L14_2 = false
-          L15_2 = 0
-          L16_2 = 1
-          L17_2 = L8_2.apartmentCount
-          L18_2 = 1
-          for L19_2 = L16_2, L17_2, L18_2 do
-            L20_2 = L12_2
-            L21_2 = "-apt-"
-            L22_2 = L19_2
-            L20_2 = L20_2 .. L21_2 .. L22_2
-            L21_2 = L2_1
-            L21_2 = L21_2[L20_2]
-            if L21_2 then
-              L13_2 = true
-            end
-            L21_2 = L3_1
-            L21_2 = L21_2[L20_2]
-            if L21_2 then
-              L14_2 = true
-            end
-            L21_2 = HouseOwnerIdentifierList
-            L21_2 = L21_2[L20_2]
-            if nil ~= L21_2 then
-              L21_2 = HouseOwnerCitizenidList
-              L21_2 = L21_2[L20_2]
-              if nil ~= L21_2 then
-                L15_2 = L15_2 + 1
-              end
-            end
-          end
-          L16_2 = L8_2.apartmentCount
-          L16_2 = L15_2 >= L16_2
-          L17_2 = L8_2.apartmentCount
-          L17_2 = L15_2 < L17_2
-          L10_2 = L13_2
-          L11_2 = L14_2 or L11_2
-          if not L14_2 then
-            L11_2 = L17_2
-          end
-          L9_2 = L16_2
         end
+        isOwned = ownedUnits >= data.apartmentCount
+        isPurchasable = anyPurchasable or (ownedUnits < data.apartmentCount)
+        isRentable = anyRentable
       end
-      if L11_2 then
-        L12_2 = L8_2.hideFromBrowser
-        if L12_2 then
-      end
+
+      -- Skip hidden houses that are purchasable
+      if isPurchasable and data.hideFromBrowser then
+        -- skip from browser
       else
-        L12_2 = nil
-        if L9_2 then
-          L13_2 = HouseOwnerIdentifierList
-          L13_2 = L13_2[L7_2]
-          if L13_2 then
-            L13_2 = HouseOwnerIdentifierList
-            L13_2 = L13_2[L7_2]
-            L14_2 = GetCharacterFromIdentifier
-            L15_2 = L13_2
-            L14_2, L15_2 = L14_2(L15_2)
-            if L14_2 and L15_2 then
-              L16_2 = L14_2
-              L17_2 = " "
-              L18_2 = L15_2
-              L16_2 = L16_2 .. L17_2 .. L18_2
-              L12_2 = L16_2
+        -- Get owner name
+        local ownerName = nil
+        if isOwned then
+          local ownerId = HouseOwnerIdentifierList[name]
+          if ownerId then
+            local first, last = GetCharacterFromIdentifier(ownerId)
+            if first and last then
+              ownerName = first .. " " .. last
             else
-              L16_2 = GetPlayerFromIdentifier
-              L17_2 = L13_2
-              L16_2 = L16_2(L17_2)
-              if L16_2 then
-                L17_2 = GetCharacterName
-                L18_2 = L16_2.source
-                L17_2, L18_2 = L17_2(L18_2)
-                L15_2 = L18_2
-                L14_2 = L17_2
-                if L14_2 and L15_2 then
-                  L17_2 = L14_2
-                  L18_2 = " "
-                  L19_2 = L15_2
-                  L17_2 = L17_2 .. L18_2 .. L19_2
-                  L12_2 = L17_2
+              local ownerSrc = GetPlayerFromIdentifier(ownerId)
+              if ownerSrc then
+                local f2, l2 = GetCharacterName(ownerSrc.source)
+                if f2 and l2 then
+                  ownerName = f2 .. " " .. l2
                 else
-                  L12_2 = "Unknown Owner"
+                  ownerName = "Unknown Owner"
                 end
               else
-                L12_2 = "Unknown Owner"
+                ownerName = "Unknown Owner"
               end
             end
           end
         end
-        L13_2 = nil
-        if L10_2 then
-          L14_2 = L8_2.price
-          if L14_2 then
-            L13_2 = L8_2.price
-          end
+
+        local rentPrice = nil
+        if isRentable and data.price then
+          rentPrice = data.price
         end
-        L14_2 = {}
-        L14_2.owned = L9_2
-        L14_2.rentable = L10_2
-        L14_2.purchasable = L11_2
-        L14_2.rentPrice = L13_2
-        L14_2.ownerName = L12_2
-        L14_2.ownerPhone = nil
-        L15_2 = L1_2[L7_2]
-        L14_2.saleFurnished = L15_2
-        L0_2[L7_2] = L14_2
+
+        browserData[name] = {
+          owned = isOwned,
+          rentable = isRentable,
+          purchasable = isPurchasable,
+          rentPrice = rentPrice,
+          ownerName = ownerName,
+          ownerPhone = nil,
+          saleFurnished = saleFurnishedMap[name],
+        }
       end
     end
   end
-  return L0_2
+  return browserData
 end
-HousingBuildBrowserDataMap = L25_1
-L25_1 = lib
-L25_1 = L25_1.callback
-L25_1 = L25_1.register
-L26_1 = "housing:getHouseBrowserData"
-function L27_1(A0_2)
-  local L1_2
-  L1_2 = HousingBuildBrowserDataMap
-  return L1_2()
-end
-L25_1(L26_1, L27_1)
-L25_1 = RegisterServerCallback
-L26_1 = "housing:getApartmentsData"
-function L27_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2
-  L4_2 = {}
-  L5_2 = GetIdentifier
-  L6_2 = A0_2
-  L5_2 = L5_2(L6_2)
-  L7_2 = A2_2
-  L6_2 = A2_2.gsub
-  L8_2 = "-apt%-%d+"
-  L9_2 = ""
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L7_2 = pairs
-  L8_2 = Config
-  L8_2 = L8_2.Houses
-  L7_2, L8_2, L9_2, L10_2 = L7_2(L8_2)
-  for L11_2, L12_2 in L7_2, L8_2, L9_2, L10_2 do
-    L13_2 = L12_2.apartmentName
-    if L13_2 == L6_2 then
-      L13_2 = L12_2.apartmentNumber
-      if "apt-0" ~= L13_2 then
-        L13_2 = L24_1
-        L14_2 = A0_2
-        L15_2 = L5_2
-        L16_2 = L11_2
-        L13_2 = L13_2(L14_2, L15_2, L16_2)
-        L14_2 = HouseOwnerIdentifierList
-        L14_2 = L14_2[L11_2]
-        L14_2 = nil ~= L14_2
-        L15_2 = L2_1
-        L15_2 = L15_2[L11_2]
-        L16_2 = L3_1
-        L16_2 = L16_2[L11_2]
-        L17_2 = HouseOwnerIdentifierList
-        L17_2 = L17_2[L11_2]
-        L17_2 = L17_2 == L5_2
-        L18_2 = OfficialHouseOwnerList
-        L18_2 = L18_2[L11_2]
-        L18_2 = nil ~= L18_2
-        L19_2 = false
-        L20_2 = nil
-        if A3_2 then
-          L21_2 = MySQL
-          L21_2 = L21_2.Sync
-          L21_2 = L21_2.fetchAll
-          L22_2 = "SELECT * FROM player_houses WHERE house = ?"
-          L23_2 = {}
-          L24_2 = L11_2
-          L23_2[1] = L24_2
-          L21_2 = L21_2(L22_2, L23_2)
-          L22_2 = L21_2[1]
-          if L22_2 then
-            L22_2 = L21_2[1]
-            L22_2 = L22_2.rented
-            L19_2 = 1 == L22_2
-          end
+
+lib.callback.register("housing:getHouseBrowserData", function(source)
+  return HousingBuildBrowserDataMap()
+end)
+
+
+-- Get apartments data for apartment complex
+RegisterServerCallback("housing:getApartmentsData", function(src, cb, houseName, showRented)
+  local apartments = {}
+  local identifier = GetIdentifier(src)
+  local baseName = houseName:gsub("-apt%-%d+", "")
+
+  for name, data in pairs(Config.Houses) do
+    if data.apartmentName == baseName and "apt-0" ~= data.apartmentNumber then
+      local hasKey = playerHasKeyAccess(src, identifier, name)
+      local isOwned = nil ~= HouseOwnerIdentifierList[name]
+      local isRentable = rentableHousesMap[name]
+      local isPurchasable = purchasableHousesMap[name]
+      local isOwnedByMe = HouseOwnerIdentifierList[name] == identifier
+      local isOfficialOwner = nil ~= OfficialHouseOwnerList[name]
+      local isRented = false
+      local ownerName = nil
+
+      if showRented then
+        local unitRows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ?", { name })
+        if unitRows[1] then
+          isRented = 1 == unitRows[1].rented
         end
-        if L14_2 then
-          L21_2 = GetCharacterFromIdentifier
-          L22_2 = HouseOwnerCitizenidList
-          L22_2 = L22_2[L11_2]
-          L21_2 = L21_2(L22_2)
-          L20_2 = L21_2
-        end
-        L21_2 = table
-        L21_2 = L21_2.insert
-        L22_2 = L4_2
-        L23_2 = {}
-        L24_2 = L12_2.id
-        L23_2.id = L24_2
-        L23_2.house = L11_2
-        L23_2.haskey = L13_2
-        L23_2.isOwned = L14_2
-        L23_2.rentable = L15_2
-        L23_2.purchasable = L16_2
-        L23_2.isOfficialOwner = L18_2
-        L23_2.isOwnedByMe = L17_2
-        L23_2.rented = L19_2
-        L24_2 = L20_2 or L24_2
-        if not L20_2 then
-          L24_2 = "Unknown Owner"
-        end
-        L23_2.ownerName = L24_2
-        L21_2(L22_2, L23_2)
+      end
+      if isOwned then
+        ownerName = GetCharacterFromIdentifier(HouseOwnerCitizenidList[name])
+      end
+
+      table.insert(apartments, {
+        id = data.id,
+        house = name,
+        haskey = hasKey,
+        isOwned = isOwned,
+        rentable = isRentable,
+        purchasable = isPurchasable,
+        isOfficialOwner = isOfficialOwner,
+        isOwnedByMe = isOwnedByMe,
+        rented = isRented,
+        ownerName = ownerName or "Unknown Owner",
+      })
+    end
+  end
+
+  table.sort(apartments, function(a, b)
+    if a.isOwnedByMe and not b.isOwnedByMe then return true end
+    if not a.isOwnedByMe and b.isOwnedByMe then return false end
+    return a.house < b.house
+  end)
+  cb(apartments)
+end)
+
+-- Get house owner
+RegisterServerCallback("qb-houses:server:getHouseOwner", function(source, cb, houseName)
+  cb(HouseOwnerCitizenidList[houseName])
+end)
+
+
+-- Get keyholders for a house
+function GetKeyHolders(playerSource, houseName)
+  local result = {}
+  local identifier = GetIdentifier(playerSource)
+  local keyholders = HouseKeyholdersList[houseName]
+  if nil ~= keyholders then
+    for i = 1, #keyholders do
+      local isOwner = HouseOwnerIdentifierList[houseName] == keyholders[i]
+      if identifier ~= keyholders[i] and not isOwner then
+        local first, last = GetCharacterFromIdentifier(keyholders[i])
+        table.insert(result, { firstname = first, lastname = last, citizenid = keyholders[i] })
       end
     end
   end
-  L7_2 = table
-  L7_2 = L7_2.sort
-  L8_2 = L4_2
-  function L9_2(A0_3, A1_3)
-    local L2_3, L3_3
-    L2_3 = A0_3.isOwnedByMe
-    if L2_3 then
-      L2_3 = A1_3.isOwnedByMe
-      if not L2_3 then
-        L2_3 = true
-        return L2_3
-    end
+  return result
+end
+
+-- Check if a player has a key to a house
+function CheckHasKey(identifier, citizenid, houseName, playerSource)
+  Debug("CheckHasKey info:", json.encode(identifier), json.encode(citizenid), json.encode(houseName))
+  if nil ~= HouseOwnerIdentifierList[houseName] and nil ~= HouseOwnerCitizenidList[houseName] then
+    if HouseOwnerIdentifierList[houseName] == identifier and HouseOwnerCitizenidList[houseName] == citizenid then
+      return true
     else
-      L2_3 = A0_3.isOwnedByMe
-      if not L2_3 then
-        L2_3 = A1_3.isOwnedByMe
-        if L2_3 then
-          L2_3 = false
-          return L2_3
-        end
-      end
-    end
-    L2_3 = A0_3.house
-    L3_3 = A1_3.house
-    L2_3 = L2_3 < L3_3
-    return L2_3
-  end
-  L7_2(L8_2, L9_2)
-  L7_2 = A1_2
-  L8_2 = L4_2
-  L7_2(L8_2)
-end
-L25_1(L26_1, L27_1)
-L25_1 = RegisterServerCallback
-L26_1 = "qb-houses:server:getHouseOwner"
-function L27_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2
-  L3_2 = A1_2
-  L4_2 = HouseOwnerCitizenidList
-  L4_2 = L4_2[A2_2]
-  L3_2(L4_2)
-end
-L25_1(L26_1, L27_1)
-function L25_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L2_2 = {}
-  L3_2 = GetIdentifier
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = HouseKeyholdersList
-  L4_2 = L4_2[A1_2]
-  if nil ~= L4_2 then
-    L4_2 = 1
-    L5_2 = HouseKeyholdersList
-    L5_2 = L5_2[A1_2]
-    L5_2 = #L5_2
-    L6_2 = 1
-    for L7_2 = L4_2, L5_2, L6_2 do
-      L8_2 = HouseOwnerIdentifierList
-      L8_2 = L8_2[A1_2]
-      L9_2 = HouseKeyholdersList
-      L9_2 = L9_2[A1_2]
-      L9_2 = L9_2[L7_2]
-      L8_2 = L8_2 == L9_2
-      L9_2 = HouseKeyholdersList
-      L9_2 = L9_2[A1_2]
-      L9_2 = L9_2[L7_2]
-      if L3_2 ~= L9_2 and not L8_2 then
-        L9_2 = GetCharacterFromIdentifier
-        L10_2 = HouseKeyholdersList
-        L10_2 = L10_2[A1_2]
-        L10_2 = L10_2[L7_2]
-        L9_2, L10_2 = L9_2(L10_2)
-        L11_2 = table
-        L11_2 = L11_2.insert
-        L12_2 = L2_2
-        L13_2 = {}
-        L13_2.firstname = L9_2
-        L13_2.lastname = L10_2
-        L14_2 = HouseKeyholdersList
-        L14_2 = L14_2[A1_2]
-        L14_2 = L14_2[L7_2]
-        L13_2.citizenid = L14_2
-        L11_2(L12_2, L13_2)
-      end
-    end
-  end
-  return L2_2
-end
-GetKeyHolders = L25_1
-function L25_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L4_2 = Debug
-  L5_2 = "CheckHasKey info:"
-  L6_2 = json
-  L6_2 = L6_2.encode
-  L7_2 = A0_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = json
-  L7_2 = L7_2.encode
-  L8_2 = A1_2
-  L7_2 = L7_2(L8_2)
-  L8_2 = json
-  L8_2 = L8_2.encode
-  L9_2 = A2_2
-  L8_2, L9_2 = L8_2(L9_2)
-  L4_2(L5_2, L6_2, L7_2, L8_2, L9_2)
-  L4_2 = HouseOwnerIdentifierList
-  L4_2 = L4_2[A2_2]
-  if nil ~= L4_2 then
-    L4_2 = HouseOwnerCitizenidList
-    L4_2 = L4_2[A2_2]
-    if nil ~= L4_2 then
-      L4_2 = HouseOwnerIdentifierList
-      L4_2 = L4_2[A2_2]
-      if L4_2 == A0_2 then
-        L4_2 = HouseOwnerCitizenidList
-        L4_2 = L4_2[A2_2]
-        if L4_2 == A1_2 then
-          L4_2 = true
-          return L4_2
-      end
-      else
-        L4_2 = HouseKeyholdersList
-        L4_2 = L4_2[A2_2]
-        if nil ~= L4_2 then
-          L4_2 = 1
-          L5_2 = HouseKeyholdersList
-          L5_2 = L5_2[A2_2]
-          L5_2 = #L5_2
-          L6_2 = 1
-          for L7_2 = L4_2, L5_2, L6_2 do
-            L8_2 = HouseKeyholdersList
-            L8_2 = L8_2[A2_2]
-            L8_2 = L8_2[L7_2]
-            if L8_2 == A1_2 then
-              L8_2 = true
-              return L8_2
-            end
+      if nil ~= HouseKeyholdersList[houseName] then
+        for i = 1, #HouseKeyholdersList[houseName] do
+          if HouseKeyholdersList[houseName][i] == citizenid then
+            return true
           end
         end
       end
     end
   end
-  L4_2 = Config
-  L4_2 = L4_2.EnableMetaKey
-  if L4_2 then
-    L4_2 = Config
-    L4_2 = L4_2.MetaKeyCheckOnEntry
-    if L4_2 and A3_2 then
-      L4_2 = CheckHasMetaKey
-      if L4_2 then
-        L4_2 = CheckHasMetaKey
-        L5_2 = A3_2
-        L6_2 = A2_2
-        L4_2 = L4_2(L5_2, L6_2)
-        if L4_2 then
-          L4_2 = Debug
-          L5_2 = "CheckHasKey: Player has meta key for house:"
-          L6_2 = A2_2
-          L4_2(L5_2, L6_2)
-          L4_2 = true
-          return L4_2
-        end
-      end
+  -- Meta key check
+  if Config.EnableMetaKey and Config.MetaKeyCheckOnEntry and playerSource then
+    if CheckHasMetaKey and CheckHasMetaKey(playerSource, houseName) then
+      Debug("CheckHasKey: Player has meta key for house:", houseName)
+      return true
     end
   end
-  L4_2 = false
-  return L4_2
+  return false
 end
-CheckHasKey = L25_1
-L25_1 = exports
-L26_1 = "CheckHasKey"
-L27_1 = CheckHasKey
-L25_1(L26_1, L27_1)
-L25_1 = CreateThread
-function L26_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = MySQL
-  L0_2 = L0_2.Async
-  L0_2 = L0_2.fetchAll
-  L1_2 = "SELECT * FROM player_houses"
-  L2_2 = {}
-  function L3_2(A0_3)
-    local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3
-    if nil ~= A0_3 then
-      L1_3 = pairs
-      L2_3 = A0_3
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = HouseOwnerIdentifierList
-        L8_3 = L6_3.house
-        L9_3 = L6_3.citizenid
-        L7_3[L8_3] = L9_3
-        L7_3 = HouseOwnerCitizenidList
-        L8_3 = L6_3.house
-        L9_3 = L6_3.citizenid
-        L7_3[L8_3] = L9_3
-        L7_3 = OfficialHouseOwnerList
-        L8_3 = L6_3.house
-        L9_3 = L6_3.owner
-        L7_3[L8_3] = L9_3
-        L8_3 = L6_3.house
-        L7_3 = L2_1
-        L9_3 = L6_3.rentable
-        L7_3[L8_3] = L9_3
-        L8_3 = L6_3.house
-        L7_3 = L3_1
-        L9_3 = L6_3.purchasable
-        L7_3[L8_3] = L9_3
-        L7_3 = HouseKeyholdersList
-        L8_3 = L6_3.house
-        L9_3 = json
-        L9_3 = L9_3.decode
-        L10_3 = L6_3.keyholders
-        L9_3 = L9_3(L10_3)
-        L7_3[L8_3] = L9_3
+
+exports("CheckHasKey", CheckHasKey)
+
+
+-- Load keyholders and owner data from DB on resource start
+CreateThread(function()
+  MySQL.Async.fetchAll("SELECT * FROM player_houses", {}, function(rows)
+    if nil ~= rows then
+      for _, row in pairs(rows) do
+        HouseOwnerIdentifierList[row.house] = row.citizenid
+        HouseOwnerCitizenidList[row.house] = row.citizenid
+        OfficialHouseOwnerList[row.house] = row.owner
+        rentableHousesMap[row.house] = row.rentable
+        purchasableHousesMap[row.house] = row.purchasable
+        HouseKeyholdersList[row.house] = json.decode(row.keyholders)
       end
     end
-  end
-  L0_2(L1_2, L2_2, L3_2)
-end
-L25_1(L26_1)
-L25_1 = RegisterServerEvent
-L26_1 = "qb-houses:server:OpenDoor"
-L25_1(L26_1)
-L25_1 = AddEventHandler
-L26_1 = "qb-houses:server:OpenDoor"
-function L27_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = source
-  L3_2 = GetPlayerSourceFromSource
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = vec3
-    L5_2 = Config
-    L5_2 = L5_2.Houses
-    L5_2 = L5_2[A1_2]
-    L5_2 = L5_2.coords
-    L5_2 = L5_2.enter
-    L5_2 = L5_2.x
-    L6_2 = Config
-    L6_2 = L6_2.Houses
-    L6_2 = L6_2[A1_2]
-    L6_2 = L6_2.coords
-    L6_2 = L6_2.enter
-    L6_2 = L6_2.y
-    L7_2 = Config
-    L7_2 = L7_2.Houses
-    L7_2 = L7_2[A1_2]
-    L7_2 = L7_2.coords
-    L7_2 = L7_2.enter
-    L7_2 = L7_2.z
-    L4_2 = L4_2(L5_2, L6_2, L7_2)
-    L5_2 = GetEntityCoords
-    L6_2 = GetPlayerPed
-    L7_2 = L3_2
-    L6_2, L7_2, L8_2 = L6_2(L7_2)
-    L5_2 = L5_2(L6_2, L7_2, L8_2)
-    L5_2 = L5_2 - L4_2
-    L5_2 = #L5_2
-    if L5_2 < 2.0 then
-      L5_2 = TriggerClientEvent
-      L6_2 = "qb-houses:client:SpawnInApartment"
-      L7_2 = L3_2
-      L8_2 = A1_2
-      L5_2(L6_2, L7_2, L8_2)
+  end)
+end)
+
+-- Open door for invited player
+RegisterServerEvent("qb-houses:server:OpenDoor")
+AddEventHandler("qb-houses:server:OpenDoor", function(targetPlayerId, houseName)
+  local src = source
+  local targetSrc = GetPlayerSourceFromSource(targetPlayerId)
+  if targetSrc then
+    local housePos = vec3(Config.Houses[houseName].coords.enter.x, Config.Houses[houseName].coords.enter.y, Config.Houses[houseName].coords.enter.z)
+    local targetPed = GetPlayerPed(targetSrc)
+    local targetCoords = GetEntityCoords(targetPed)
+    if #(targetCoords - housePos) < 2.0 then
+      TriggerClientEvent("qb-houses:client:SpawnInApartment", targetSrc, houseName)
     else
-      L5_2 = Notification
-      L6_2 = L2_2
-      L7_2 = i18n
-      L7_2 = L7_2.t
-      L8_2 = "invite_play_far_other"
-      L7_2 = L7_2(L8_2)
-      L8_2 = "error"
-      L5_2(L6_2, L7_2, L8_2)
-      L5_2 = Notification
-      L6_2 = L3_2
-      L7_2 = i18n
-      L7_2 = L7_2.t
-      L8_2 = "invite_play_far"
-      L7_2 = L7_2(L8_2)
-      L8_2 = "error"
-      L5_2(L6_2, L7_2, L8_2)
+      Notification(src, i18n.t("invite_play_far_other"), "error")
+      Notification(targetSrc, i18n.t("invite_play_far"), "error")
     end
   end
-end
-L25_1(L26_1, L27_1)
-L25_1 = {}
-L26_1 = {}
-DoorbellPlayers = L26_1
-L26_1 = RegisterServerEvent
-L27_1 = "qb-houses:server:RingDoor"
-L26_1(L27_1)
-L26_1 = AddEventHandler
-L27_1 = "qb-houses:server:RingDoor"
-function L28_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L1_2 = source
-  L2_2 = GetIdentifier
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
+end)
+
+
+-- Doorbell system
+local doorbellCooldowns = {}
+DoorbellPlayers = {}
+
+RegisterServerEvent("qb-houses:server:RingDoor")
+AddEventHandler("qb-houses:server:RingDoor", function(houseName)
+  local src = source
+  local identifier = GetIdentifier(src)
+  if not identifier then return end
+
+  local cooldownKey = houseName .. ":" .. identifier
+  local now = os.time()
+  if doorbellCooldowns[cooldownKey] and (now - doorbellCooldowns[cooldownKey]) < 10 then
     return
   end
-  L3_2 = A0_2
-  L4_2 = ":"
-  L5_2 = L2_2
-  L3_2 = L3_2 .. L4_2 .. L5_2
-  L4_2 = L25_1
-  L4_2 = L4_2[L3_2]
-  L5_2 = os
-  L5_2 = L5_2.time
-  L5_2 = L5_2()
-  if L4_2 then
-    L6_2 = L5_2 - L4_2
-    if L6_2 < 10 then
-      return
-    end
+  doorbellCooldowns[cooldownKey] = now
+  SetTimeout(10000, function() doorbellCooldowns[cooldownKey] = nil end)
+
+  local firstName, lastName = GetCharacterName(src)
+  local playerName = GetPlayerName(src)
+
+  if not DoorbellPlayers[houseName] then
+    DoorbellPlayers[houseName] = {}
   end
-  L6_2 = L25_1
-  L6_2[L3_2] = L5_2
-  L6_2 = SetTimeout
-  L7_2 = 10000
-  function L8_2()
-    local L0_3, L1_3
-    L1_3 = L3_2
-    L0_3 = L25_1
-    L0_3[L1_3] = nil
-  end
-  L6_2(L7_2, L8_2)
-  L6_2 = GetCharacterName
-  L7_2 = L1_2
-  L6_2, L7_2 = L6_2(L7_2)
-  L8_2 = GetPlayerName
-  L9_2 = L1_2
-  L8_2 = L8_2(L9_2)
-  L9_2 = DoorbellPlayers
-  L9_2 = L9_2[A0_2]
-  if not L9_2 then
-    L9_2 = DoorbellPlayers
-    L10_2 = {}
-    L9_2[A0_2] = L10_2
-  end
-  L9_2 = {}
-  L9_2.id = L1_2
-  L10_2 = L6_2 or L10_2
-  if not L6_2 then
-    L10_2 = ""
-  end
-  L9_2.firstname = L10_2
-  L10_2 = L7_2 or L10_2
-  if not L7_2 then
-    L10_2 = ""
-  end
-  L9_2.lastname = L10_2
-  L10_2 = L8_2 or L10_2
-  if not L8_2 then
-    L10_2 = ""
-  end
-  L9_2.name = L10_2
-  L10_2 = L5_2 * 1000
-  L9_2.timestamp = L10_2
-  L10_2 = false
-  L11_2 = ipairs
-  L12_2 = DoorbellPlayers
-  L12_2 = L12_2[A0_2]
-  L11_2, L12_2, L13_2, L14_2 = L11_2(L12_2)
-  for L15_2, L16_2 in L11_2, L12_2, L13_2, L14_2 do
-    L17_2 = L16_2.id
-    if L17_2 == L1_2 then
-      L17_2 = DoorbellPlayers
-      L17_2 = L17_2[A0_2]
-      L17_2[L15_2] = L9_2
-      L10_2 = true
+
+  local entry = {
+    id = src,
+    firstname = firstName or "",
+    lastname = lastName or "",
+    name = playerName or "",
+    timestamp = now * 1000,
+  }
+
+  -- Update or insert
+  local found = false
+  for idx, existing in ipairs(DoorbellPlayers[houseName]) do
+    if existing.id == src then
+      DoorbellPlayers[houseName][idx] = entry
+      found = true
       break
     end
   end
-  if not L10_2 then
-    L11_2 = table
-    L11_2 = L11_2.insert
-    L12_2 = DoorbellPlayers
-    L12_2 = L12_2[A0_2]
-    L13_2 = L9_2
-    L11_2(L12_2, L13_2)
+  if not found then
+    table.insert(DoorbellPlayers[houseName], entry)
   end
-  L11_2 = SetTimeout
-  L12_2 = 10000
-  function L13_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3
-    L0_3 = DoorbellPlayers
-    L1_3 = A0_2
-    L0_3 = L0_3[L1_3]
-    if L0_3 then
-      L0_3 = ipairs
-      L1_3 = DoorbellPlayers
-      L2_3 = A0_2
-      L1_3 = L1_3[L2_3]
-      L0_3, L1_3, L2_3, L3_3 = L0_3(L1_3)
-      for L4_3, L5_3 in L0_3, L1_3, L2_3, L3_3 do
-        L6_3 = L5_3.id
-        L7_3 = L1_2
-        if L6_3 == L7_3 then
-          L6_3 = table
-          L6_3 = L6_3.remove
-          L7_3 = DoorbellPlayers
-          L8_3 = A0_2
-          L7_3 = L7_3[L8_3]
-          L8_3 = L4_3
-          L6_3(L7_3, L8_3)
+
+  -- Auto-remove after 10 seconds
+  SetTimeout(10000, function()
+    if DoorbellPlayers[houseName] then
+      for idx, p in ipairs(DoorbellPlayers[houseName]) do
+        if p.id == src then
+          table.remove(DoorbellPlayers[houseName], idx)
           break
         end
       end
-      L0_3 = DoorbellPlayers
-      L1_3 = A0_2
-      L0_3 = L0_3[L1_3]
-      L0_3 = #L0_3
-      if 0 == L0_3 then
-        L0_3 = DoorbellPlayers
-        L1_3 = A0_2
-        L0_3[L1_3] = nil
+      if #DoorbellPlayers[houseName] == 0 then
+        DoorbellPlayers[houseName] = nil
       end
     end
+  end)
+
+  TriggerClientEvent("qb-houses:client:RingDoor", -1, src, houseName)
+end)
+
+-- Get doorbell players
+lib.callback.register("housing:getDoorbellPlayers", function(source, houseName)
+  if not houseName or not DoorbellPlayers[houseName] then
+    return {}
   end
-  L11_2(L12_2, L13_2)
-  L11_2 = TriggerClientEvent
-  L12_2 = "qb-houses:client:RingDoor"
-  L13_2 = -1
-  L14_2 = L1_2
-  L15_2 = A0_2
-  L11_2(L12_2, L13_2, L14_2, L15_2)
-end
-L26_1(L27_1, L28_1)
-L26_1 = lib
-L26_1 = L26_1.callback
-L26_1 = L26_1.register
-L27_1 = "housing:getDoorbellPlayers"
-function L28_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  if A1_2 then
-    L2_2 = DoorbellPlayers
-    L2_2 = L2_2[A1_2]
-    if L2_2 then
-      goto lbl_10
+  local now = os.time() * 1000
+  local result = {}
+  for _, entry in ipairs(DoorbellPlayers[houseName]) do
+    if (now - entry.timestamp) < 10000 then
+      table.insert(result, entry)
     end
   end
-  L2_2 = {}
-  do return L2_2 end
-  ::lbl_10::
-  L2_2 = os
-  L2_2 = L2_2.time
-  L2_2 = L2_2()
-  L2_2 = L2_2 * 1000
-  L3_2 = {}
-  L4_2 = ipairs
-  L5_2 = DoorbellPlayers
-  L5_2 = L5_2[A1_2]
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = L9_2.timestamp
-    L10_2 = L2_2 - L10_2
-    L11_2 = 10000
-    if L10_2 < L11_2 then
-      L10_2 = table
-      L10_2 = L10_2.insert
-      L11_2 = L3_2
-      L12_2 = L9_2
-      L10_2(L11_2, L12_2)
-    end
-  end
-  return L3_2
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterNetEvent
-L27_1 = "qb-houses:saveStash"
-function L28_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "select * from player_houses where house = @hosue"
-  L4_2 = {}
-  L4_2["@house"] = A0_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = L2_2[1]
-  if not L3_2 then
-    return
-  end
-  L3_2 = json
-  L3_2 = L3_2.decode
-  L4_2 = L2_2[1]
-  L4_2 = L4_2.decorateStash
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = L3_2[1]
-    if L4_2 then
-      goto lbl_26
-    end
-  end
-  L4_2 = {}
-  L3_2 = L4_2
-  ::lbl_26::
-  L4_2 = table
-  L4_2 = L4_2.insert
-  L5_2 = L3_2
-  L6_2 = A1_2
-  L4_2(L5_2, L6_2)
-  L4_2 = MySQL
-  L4_2 = L4_2.Sync
-  L4_2 = L4_2.execute
-  L5_2 = "update player_houses SET decorateStash = @newStash where house = @house"
-  L6_2 = {}
-  L6_2["@house"] = A0_2
-  L6_2["@newStash"] = L3_2
-  L4_2(L5_2, L6_2)
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerCallback
-L27_1 = "qb-houses:server:getHouseDecorateStashes"
-function L28_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM `player_houses` WHERE `house` = '"
-  L5_2 = A2_2
-  L6_2 = "'"
-  L4_2 = L4_2 .. L5_2 .. L6_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = L3_2[1]
-  if nil ~= L4_2 then
-    L4_2 = L3_2[1]
-    L4_2 = L4_2.decorateStash
-    if nil ~= L4_2 then
-      L4_2 = A1_2
-      L5_2 = json
-      L5_2 = L5_2.decode
-      L6_2 = L3_2[1]
-      L6_2 = L6_2.decorateStash
-      L5_2, L6_2 = L5_2(L6_2)
-      L4_2(L5_2, L6_2)
+  return result
+end)
+
+
+-- Save stash location
+RegisterNetEvent("qb-houses:saveStash", function(houseName, stashData)
+  local rows = MySQL.Sync.fetchAll("select * from player_houses where house = @hosue", { ["@house"] = houseName })
+  if not rows[1] then return end
+  local stashes = json.decode(rows[1].decorateStash)
+  if not stashes or not stashes[1] then stashes = {} end
+  table.insert(stashes, stashData)
+  MySQL.Sync.execute("update player_houses SET decorateStash = @newStash where house = @house", { ["@house"] = houseName, ["@newStash"] = stashes })
+end)
+
+-- Get decorate stashes
+RegisterServerCallback("qb-houses:server:getHouseDecorateStashes", function(source, cb, houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM `player_houses` WHERE `house` = '" .. houseName .. "'")
+  if nil ~= rows[1] then
+    if nil ~= rows[1].decorateStash then
+      cb(json.decode(rows[1].decorateStash))
     else
-      L4_2 = A1_2
-      L5_2 = false
-      L4_2(L5_2)
+      cb(false)
     end
   else
-    L4_2 = A1_2
-    L5_2 = false
-    L4_2(L5_2)
+    cb(false)
   end
-end
-L26_1(L27_1, L28_1)
-L26_1 = lib
-L26_1 = L26_1.callback
-L26_1 = L26_1.register
-L27_1 = "housing:getLocations"
-function L28_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = Debug
-  L3_2 = "house"
-  L4_2 = A1_2
-  L2_2(L3_2, L4_2)
-  L2_2 = MySQL
-  L2_2 = L2_2.query
-  L2_2 = L2_2.await
-  L3_2 = "SELECT stash, outfit, logout, charge, tablet FROM `player_houses` WHERE `house` = ?"
-  L4_2 = {}
-  L5_2 = A1_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  if L2_2 then
-    L3_2 = L2_2[1]
-    if L3_2 then
-      goto lbl_20
+end)
+
+-- Get house locations (stash, outfit, logout, charge, tablet)
+lib.callback.register("housing:getLocations", function(source, houseName)
+  Debug("house", houseName)
+  local result = MySQL.query.await("SELECT stash, outfit, logout, charge, tablet FROM `player_houses` WHERE `house` = ?", { houseName })
+  local row = (result and result[1]) or nil
+  if not row then
+    Debug("getlocations", result)
+    return nil
+  end
+  -- Also get delivery coords from houselocations
+  local locRow = MySQL.single.await("SELECT coords FROM `houselocations` WHERE `name` = ? LIMIT 1", { houseName })
+  if locRow and locRow.coords then
+    local coords = json.decode(locRow.coords) or {}
+    if coords.delivery then
+      row.delivery = json.encode(coords.delivery)
     end
   end
-  L3_2 = nil
-  ::lbl_20::
-  if not L3_2 then
-    L4_2 = Debug
-    L5_2 = "getlocations"
-    L6_2 = L2_2
-    L4_2(L5_2, L6_2)
-    L4_2 = nil
-    return L4_2
+  Debug("getlocations", row)
+  return row
+end)
+
+
+-- Get player houses (for callbacks)
+RegisterServerCallback("qb-houses:server:getPlayerHouses", function(src, cb, filterHouse)
+  local query = "SELECT house, owner, citizenid, rented, rentable, purchasable FROM player_houses"
+  if filterHouse then
+    query = query .. " WHERE house = ?"
   end
-  L4_2 = MySQL
-  L4_2 = L4_2.single
-  L4_2 = L4_2.await
-  L5_2 = "SELECT coords FROM `houselocations` WHERE `name` = ? LIMIT 1"
-  L6_2 = {}
-  L7_2 = A1_2
-  L6_2[1] = L7_2
-  L4_2 = L4_2(L5_2, L6_2)
-  if L4_2 then
-    L5_2 = L4_2.coords
-    if L5_2 then
-      L5_2 = json
-      L5_2 = L5_2.decode
-      L6_2 = L4_2.coords
-      L5_2 = L5_2(L6_2)
-      if not L5_2 then
-        L5_2 = {}
-      end
-      L6_2 = L5_2.delivery
-      if L6_2 then
-        L6_2 = json
-        L6_2 = L6_2.encode
-        L7_2 = L5_2.delivery
-        L6_2 = L6_2(L7_2)
-        L3_2.delivery = L6_2
-      end
+  local rows = MySQL.Sync.fetchAll(query, filterHouse and { filterHouse } or {})
+  cb(rows)
+end)
+
+-- Set location (stash=1, outfit=2, logout=3, charge=4, delivery=8, tablet=9, tv=6, sit=7)
+RegisterServerEvent("qb-houses:server:setLocation")
+AddEventHandler("qb-houses:server:setLocation", function(coords, houseName, locationType)
+  local src = source
+  local coordsJson = json.encode(coords)
+  local broadcastCoords = coordsJson
+
+  if 1 == locationType then
+    MySQL.update.await("UPDATE `player_houses` SET `stash` = ? WHERE `house` = ?", { coordsJson, houseName })
+    -- Quest: place_home_stash
+    if GetResourceState("qs-inventory"):find("started") and Config.EnableQuests then
+      local ok = exports["qs-inventory"]:UpdateQuestProgress(src, "place_home_stash", 100)
+      Debug(ok and "Quest \"place_home_stash\" progress updated" or "Failed to update quest \"place_home_stash\"")
     end
+  elseif 2 == locationType then
+    MySQL.update.await("UPDATE `player_houses` SET `outfit` = ? WHERE `house` = ?", { coordsJson, houseName })
+    if GetResourceState("qs-inventory"):find("started") and Config.EnableQuests then
+      local ok = exports["qs-inventory"]:UpdateQuestProgress(src, "place_home_wardrobe", 100)
+      Debug(ok and "Quest \"place_home_wardrobe\" progress updated" or "Failed to update quest \"place_home_wardrobe\"")
+    end
+  elseif 3 == locationType then
+    MySQL.update.await("UPDATE `player_houses` SET `logout` = ? WHERE `house` = ?", { coordsJson, houseName })
+  elseif 4 == locationType then
+    MySQL.update.await("UPDATE `player_houses` SET `charge` = ? WHERE `house` = ?", { coordsJson, houseName })
+    if GetResourceState("qs-inventory"):find("started") and Config.EnableQuests then
+      local ok = exports["qs-inventory"]:UpdateQuestProgress(src, "place_phone_charger", 100)
+      Debug(ok and "Quest \"place_phone_charger\" progress updated" or "Failed to update quest \"place_phone_charger\"")
+    end
+    HousingBatteryBridge_Register(houseName, coords)
+  elseif 8 == locationType then
+    -- Delivery location stored in houselocations.coords
+    local locRow = MySQL.single.await("SELECT coords FROM `houselocations` WHERE `name` = ? LIMIT 1", { houseName })
+    local existingCoords = (locRow and locRow.coords and json.decode(locRow.coords)) or {}
+    existingCoords.delivery = { x = tonumber(coords.x) or coords.x, y = tonumber(coords.y) or coords.y, z = tonumber(coords.z) or coords.z, w = tonumber(coords.w) or 0.0 }
+    MySQL.update.await("UPDATE `houselocations` SET `coords` = ? WHERE `name` = ?", { json.encode(existingCoords), houseName })
+    broadcastCoords = json.encode(existingCoords.delivery)
+  elseif 9 == locationType then
+    MySQL.update.await("UPDATE `player_houses` SET `tablet` = ? WHERE `house` = ?", { coordsJson, houseName })
+  elseif 6 == locationType then
+    local rows = MySQL.Sync.fetchAll("SELECT console FROM `player_houses` WHERE `house` = ?", { houseName })
+    local console = json.decode(rows[1].console) or {}
+    console.tv = coords
+    MySQL.Sync.execute("UPDATE `player_houses` SET `console` = '" .. json.encode(console) .. "' WHERE `house` = '" .. houseName .. "'")
+  elseif 7 == locationType then
+    local rows = MySQL.Sync.fetchAll("SELECT console FROM `player_houses` WHERE `house` = ?", { houseName })
+    local console = json.decode(rows[1].console) or {}
+    console.sit = coords
+    MySQL.Sync.execute("UPDATE `player_houses` SET `console` = '" .. json.encode(console) .. "' WHERE `house` = '" .. houseName .. "'")
   end
-  L5_2 = Debug
-  L6_2 = "getlocations"
-  L7_2 = L3_2
-  L5_2(L6_2, L7_2)
-  return L3_2
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerCallback
-L27_1 = "qb-houses:server:getPlayerHouses"
-function L28_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L3_2 = A0_2
-  L4_2 = "SELECT house, owner, citizenid, rented, rentable, purchasable FROM player_houses"
-  if A2_2 then
-    L5_2 = L4_2
-    L6_2 = " WHERE house = ?"
-    L5_2 = L5_2 .. L6_2
-    L4_2 = L5_2
-  end
-  L5_2 = MySQL
-  L5_2 = L5_2.Sync
-  L5_2 = L5_2.fetchAll
-  L6_2 = L4_2
-  if A2_2 then
-    L7_2 = {}
-    L8_2 = A2_2
-    L7_2[1] = L8_2
-    if L7_2 then
-      goto lbl_23
+
+  Debug("refresh locations, type: " .. locationType .. " house: " .. houseName .. " coords: " .. tostring(broadcastCoords) .. "")
+
+  -- For delivery (type 8), only notify players inside house
+  if 8 == locationType then
+    local targets = {}
+    local seen = {}
+    if src and src > 0 then
+      seen[src] = true
+      targets[#targets + 1] = src
     end
-  end
-  L7_2 = {}
-  ::lbl_23::
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = A1_2
-  L7_2 = L5_2
-  L6_2(L7_2)
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerEvent
-L27_1 = "qb-houses:server:setLocation"
-L26_1(L27_1)
-L26_1 = AddEventHandler
-L27_1 = "qb-houses:server:setLocation"
-function L28_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2
-  L3_2 = source
-  L4_2 = json
-  L4_2 = L4_2.encode
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = L4_2
-  if 1 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.update
-    L6_2 = L6_2.await
-    L7_2 = "UPDATE `player_houses` SET `stash` = ? WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = L4_2
-    L10_2 = A1_2
-    L8_2[1] = L9_2
-    L8_2[2] = L10_2
-    L6_2(L7_2, L8_2)
-    L6_2 = GetResourceState
-    L7_2 = "qs-inventory"
-    L6_2 = L6_2(L7_2)
-    L7_2 = L6_2
-    L6_2 = L6_2.find
-    L8_2 = "started"
-    L6_2 = L6_2(L7_2, L8_2)
-    if L6_2 then
-      L6_2 = Config
-      L6_2 = L6_2.EnableQuests
-      if L6_2 then
-        L6_2 = exports
-        L6_2 = L6_2["qs-inventory"]
-        L7_2 = L6_2
-        L6_2 = L6_2.UpdateQuestProgress
-        L8_2 = L3_2
-        L9_2 = "place_home_stash"
-        L10_2 = 100
-        L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2)
-        if L6_2 then
-          L7_2 = Debug
-          L8_2 = "Quest \"place_home_stash\" progress updated"
-          L7_2(L8_2)
-        else
-          L7_2 = Debug
-          L8_2 = "Failed to update quest \"place_home_stash\""
-          L7_2(L8_2)
-        end
-      end
-    end
-  elseif 2 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.update
-    L6_2 = L6_2.await
-    L7_2 = "UPDATE `player_houses` SET `outfit` = ? WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = L4_2
-    L10_2 = A1_2
-    L8_2[1] = L9_2
-    L8_2[2] = L10_2
-    L6_2(L7_2, L8_2)
-    L6_2 = GetResourceState
-    L7_2 = "qs-inventory"
-    L6_2 = L6_2(L7_2)
-    L7_2 = L6_2
-    L6_2 = L6_2.find
-    L8_2 = "started"
-    L6_2 = L6_2(L7_2, L8_2)
-    if L6_2 then
-      L6_2 = Config
-      L6_2 = L6_2.EnableQuests
-      if L6_2 then
-        L6_2 = exports
-        L6_2 = L6_2["qs-inventory"]
-        L7_2 = L6_2
-        L6_2 = L6_2.UpdateQuestProgress
-        L8_2 = L3_2
-        L9_2 = "place_home_wardrobe"
-        L10_2 = 100
-        L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2)
-        if L6_2 then
-          L7_2 = Debug
-          L8_2 = "Quest \"place_home_wardrobe\" progress updated"
-          L7_2(L8_2)
-        else
-          L7_2 = Debug
-          L8_2 = "Failed to update quest \"place_home_wardrobe\""
-          L7_2(L8_2)
-        end
-      end
-    end
-  elseif 3 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.update
-    L6_2 = L6_2.await
-    L7_2 = "UPDATE `player_houses` SET `logout` = ? WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = L4_2
-    L10_2 = A1_2
-    L8_2[1] = L9_2
-    L8_2[2] = L10_2
-    L6_2(L7_2, L8_2)
-  elseif 4 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.update
-    L6_2 = L6_2.await
-    L7_2 = "UPDATE `player_houses` SET `charge` = ? WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = L4_2
-    L10_2 = A1_2
-    L8_2[1] = L9_2
-    L8_2[2] = L10_2
-    L6_2(L7_2, L8_2)
-    L6_2 = GetResourceState
-    L7_2 = "qs-inventory"
-    L6_2 = L6_2(L7_2)
-    L7_2 = L6_2
-    L6_2 = L6_2.find
-    L8_2 = "started"
-    L6_2 = L6_2(L7_2, L8_2)
-    if L6_2 then
-      L6_2 = Config
-      L6_2 = L6_2.EnableQuests
-      if L6_2 then
-        L6_2 = exports
-        L6_2 = L6_2["qs-inventory"]
-        L7_2 = L6_2
-        L6_2 = L6_2.UpdateQuestProgress
-        L8_2 = L3_2
-        L9_2 = "place_phone_charger"
-        L10_2 = 100
-        L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2)
-        if L6_2 then
-          L7_2 = Debug
-          L8_2 = "Quest \"place_phone_charger\" progress updated"
-          L7_2(L8_2)
-        else
-          L7_2 = Debug
-          L8_2 = "Failed to update quest \"place_phone_charger\""
-          L7_2(L8_2)
-        end
-      end
-    end
-    L6_2 = HousingBatteryBridge_Register
-    L7_2 = A1_2
-    L8_2 = A0_2
-    L6_2(L7_2, L8_2)
-  elseif 8 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.single
-    L6_2 = L6_2.await
-    L7_2 = "SELECT coords FROM `houselocations` WHERE `name` = ? LIMIT 1"
-    L8_2 = {}
-    L9_2 = A1_2
-    L8_2[1] = L9_2
-    L6_2 = L6_2(L7_2, L8_2)
-    L7_2 = {}
-    if L6_2 then
-      L8_2 = L6_2.coords
-      if L8_2 then
-        L8_2 = json
-        L8_2 = L8_2.decode
-        L9_2 = L6_2.coords
-        L8_2 = L8_2(L9_2)
-        L7_2 = L8_2 or L7_2
-        if not L8_2 then
-          L8_2 = {}
-          L7_2 = L8_2
-        end
-      end
-    end
-    L8_2 = {}
-    L9_2 = tonumber
-    L10_2 = A0_2.x
-    L9_2 = L9_2(L10_2)
-    if not L9_2 then
-      L9_2 = A0_2.x
-    end
-    L8_2.x = L9_2
-    L9_2 = tonumber
-    L10_2 = A0_2.y
-    L9_2 = L9_2(L10_2)
-    if not L9_2 then
-      L9_2 = A0_2.y
-    end
-    L8_2.y = L9_2
-    L9_2 = tonumber
-    L10_2 = A0_2.z
-    L9_2 = L9_2(L10_2)
-    if not L9_2 then
-      L9_2 = A0_2.z
-    end
-    L8_2.z = L9_2
-    L9_2 = tonumber
-    L10_2 = A0_2.w
-    L9_2 = L9_2(L10_2)
-    if not L9_2 then
-      L9_2 = 0.0
-    end
-    L8_2.w = L9_2
-    L7_2.delivery = L8_2
-    L8_2 = MySQL
-    L8_2 = L8_2.update
-    L8_2 = L8_2.await
-    L9_2 = "UPDATE `houselocations` SET `coords` = ? WHERE `name` = ?"
-    L10_2 = {}
-    L11_2 = json
-    L11_2 = L11_2.encode
-    L12_2 = L7_2
-    L11_2 = L11_2(L12_2)
-    L12_2 = A1_2
-    L10_2[1] = L11_2
-    L10_2[2] = L12_2
-    L8_2(L9_2, L10_2)
-    L8_2 = json
-    L8_2 = L8_2.encode
-    L9_2 = L7_2.delivery
-    L8_2 = L8_2(L9_2)
-    L5_2 = L8_2
-  elseif 9 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.update
-    L6_2 = L6_2.await
-    L7_2 = "UPDATE `player_houses` SET `tablet` = ? WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = L4_2
-    L10_2 = A1_2
-    L8_2[1] = L9_2
-    L8_2[2] = L10_2
-    L6_2(L7_2, L8_2)
-  elseif 6 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.Sync
-    L6_2 = L6_2.fetchAll
-    L7_2 = "SELECT console FROM `player_houses` WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = A1_2
-    L8_2[1] = L9_2
-    L6_2 = L6_2(L7_2, L8_2)
-    L7_2 = json
-    L7_2 = L7_2.decode
-    L8_2 = L6_2[1]
-    L8_2 = L8_2.console
-    L7_2 = L7_2(L8_2)
-    if not L7_2 then
-      L7_2 = {}
-    end
-    L7_2.tv = A0_2
-    L8_2 = MySQL
-    L8_2 = L8_2.Sync
-    L8_2 = L8_2.execute
-    L9_2 = "UPDATE `player_houses` SET `console` = '"
-    L10_2 = json
-    L10_2 = L10_2.encode
-    L11_2 = L7_2
-    L10_2 = L10_2(L11_2)
-    L11_2 = "' WHERE `house` = '"
-    L12_2 = A1_2
-    L13_2 = "'"
-    L9_2 = L9_2 .. L10_2 .. L11_2 .. L12_2 .. L13_2
-    L8_2(L9_2)
-  elseif 7 == A2_2 then
-    L6_2 = MySQL
-    L6_2 = L6_2.Sync
-    L6_2 = L6_2.fetchAll
-    L7_2 = "SELECT console FROM `player_houses` WHERE `house` = ?"
-    L8_2 = {}
-    L9_2 = A1_2
-    L8_2[1] = L9_2
-    L6_2 = L6_2(L7_2, L8_2)
-    L7_2 = json
-    L7_2 = L7_2.decode
-    L8_2 = L6_2[1]
-    L8_2 = L8_2.console
-    L7_2 = L7_2(L8_2)
-    if not L7_2 then
-      L7_2 = {}
-    end
-    L7_2.sit = A0_2
-    L8_2 = MySQL
-    L8_2 = L8_2.Sync
-    L8_2 = L8_2.execute
-    L9_2 = "UPDATE `player_houses` SET `console` = '"
-    L10_2 = json
-    L10_2 = L10_2.encode
-    L11_2 = L7_2
-    L10_2 = L10_2(L11_2)
-    L11_2 = "' WHERE `house` = '"
-    L12_2 = A1_2
-    L13_2 = "'"
-    L9_2 = L9_2 .. L10_2 .. L11_2 .. L12_2 .. L13_2
-    L8_2(L9_2)
-  end
-  L6_2 = Debug
-  L7_2 = "refresh locations, type: "
-  L8_2 = A2_2
-  L9_2 = " house: "
-  L10_2 = A1_2
-  L11_2 = " coords: "
-  L12_2 = tostring
-  L13_2 = L5_2
-  L12_2 = L12_2(L13_2)
-  L13_2 = ""
-  L7_2 = L7_2 .. L8_2 .. L9_2 .. L10_2 .. L11_2 .. L12_2 .. L13_2
-  L6_2(L7_2)
-  if 8 == A2_2 then
-    L6_2 = {}
-    L7_2 = {}
-    if L3_2 and L3_2 > 0 then
-      L7_2[L3_2] = true
-      L8_2 = #L6_2
-      L8_2 = L8_2 + 1
-      L6_2[L8_2] = L3_2
-    end
-    L8_2 = HouseRoutings
-    if L8_2 then
-      L8_2 = HouseRoutings
-      L8_2 = L8_2[A1_2]
-    end
-    if L8_2 then
-      L9_2 = A2_2
-      L10_2 = L8_2.players
-      L9_2 = L9_2(L10_2)
-      if "table" == L9_2 then
-        L9_2 = 1
-        L10_2 = L8_2.players
-        L10_2 = #L10_2
-        L11_2 = 1
-        for L12_2 = L9_2, L10_2, L11_2 do
-          L13_2 = tonumber
-          L14_2 = L8_2.players
-          L14_2 = L14_2[L12_2]
-          L13_2 = L13_2(L14_2)
-          if L13_2 then
-            L14_2 = L7_2[L13_2]
-            if not L14_2 then
-              L14_2 = DoesPlayerExist
-              L15_2 = tostring
-              L16_2 = L13_2
-              L15_2, L16_2, L17_2, L18_2 = L15_2(L16_2)
-              L14_2 = L14_2(L15_2, L16_2, L17_2, L18_2)
-              if L14_2 > 0 then
-                L7_2[L13_2] = true
-                L14_2 = #L6_2
-                L14_2 = L14_2 + 1
-                L6_2[L14_2] = L13_2
-              end
-            end
+    local routing = HouseRoutings and HouseRoutings[houseName]
+    if routing and type(routing.players) == "table" then
+      for i = 1, #routing.players do
+        local pid = tonumber(routing.players[i])
+        if pid and not seen[pid] then
+          if DoesPlayerExist(tostring(pid)) > 0 then
+            seen[pid] = true
+            targets[#targets + 1] = pid
           end
         end
       end
     end
-    L9_2 = 1
-    L10_2 = #L6_2
-    L11_2 = 1
-    for L12_2 = L9_2, L10_2, L11_2 do
-      L13_2 = TriggerClientEvent
-      L14_2 = "qb-houses:client:refreshLocations"
-      L15_2 = L6_2[L12_2]
-      L16_2 = A1_2
-      L17_2 = L5_2
-      L18_2 = A2_2
-      L13_2(L14_2, L15_2, L16_2, L17_2, L18_2)
+    for i = 1, #targets do
+      TriggerClientEvent("qb-houses:client:refreshLocations", targets[i], houseName, broadcastCoords, locationType)
     end
   else
-    L6_2 = TriggerClientEvent
-    L7_2 = "qb-houses:client:refreshLocations"
-    L8_2 = -1
-    L9_2 = A1_2
-    L10_2 = L5_2
-    L11_2 = A2_2
-    L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
+    TriggerClientEvent("qb-houses:client:refreshLocations", -1, houseName, broadcastCoords, locationType)
   end
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerCallback
-L27_1 = "qb-houses:GetCreditState"
-function L28_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE house = ?"
-  L5_2 = {}
-  L6_2 = A2_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L3_2[1]
-  if L4_2 then
-    L4_2 = L4_2.credit
-  end
-  if L4_2 then
-    L5_2 = tonumber
-    L6_2 = L4_2
-    L5_2 = L5_2(L6_2)
-    if L5_2 > 0 then
-      L5_2 = A1_2
-      L6_2 = true
-      L5_2(L6_2)
-  end
+end)
+
+
+-- Get credit state
+RegisterServerCallback("qb-houses:GetCreditState", function(source, cb, houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE house = ?", { houseName })
+  local row = rows[1]
+  local credit = row and row.credit
+  if credit and tonumber(credit) > 0 then
+    cb(true)
   else
-    L5_2 = A1_2
-    L6_2 = false
-    L5_2(L6_2)
+    cb(false)
   end
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerEvent
-L27_1 = "housing:setInside"
-L26_1(L27_1)
-L26_1 = AddEventHandler
-L27_1 = "housing:setInside"
-function L28_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = source
-  L3_2 = UpdateInside
-  L4_2 = L2_2
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2)
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerCallback
-L27_1 = "qb-houses:getConsoleData"
-function L28_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT console FROM player_houses WHERE house = ?"
-  L5_2 = {}
-  L6_2 = A2_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L3_2 = L3_2[1]
-  if not L3_2 then
-    L4_2 = A1_2
-    L5_2 = {}
-    return L4_2(L5_2)
+end)
+
+-- Set inside state
+RegisterServerEvent("housing:setInside")
+AddEventHandler("housing:setInside", function(houseName, inside)
+  UpdateInside(source, houseName, inside)
+end)
+
+-- Get console data
+RegisterServerCallback("qb-houses:getConsoleData", function(source, cb, houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT console FROM player_houses WHERE house = ?", { houseName })
+  if not rows[1] then
+    return cb({})
   end
-  L4_2 = A1_2
-  L5_2 = json
-  L5_2 = L5_2.decode
-  L6_2 = L3_2.console
-  L5_2 = L5_2(L6_2)
-  if not L5_2 then
-    L5_2 = {}
-  end
-  L4_2(L5_2)
-end
-L26_1(L27_1, L28_1)
-L26_1 = RegisterServerCallback
-L27_1 = "phone_new:server:GetPlayerHouses"
-function L28_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = A0_2
-  L3_2 = {}
-  L4_2 = {}
-  L5_2 = GetIdentifier
-  L6_2 = L2_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = MySQL
-  L6_2 = L6_2.Async
-  L6_2 = L6_2.fetchAll
-  L7_2 = "SELECT * FROM `player_houses` WHERE `citizenid` = '"
-  L8_2 = L5_2
-  L9_2 = "'"
-  L7_2 = L7_2 .. L8_2 .. L9_2
-  L8_2 = {}
-  function L9_2(A0_3)
-    local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3, L13_3, L14_3
-    L1_3 = A0_3[1]
-    if nil ~= L1_3 then
-      L1_3 = pairs
-      L2_3 = A0_3
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = json
-        L7_3 = L7_3.decode
-        L8_3 = L6_3.keyholders
-        L7_3 = L7_3(L8_3)
-        L6_3.keyholders = L7_3
-        L7_3 = L6_3.keyholders
-        if nil ~= L7_3 then
-          L7_3 = next
-          L8_3 = L6_3.keyholders
-          L7_3 = L7_3(L8_3)
-          if L7_3 then
-            L7_3 = pairs
-            L8_3 = L6_3.keyholders
-            L7_3, L8_3, L9_3, L10_3 = L7_3(L8_3)
-            for L11_3, L12_3 in L7_3, L8_3, L9_3, L10_3 do
-              L13_3 = GetPlayerSQLDataFromIdentifier
-              L14_3 = L12_3
-              L13_3 = L13_3(L14_3)
-              if L13_3 then
-                L14_3 = L4_2
-                L14_3[L11_3] = L13_3
+  cb(json.decode(rows[1].console) or {})
+end)
+
+-- Phone new: get player houses
+RegisterServerCallback("phone_new:server:GetPlayerHouses", function(src, cb)
+  local playerHouses = {}
+  local keyholderData = {}
+  local identifier = GetIdentifier(src)
+
+  MySQL.Async.fetchAll("SELECT * FROM `player_houses` WHERE `citizenid` = '" .. identifier .. "'", {}, function(rows)
+    if nil ~= rows[1] then
+      for idx, row in pairs(rows) do
+        row.keyholders = json.decode(row.keyholders)
+        if nil ~= row.keyholders then
+          if next(row.keyholders) then
+            for khIdx, khId in pairs(row.keyholders) do
+              local sqlData = GetPlayerSQLDataFromIdentifier(khId)
+              if sqlData then
+                keyholderData[khIdx] = sqlData
               end
             end
-        end
+          end
         else
-          L7_3 = L4_2
-          L8_3 = L5_2
-          L7_3[1] = L8_3
+          keyholderData[1] = identifier
         end
-        L7_3 = table
-        L7_3 = L7_3.insert
-        L8_3 = L3_2
-        L9_3 = {}
-        L10_3 = L6_3.house
-        L9_3.name = L10_3
-        L10_3 = L4_2
-        L9_3.keyholders = L10_3
-        L10_3 = L6_3.citizenid
-        L9_3.owner = L10_3
-        L10_3 = Config
-        L10_3 = L10_3.Houses
-        L11_3 = L6_3.house
-        L10_3 = L10_3[L11_3]
-        L10_3 = L10_3.price
-        L9_3.price = L10_3
-        L10_3 = Config
-        L10_3 = L10_3.Houses
-        L11_3 = L6_3.house
-        L10_3 = L10_3[L11_3]
-        L10_3 = L10_3.address
-        L9_3.label = L10_3
-        L10_3 = Config
-        L10_3 = L10_3.Houses
-        L11_3 = L6_3.house
-        L10_3 = L10_3[L11_3]
-        L10_3 = L10_3.tier
-        L9_3.tier = L10_3
-        L10_3 = Config
-        L10_3 = L10_3.Houses
-        L11_3 = L6_3.house
-        L10_3 = L10_3[L11_3]
-        L10_3 = L10_3.garage
-        L9_3.garage = L10_3
-        L7_3(L8_3, L9_3)
+        table.insert(playerHouses, {
+          name = row.house,
+          keyholders = keyholderData,
+          owner = row.citizenid,
+          price = Config.Houses[row.house].price,
+          label = Config.Houses[row.house].address,
+          tier = Config.Houses[row.house].tier,
+          garage = Config.Houses[row.house].garage,
+        })
       end
-      L1_3 = A1_2
-      L2_3 = L3_2
-      L1_3(L2_3)
+      cb(playerHouses)
     end
+  end)
+end)
+
+
+-- Utility functions
+function SplitStringToArray(str)
+  local result = {}
+  for word in str:gmatch("%S+") do
+    result[#result + 1] = word
   end
-  L6_2(L7_2, L8_2, L9_2)
+  return result
 end
-L26_1(L27_1, L28_1)
-function L26_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = {}
-  L2_2 = A0_2.gmatch
-  L3_2 = A0_2
-  L4_2 = "%S+"
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2, L4_2)
-  for L6_2 in L2_2, L3_2, L4_2, L5_2 do
-    L7_2 = #L1_2
-    L7_2 = L7_2 + 1
-    L1_2[L7_2] = L6_2
-  end
-  return L1_2
+
+function escape_sqli(str)
+  local replacements = { ['"'] = '\\"', ["'"] = "\\'" }
+  return str:gsub("['\"']", replacements)
 end
-SplitStringToArray = L26_1
-function L26_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = {}
-  L1_2["\""] = "\\\""
-  L1_2["'"] = "\\'"
-  L3_2 = A0_2
-  L2_2 = A0_2.gsub
-  L4_2 = "['\"]"
-  L5_2 = L1_2
-  return L2_2(L3_2, L4_2, L5_2)
-end
-escape_sqli = L26_1
-L26_1 = Config
-L26_1 = L26_1.EnableRaid
-if L26_1 then
-  L26_1 = RegisterUsableItem
-  L27_1 = Config
-  L27_1 = L27_1.StomRamItem
-  function L28_1(A0_2, A1_2)
-    local L2_2, L3_2, L4_2, L5_2, L6_2
-    L2_2 = GetJobName
-    L3_2 = A0_2
-    L2_2 = L2_2(L3_2)
-    L3_2 = table
-    L3_2 = L3_2.contains
-    L4_2 = Config
-    L4_2 = L4_2.PoliceJobs
-    L5_2 = L2_2
-    L3_2 = L3_2(L4_2, L5_2)
-    if L3_2 then
-      L3_2 = TriggerClientEvent
-      L4_2 = "qb-houses:client:HomeInvasion"
-      L5_2 = A0_2
-      L3_2(L4_2, L5_2)
+
+-- Storm ram / raid item
+if Config.EnableRaid then
+  RegisterUsableItem(Config.StomRamItem, function(src, item)
+    local jobName = GetJobName(src)
+    if table.contains(Config.PoliceJobs, jobName) then
+      TriggerClientEvent("qb-houses:client:HomeInvasion", src)
     else
-      L3_2 = Notification
-      L4_2 = A0_2
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "stormram"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "error"
-      L3_2(L4_2, L5_2, L6_2)
+      Notification(src, i18n.t("stormram"), "error")
+    end
+  end)
+end
+
+-- Count players with a specific job
+local function countPlayersWithJob(jobList)
+  local players = GetPlayers()
+  local count = 0
+  for _, pid in ipairs(players) do
+    local job = GetJobName(pid)
+    if table.contains(jobList, job) then
+      count = count + 1
     end
   end
-  L26_1(L27_1, L28_1)
+  return count
 end
-function L26_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L1_2 = GetPlayers
-  L1_2 = L1_2()
-  L2_2 = 0
-  L3_2 = ipairs
-  L4_2 = L1_2
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = GetJobName
-    L10_2 = L8_2
-    L9_2 = L9_2(L10_2)
-    L10_2 = table
-    L10_2 = L10_2.contains
-    L11_2 = A0_2
-    L12_2 = L9_2
-    L10_2 = L10_2(L11_2, L12_2)
-    if L10_2 then
-      L2_2 = L2_2 + 1
+
+RegisterServerCallback("housing:checkTotalJobCount", function(source, cb)
+  cb(countPlayersWithJob(Config.PoliceJobs))
+end)
+
+RegisterNetEvent("housing:removeItem", function(itemName, amount)
+  RemoveItem(source, itemName, amount)
+end)
+
+-- Robbery item
+if Config.EnableRobbery then
+  RegisterUsableItem(Config.RobberyItem, function(src, item)
+    local policeCount = countPlayersWithJob(Config.PoliceJobs)
+    if policeCount < Config.RequiredCop then
+      Notification(src, i18n.t("not_enough_police"), "error")
     end
-  end
-  return L2_2
+    TriggerClientEvent("qb-houses:client:lockpick", src)
+  end)
 end
-L27_1 = RegisterServerCallback
-L28_1 = "housing:checkTotalJobCount"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = A1_2
-  L3_2 = L26_1
-  L4_2 = Config
-  L4_2 = L4_2.PoliceJobs
-  L3_2, L4_2 = L3_2(L4_2)
-  L2_2(L3_2, L4_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "housing:removeItem"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = source
-  L3_2 = RemoveItem
-  L4_2 = L2_2
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = Config
-L27_1 = L27_1.EnableRobbery
-if L27_1 then
-  L27_1 = RegisterUsableItem
-  L28_1 = Config
-  L28_1 = L28_1.RobberyItem
-  function L29_1(A0_2, A1_2)
-    local L2_2, L3_2, L4_2, L5_2, L6_2
-    L2_2 = L26_1
-    L3_2 = Config
-    L3_2 = L3_2.PoliceJobs
-    L2_2 = L2_2(L3_2)
-    L3_2 = Config
-    L3_2 = L3_2.RequiredCop
-    if L2_2 < L3_2 then
-      L3_2 = Notification
-      L4_2 = A0_2
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "not_enough_police"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "error"
-      L3_2(L4_2, L5_2, L6_2)
-    end
-    L3_2 = TriggerClientEvent
-    L4_2 = "qb-houses:client:lockpick"
-    L5_2 = A0_2
-    L3_2(L4_2, L5_2)
-  end
-  L27_1(L28_1, L29_1)
-end
-L27_1 = RegisterServerEvent
-L28_1 = "qb-houses:server:SetHouseRammed"
-L27_1(L28_1)
-L27_1 = AddEventHandler
-L28_1 = "qb-houses:server:SetHouseRammed"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = Config
-  L2_2 = L2_2.Houses
-  L2_2 = L2_2[A1_2]
-  L2_2.IsRammed = A0_2
-  L2_2 = TriggerClientEvent
-  L3_2 = "qb-houses:client:SetHouseRammed"
-  L4_2 = -1
-  L5_2 = A0_2
-  L6_2 = A1_2
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "qb-houses:server:RegisterStash"
-L27_1(L28_1)
-L27_1 = AddEventHandler
-L28_1 = "qb-houses:server:RegisterStash"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L3_2 = exports
-  L3_2 = L3_2.ox_inventory
-  L4_2 = L3_2
-  L3_2 = L3_2.RegisterStash
-  L5_2 = A0_2
-  L6_2 = "stash"
-  L7_2 = A0_2
-  L6_2 = L6_2 .. L7_2
-  L7_2 = A1_2
-  L8_2 = A2_2
-  L9_2 = false
-  L3_2(L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:getPlayerDressing"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = GetPlayerFromId
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if L2_2 then
-    L3_2 = TriggerEvent
-    L4_2 = "esx_datastore:getDataStore"
-    L5_2 = "property"
-    L6_2 = L2_2.identifier
-    function L7_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3
-      L1_3 = A0_3.count
-      L2_3 = "dressing"
-      L1_3 = L1_3(L2_3)
-      L2_3 = {}
-      L3_3 = 1
-      L4_3 = L1_3
-      L5_3 = 1
-      for L6_3 = L3_3, L4_3, L5_3 do
-        L7_3 = A0_3.get
-        L8_3 = "dressing"
-        L9_3 = L6_3
-        L7_3 = L7_3(L8_3, L9_3)
-        L8_3 = table
-        L8_3 = L8_3.insert
-        L9_3 = L2_3
-        L10_3 = L7_3.label
-        L8_3(L9_3, L10_3)
+
+
+-- Set house rammed state
+RegisterServerEvent("qb-houses:server:SetHouseRammed")
+AddEventHandler("qb-houses:server:SetHouseRammed", function(state, houseName)
+  Config.Houses[houseName].IsRammed = state
+  TriggerClientEvent("qb-houses:client:SetHouseRammed", -1, state, houseName)
+end)
+
+-- Register stash (ox_inventory)
+RegisterServerEvent("qb-houses:server:RegisterStash")
+AddEventHandler("qb-houses:server:RegisterStash", function(stashName, slots, weight)
+  exports.ox_inventory:RegisterStash(stashName, "stash" .. stashName, slots, weight, false)
+end)
+
+-- ESX: get player dressing
+RegisterServerCallback("qb-houses:server:getPlayerDressing", function(src, cb)
+  local player = GetPlayerFromId(src)
+  if player then
+    TriggerEvent("esx_datastore:getDataStore", "property", player.identifier, function(store)
+      local count = store.count("dressing")
+      local labels = {}
+      for i = 1, count do
+        local outfit = store.get("dressing", i)
+        table.insert(labels, outfit.label)
       end
-      L3_3 = A1_2
-      L4_3 = L2_3
-      L3_3(L4_3)
-    end
-    L3_2(L4_2, L5_2, L6_2, L7_2)
+      cb(labels)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:getPlayerOutfit"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L3_2 = GetPlayerFromId
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = TriggerEvent
-    L5_2 = "esx_datastore:getDataStore"
-    L6_2 = "property"
-    L7_2 = L3_2.identifier
-    function L8_2(A0_3)
-      local L1_3, L2_3, L3_3
-      L1_3 = A0_3.get
-      L2_3 = "dressing"
-      L3_3 = A2_2
-      L1_3 = L1_3(L2_3, L3_3)
-      L2_3 = A1_2
-      L3_3 = L1_3.skin
-      L2_3(L3_3)
-    end
-    L4_2(L5_2, L6_2, L7_2, L8_2)
+end)
+
+-- ESX: get player outfit
+RegisterServerCallback("qb-houses:server:getPlayerOutfit", function(src, cb, outfitIndex)
+  local player = GetPlayerFromId(src)
+  if player then
+    TriggerEvent("esx_datastore:getDataStore", "property", player.identifier, function(store)
+      local outfit = store.get("dressing", outfitIndex)
+      cb(outfit.skin)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerEvent
-L28_1 = "qb-houses:server:removeOutfit"
-L27_1(L28_1)
-L27_1 = AddEventHandler
-L28_1 = "qb-houses:server:removeOutfit"
-function L29_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = GetPlayerFromId
-  L2_2 = source
-  L1_2 = L1_2(L2_2)
-  if L1_2 then
-    L2_2 = TriggerEvent
-    L3_2 = "esx_datastore:getDataStore"
-    L4_2 = "property"
-    L5_2 = L1_2.identifier
-    function L6_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3
-      L1_3 = A0_3.get
-      L2_3 = "dressing"
-      L1_3 = L1_3(L2_3)
-      if nil == L1_3 then
-        L2_3 = {}
-        L1_3 = L2_3
-      end
-      L2_3 = A0_2
-      A0_2 = L2_3
-      L2_3 = table
-      L2_3 = L2_3.remove
-      L3_3 = L1_3
-      L4_3 = A0_2
-      L2_3(L3_3, L4_3)
-      L2_3 = A0_3.set
-      L3_3 = "dressing"
-      L4_3 = L1_3
-      L2_3(L3_3, L4_3)
-    end
-    L2_2(L3_2, L4_2, L5_2, L6_2)
+end)
+
+-- ESX: remove outfit
+RegisterServerEvent("qb-houses:server:removeOutfit")
+AddEventHandler("qb-houses:server:removeOutfit", function(outfitIndex)
+  local player = GetPlayerFromId(source)
+  if player then
+    TriggerEvent("esx_datastore:getDataStore", "property", player.identifier, function(store)
+      local outfits = store.get("dressing")
+      if nil == outfits then outfits = {} end
+      table.remove(outfits, outfitIndex)
+      store.set("dressing", outfits)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerEvent
-L28_1 = "qb-houses:server:withdrawItem"
-L27_1(L28_1)
-L27_1 = AddEventHandler
-L28_1 = "qb-houses:server:withdrawItem"
-function L29_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L4_2 = source
-  L5_2 = GetPlayerFromId
-  L6_2 = L4_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = L5_2.identifier
-  if "item" == A0_2 then
-    L7_2 = TriggerEvent
-    L8_2 = "esx_addoninventory:getInventory"
-    L9_2 = "property"
-    L10_2 = L6_2
-    function L11_2(A0_3)
-      local L1_3, L2_3, L3_3
-      L1_3 = L5_2.canCarryItem
-      L2_3 = A1_2
-      L3_3 = A2_2
-      L1_3 = L1_3(L2_3, L3_3)
-      if L1_3 then
-        L1_3 = A0_3.getItem
-        L2_3 = A1_2
-        L1_3 = L1_3(L2_3)
-        L1_3 = L1_3.count
-        L2_3 = A2_2
-        if L1_3 >= L2_3 then
-          L1_3 = L5_2.addInventoryItem
-          L2_3 = A1_2
-          L3_3 = A2_2
-          L1_3(L2_3, L3_3)
-          L1_3 = A0_3.removeItem
-          L2_3 = A1_2
-          L3_3 = A2_2
-          L1_3(L2_3, L3_3)
+end)
+
+
+-- ESX: withdraw item from house
+RegisterServerEvent("qb-houses:server:withdrawItem")
+AddEventHandler("qb-houses:server:withdrawItem", function(itemType, itemName, amount, extra)
+  local src = source
+  local player = GetPlayerFromId(src)
+  local identifier = player.identifier
+  if "item" == itemType then
+    TriggerEvent("esx_addoninventory:getInventory", "property", identifier, function(inventory)
+      if player.canCarryItem(itemName, amount) then
+        local item = inventory.getItem(itemName)
+        if item.count >= amount then
+          player.addInventoryItem(itemName, amount)
+          inventory.removeItem(itemName, amount)
         end
       end
-    end
-    L7_2(L8_2, L9_2, L10_2, L11_2)
-  elseif "weapon" == A0_2 then
-    L7_2 = TriggerEvent
-    L8_2 = "esx_datastore:getDataStore"
-    L9_2 = "property"
-    L10_2 = L6_2
-    function L11_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3
-      L1_3 = A0_3.get
-      L2_3 = "weapons"
-      L1_3 = L1_3(L2_3)
-      if not L1_3 then
-        L1_3 = {}
-      end
-      L2_3 = 1
-      L3_3 = #L1_3
-      L4_3 = 1
-      for L5_3 = L2_3, L3_3, L4_3 do
-        L6_3 = L1_3[L5_3]
-        L6_3 = L6_3.name
-        L7_3 = A1_2
-        if L6_3 == L7_3 then
-          L6_3 = table
-          L6_3 = L6_3.remove
-          L7_3 = L1_3
-          L8_3 = L5_3
-          L6_3(L7_3, L8_3)
-          L6_3 = A0_3.set
-          L7_3 = "weapons"
-          L8_3 = L1_3
-          L6_3(L7_3, L8_3)
-          L6_3 = L5_2.addWeapon
-          L7_3 = A1_2
-          L8_3 = A2_2
-          L6_3(L7_3, L8_3)
+    end)
+  elseif "weapon" == itemType then
+    TriggerEvent("esx_datastore:getDataStore", "property", identifier, function(store)
+      local weapons = store.get("weapons") or {}
+      for i = 1, #weapons do
+        if weapons[i].name == itemName then
+          table.remove(weapons, i)
+          store.set("weapons", weapons)
+          player.addWeapon(itemName, amount)
           break
         end
       end
-    end
-    L7_2(L8_2, L9_2, L10_2, L11_2)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerEvent
-L28_1 = "qb-houses:server:storeItem"
-L27_1(L28_1)
-L27_1 = AddEventHandler
-L28_1 = "qb-houses:server:storeItem"
-function L29_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L4_2 = source
-  L5_2 = GetPlayerFromId
-  L6_2 = L4_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = L5_2.identifier
-  if "item" == A0_2 then
-    L7_2 = L5_2.getInventoryItem
-    L8_2 = A1_2
-    L7_2 = L7_2(L8_2)
-    L7_2 = L7_2.count
-    if A2_2 <= L7_2 then
-      L7_2 = TriggerEvent
-      L8_2 = "esx_addoninventory:getInventory"
-      L9_2 = "property"
-      L10_2 = L6_2
-      function L11_2(A0_3)
-        local L1_3, L2_3, L3_3
-        L1_3 = L5_2.removeInventoryItem
-        L2_3 = A1_2
-        L3_3 = A2_2
-        L1_3(L2_3, L3_3)
-        L1_3 = A0_3.addItem
-        L2_3 = A1_2
-        L3_3 = A2_2
-        L1_3(L2_3, L3_3)
-      end
-      L7_2(L8_2, L9_2, L10_2, L11_2)
+end)
+
+-- ESX: store item in house
+RegisterServerEvent("qb-houses:server:storeItem")
+AddEventHandler("qb-houses:server:storeItem", function(itemType, itemName, amount, extra)
+  local src = source
+  local player = GetPlayerFromId(src)
+  local identifier = player.identifier
+  if "item" == itemType then
+    local invItem = player.getInventoryItem(itemName)
+    if amount <= invItem.count then
+      TriggerEvent("esx_addoninventory:getInventory", "property", identifier, function(inventory)
+        player.removeInventoryItem(itemName, amount)
+        inventory.addItem(itemName, amount)
+      end)
     end
-  elseif "weapon" == A0_2 then
-    L7_2 = L5_2.getLoadout
-    L7_2 = L7_2()
-    L8_2 = false
-    L9_2 = pairs
-    L10_2 = L7_2
-    L9_2, L10_2, L11_2, L12_2 = L9_2(L10_2)
-    for L13_2, L14_2 in L9_2, L10_2, L11_2, L12_2 do
-      L15_2 = L14_2.name
-      if L15_2 == A1_2 then
-        L8_2 = true
+  elseif "weapon" == itemType then
+    local loadout = player.getLoadout()
+    local hasWeapon = false
+    for _, weapon in pairs(loadout) do
+      if weapon.name == itemName then
+        hasWeapon = true
         break
       end
     end
-    if L8_2 then
-      L9_2 = TriggerEvent
-      L10_2 = "esx_datastore:getDataStore"
-      L11_2 = "property"
-      L12_2 = L6_2
-      function L13_2(A0_3)
-        local L1_3, L2_3, L3_3, L4_3, L5_3
-        L1_3 = A0_3.get
-        L2_3 = "weapons"
-        L1_3 = L1_3(L2_3)
-        if not L1_3 then
-          L1_3 = {}
-        end
-        L2_3 = table
-        L2_3 = L2_3.insert
-        L3_3 = L1_3
-        L4_3 = {}
-        L5_3 = A1_2
-        L4_3.name = L5_3
-        L5_3 = A2_2
-        L4_3.ammo = L5_3
-        L2_3(L3_3, L4_3)
-        L2_3 = A0_3.set
-        L3_3 = "weapons"
-        L4_3 = L1_3
-        L2_3(L3_3, L4_3)
-        L2_3 = L5_2.removeWeapon
-        L3_3 = A1_2
-        L2_3(L3_3)
-      end
-      L9_2(L10_2, L11_2, L12_2, L13_2)
+    if hasWeapon then
+      TriggerEvent("esx_datastore:getDataStore", "property", identifier, function(store)
+        local weapons = store.get("weapons") or {}
+        table.insert(weapons, { name = itemName, ammo = amount })
+        store.set("weapons", weapons)
+        player.removeWeapon(itemName)
+      end)
     end
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:getInventory"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = GetPlayerFromId
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if L2_2 then
-    L3_2 = A1_2
-    L4_2 = {}
-    L5_2 = L2_2.inventory
-    L4_2.items = L5_2
-    L5_2 = L2_2.getLoadout
-    L5_2 = L5_2()
-    L4_2.weapons = L5_2
-    L3_2(L4_2)
+end)
+
+
+-- ESX: get inventory
+RegisterServerCallback("qb-houses:server:getInventory", function(src, cb)
+  local player = GetPlayerFromId(src)
+  if player then
+    cb({ items = player.inventory, weapons = player.getLoadout() })
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:getBlackMoney"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = GetPlayerFromId
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if L2_2 then
-    L3_2 = TriggerEvent
-    L4_2 = "esx_addonaccount:getAccount"
-    L5_2 = "property"
-    L6_2 = L2_2.identifier
-    function L7_2(A0_3)
-      local L1_3, L2_3, L3_3
-      L1_3 = A0_3.money
-      L2_3 = A1_2
-      L3_3 = L1_3
-      L2_3(L3_3)
-    end
-    L3_2(L4_2, L5_2, L6_2, L7_2)
+end)
+
+-- ESX: get black money
+RegisterServerCallback("qb-houses:server:getBlackMoney", function(src, cb)
+  local player = GetPlayerFromId(src)
+  if player then
+    TriggerEvent("esx_addonaccount:getAccount", "property", player.identifier, function(account)
+      cb(account.money)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:depositBlackMoney"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L3_2 = GetPlayerFromId
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = A2_2
-  if L3_2 then
-    L5_2 = L3_2.getAccount
-    L6_2 = "black_money"
-    L5_2 = L5_2(L6_2)
-    L5_2 = L5_2.money
-    if L4_2 and L4_2 > 0 and L4_2 <= L5_2 then
-      L6_2 = L3_2.removeAccountMoney
-      L7_2 = "black_money"
-      L8_2 = L4_2
-      L6_2(L7_2, L8_2)
-      L6_2 = TriggerEvent
-      L7_2 = "esx_addonaccount:getAccount"
-      L8_2 = "property"
-      L9_2 = L3_2.identifier
-      function L10_2(A0_3)
-        local L1_3, L2_3
-        L1_3 = A0_3.addMoney
-        L2_3 = L4_2
-        L1_3(L2_3)
-        L1_3 = A1_2
-        L2_3 = true
-        L1_3(L2_3)
-      end
-      L6_2(L7_2, L8_2, L9_2, L10_2)
+end)
+
+-- ESX: deposit black money
+RegisterServerCallback("qb-houses:server:depositBlackMoney", function(src, cb, amount)
+  local player = GetPlayerFromId(src)
+  if player then
+    local blackMoney = player.getAccount("black_money").money
+    if amount and amount > 0 and amount <= blackMoney then
+      player.removeAccountMoney("black_money", amount)
+      TriggerEvent("esx_addonaccount:getAccount", "property", player.identifier, function(account)
+        account.addMoney(amount)
+        cb(true)
+      end)
     else
-      L6_2 = A1_2
-      L7_2 = false
-      L6_2(L7_2)
+      cb(false)
     end
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:withdrawBlackMoney"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L3_2 = GetPlayerFromId
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = A2_2
-  if L3_2 and L4_2 and L4_2 > 0 then
-    L5_2 = TriggerEvent
-    L6_2 = "esx_addonaccount:getAccount"
-    L7_2 = "property"
-    L8_2 = L3_2.identifier
-    function L9_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3
-      L1_3 = A0_3.money
-      L2_3 = L4_2
-      if L1_3 >= L2_3 then
-        L2_3 = A0_3.removeMoney
-        L3_3 = L4_2
-        L2_3(L3_3)
-        L2_3 = L3_2.addAccountMoney
-        L3_3 = "black_money"
-        L4_3 = L4_2
-        L2_3(L3_3, L4_3)
-        L2_3 = A1_2
-        L3_3 = true
-        L2_3(L3_3)
+end)
+
+-- ESX: withdraw black money
+RegisterServerCallback("qb-houses:server:withdrawBlackMoney", function(src, cb, amount)
+  local player = GetPlayerFromId(src)
+  if player and amount and amount > 0 then
+    TriggerEvent("esx_addonaccount:getAccount", "property", player.identifier, function(account)
+      if account.money >= amount then
+        account.removeMoney(amount)
+        player.addAccountMoney("black_money", amount)
+        cb(true)
       else
-        L2_3 = A1_2
-        L3_3 = false
-        L2_3(L3_3)
+        cb(false)
       end
-    end
-    L5_2(L6_2, L7_2, L8_2, L9_2)
+    end)
   end
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterServerCallback
-L28_1 = "qb-houses:server:getHouseInventory"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L3_2 = GetPlayerFromId
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = {}
-    L5_2 = {}
-    L6_2 = TriggerEvent
-    L7_2 = "esx_addoninventory:getInventory"
-    L8_2 = "property"
-    L9_2 = L3_2.identifier
-    function L10_2(A0_3)
-      local L1_3
-      L1_3 = A0_3.items
-      L4_2 = L1_3
-    end
-    L6_2(L7_2, L8_2, L9_2, L10_2)
-    L6_2 = TriggerEvent
-    L7_2 = "esx_datastore:getDataStore"
-    L8_2 = "property"
-    L9_2 = L3_2.identifier
-    function L10_2(A0_3)
-      local L1_3, L2_3
-      L1_3 = A0_3.get
-      L2_3 = "weapons"
-      L1_3 = L1_3(L2_3)
-      if not L1_3 then
-        L1_3 = {}
-      end
-      L5_2 = L1_3
-    end
-    L6_2(L7_2, L8_2, L9_2, L10_2)
-    L6_2 = A1_2
-    L7_2 = {}
-    L7_2.items = L4_2
-    L7_2.weapons = L5_2
-    L6_2(L7_2)
+end)
+
+-- ESX: get house inventory
+RegisterServerCallback("qb-houses:server:getHouseInventory", function(src, cb, houseName)
+  local player = GetPlayerFromId(src)
+  if player then
+    local items = {}
+    local weapons = {}
+    TriggerEvent("esx_addoninventory:getInventory", "property", player.identifier, function(inventory)
+      items = inventory.items
+    end)
+    TriggerEvent("esx_datastore:getDataStore", "property", player.identifier, function(store)
+      weapons = store.get("weapons") or {}
+    end)
+    cb({ items = items, weapons = weapons })
   end
+end)
+
+
+-- Open stash (qb-inventory)
+RegisterNetEvent("housing:openStash", function(stashType, stashData)
+  exports["qb-inventory"]:OpenInventory(source, stashType, stashData)
+end)
+
+-- Update exit coords
+RegisterNetEvent("housing:updateExitCoords", function(houseName, exitCoords)
+  local src = source
+  Debug("housing:updateExitCoords", "Updating exit coords", houseName, exitCoords)
+  Config.Houses[houseName].coords.exit = exitCoords
+  MySQL.Sync.execute("UPDATE houselocations SET coords = ? WHERE name = ?", { json.encode(Config.Houses[houseName].coords), houseName })
+  TriggerClientEvent("housing:updateHouseData", -1, houseName, "coords", Config.Houses[houseName].coords)
+end)
+
+-- Discord webhook log
+function SendLog(webhookUrl, embed)
+  embed.author = { name = "HOUSE LOG", icon_url = "https://img.gta5-mods.com/q75/images/motel-arrangement/3a516a-1.png" }
+  embed.footer = { text = "HOUSING" }
+  embed.timestamp = os.date("%Y-%m-%dT%H:%M:%S")
+  PerformHttpRequest(webhookUrl, function(status, text, headers) end, "POST", json.encode({
+    username = "QS",
+    embeds = { embed },
+    avatar_url = "https://img.gta5-mods.com/q75/images/motel-arrangement/3a516a-1.png",
+  }), { ["Content-Type"] = "application/json" }, {})
 end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "housing:openStash"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = source
-  L3_2 = exports
-  L3_2 = L3_2["qb-inventory"]
-  L4_2 = L3_2
-  L3_2 = L3_2.OpenInventory
-  L5_2 = L2_2
-  L6_2 = A0_2
-  L7_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2, L7_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "housing:updateExitCoords"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = source
-  L3_2 = Debug
-  L4_2 = "housing:updateExitCoords"
-  L5_2 = "Updating exit coords"
-  L6_2 = A0_2
-  L7_2 = A1_2
-  L3_2(L4_2, L5_2, L6_2, L7_2)
-  L3_2 = Config
-  L3_2 = L3_2.Houses
-  L3_2 = L3_2[A0_2]
-  L3_2 = L3_2.coords
-  L3_2.exit = A1_2
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "UPDATE houselocations SET coords = ? WHERE name = ?"
-  L5_2 = {}
-  L6_2 = json
-  L6_2 = L6_2.encode
-  L7_2 = Config
-  L7_2 = L7_2.Houses
-  L7_2 = L7_2[A0_2]
-  L7_2 = L7_2.coords
-  L6_2 = L6_2(L7_2)
-  L7_2 = A0_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2(L4_2, L5_2)
-  L3_2 = TriggerClientEvent
-  L4_2 = "housing:updateHouseData"
-  L5_2 = -1
-  L6_2 = A0_2
-  L7_2 = "coords"
-  L8_2 = Config
-  L8_2 = L8_2.Houses
-  L8_2 = L8_2[A0_2]
-  L8_2 = L8_2.coords
-  L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-end
-L27_1(L28_1, L29_1)
-function L27_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = {}
-  L2_2.name = "HOUSE LOG"
-  L2_2.icon_url = "https://img.gta5-mods.com/q75/images/motel-arrangement/3a516a-1.png"
-  A1_2.author = L2_2
-  L2_2 = {}
-  L2_2.text = "HOUSING"
-  A1_2.footer = L2_2
-  L2_2 = os
-  L2_2 = L2_2.date
-  L3_2 = "%Y-%m-%dT%H:%M:%S"
-  L2_2 = L2_2(L3_2)
-  A1_2.timestamp = L2_2
-  L2_2 = {}
-  L3_2 = table
-  L3_2 = L3_2.insert
-  L4_2 = L2_2
-  L5_2 = A1_2
-  L3_2(L4_2, L5_2)
-  L3_2 = PerformHttpRequest
-  L4_2 = A0_2
-  function L5_2(A0_3, A1_3, A2_3)
+
+-- Vault codes
+function HousingGetVaultCodes(houseName)
+  local rows = MySQL.Sync.fetchAll("SELECT vaultCodes FROM player_houses WHERE house = ?", { houseName })
+  if rows[1] then
+    return json.decode(rows[1].vaultCodes) or {}
   end
-  L6_2 = "POST"
-  L7_2 = json
-  L7_2 = L7_2.encode
-  L8_2 = {}
-  L8_2.username = "QS"
-  L8_2.embeds = L2_2
-  L8_2.avatar_url = "https://img.gta5-mods.com/q75/images/motel-arrangement/3a516a-1.png"
-  L7_2 = L7_2(L8_2)
-  L8_2 = {}
-  L8_2["Content-Type"] = "application/json"
-  L9_2 = {}
-  L3_2(L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
+  return {}
 end
-SendLog = L27_1
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = MySQL
-  L1_2 = L1_2.Sync
-  L1_2 = L1_2.fetchAll
-  L2_2 = "SELECT vaultCodes FROM player_houses WHERE house = ?"
-  L3_2 = {}
-  L4_2 = A0_2
-  L3_2[1] = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = L1_2[1]
-  if L2_2 then
-    L2_2 = json
-    L2_2 = L2_2.decode
-    L3_2 = L1_2[1]
-    L3_2 = L3_2.vaultCodes
-    L2_2 = L2_2(L3_2)
-    if not L2_2 then
-      L2_2 = {}
-    end
-    return L2_2
-  end
-  L2_2 = {}
-  return L2_2
-end
-HousingGetVaultCodes = L27_1
-L27_1 = RegisterServerCallback
-L28_1 = "housing:getVaultCodes"
-function L29_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = A0_2
-  L4_2 = A1_2
-  L5_2 = HousingGetVaultCodes
-  L6_2 = A2_2
-  L5_2, L6_2 = L5_2(L6_2)
-  L4_2(L5_2, L6_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "housing:setVaultCode"
-function L29_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = source
-  L2_2 = HousingGetVaultCodes
-  L3_2 = A0_2.house
-  L2_2 = L2_2(L3_2)
-  L3_2 = #L2_2
-  L4_2 = Config
-  L4_2 = L4_2.MaxVaultCodes
-  if L3_2 >= L4_2 then
-    L3_2 = Notification
-    L4_2 = L1_2
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "vault_code.codes_full"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    L3_2(L4_2, L5_2, L6_2)
+
+RegisterServerCallback("housing:getVaultCodes", function(src, cb, houseName)
+  cb(HousingGetVaultCodes(houseName))
+end)
+
+
+-- Set vault code
+RegisterNetEvent("housing:setVaultCode", function(data)
+  local src = source
+  local codes = HousingGetVaultCodes(data.house)
+  if #codes >= Config.MaxVaultCodes then
+    Notification(src, i18n.t("vault_code.codes_full"), "error")
     return
   end
-  L3_2 = table
-  L3_2 = L3_2.insert
-  L4_2 = L2_2
-  L5_2 = {}
-  L6_2 = A0_2.code
-  L5_2.code = L6_2
-  L6_2 = A0_2.id
-  L5_2.id = L6_2
-  L3_2(L4_2, L5_2)
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "UPDATE player_houses SET vaultCodes = ? WHERE house = ?"
-  L5_2 = {}
-  L6_2 = json
-  L6_2 = L6_2.encode
-  L7_2 = L2_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = A0_2.house
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2(L4_2, L5_2)
-  L3_2 = Notification
-  L4_2 = L1_2
-  L5_2 = i18n
-  L5_2 = L5_2.t
-  L6_2 = "vault_code.added"
-  L5_2 = L5_2(L6_2)
-  L6_2 = "success"
-  L3_2(L4_2, L5_2, L6_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = RegisterNetEvent
-L28_1 = "housing:removeVaultCode"
-function L29_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L1_2 = source
-  L2_2 = HousingGetVaultCodes
-  L3_2 = A0_2.house
-  L2_2 = L2_2(L3_2)
-  L3_2 = 1
-  L4_2 = #L2_2
-  L5_2 = 1
-  for L6_2 = L3_2, L4_2, L5_2 do
-    L7_2 = tostring
-    L8_2 = L2_2[L6_2]
-    L8_2 = L8_2.id
-    L7_2 = L7_2(L8_2)
-    L8_2 = tostring
-    L9_2 = A0_2.id
-    L8_2 = L8_2(L9_2)
-    if L7_2 == L8_2 then
-      L7_2 = table
-      L7_2 = L7_2.remove
-      L8_2 = L2_2
-      L9_2 = L6_2
-      L7_2(L8_2, L9_2)
-      L7_2 = MySQL
-      L7_2 = L7_2.Sync
-      L7_2 = L7_2.execute
-      L8_2 = "UPDATE player_houses SET vaultCodes = ? WHERE house = ?"
-      L9_2 = {}
-      L10_2 = json
-      L10_2 = L10_2.encode
-      L11_2 = L2_2
-      L10_2 = L10_2(L11_2)
-      L11_2 = A0_2.house
-      L9_2[1] = L10_2
-      L9_2[2] = L11_2
-      L7_2(L8_2, L9_2)
-      L7_2 = Notification
-      L8_2 = L1_2
-      L9_2 = i18n
-      L9_2 = L9_2.t
-      L10_2 = "vault_code.removed"
-      L9_2 = L9_2(L10_2)
-      L10_2 = "success"
-      L7_2(L8_2, L9_2, L10_2)
+  table.insert(codes, { code = data.code, id = data.id })
+  MySQL.Sync.execute("UPDATE player_houses SET vaultCodes = ? WHERE house = ?", { json.encode(codes), data.house })
+  Notification(src, i18n.t("vault_code.added"), "success")
+end)
+
+-- Remove vault code
+RegisterNetEvent("housing:removeVaultCode", function(data)
+  local src = source
+  local codes = HousingGetVaultCodes(data.house)
+  for i = 1, #codes do
+    if tostring(codes[i].id) == tostring(data.id) then
+      table.remove(codes, i)
+      MySQL.Sync.execute("UPDATE player_houses SET vaultCodes = ? WHERE house = ?", { json.encode(codes), data.house })
+      Notification(src, i18n.t("vault_code.removed"), "success")
       return
     end
   end
-  L3_2 = Notification
-  L4_2 = L1_2
-  L5_2 = i18n
-  L5_2 = L5_2.t
-  L6_2 = "vault_code.not_found"
-  L5_2 = L5_2(L6_2)
-  L6_2 = "error"
-  L3_2(L4_2, L5_2, L6_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = Config
-L27_1 = L27_1.Construction
-if L27_1 then
-  L27_1 = CreateThread
-  function L28_1()
-    local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
+  Notification(src, i18n.t("vault_code.not_found"), "error")
+end)
+
+-- Construction timer
+if Config.Construction then
+  CreateThread(function()
     while true do
-      L0_2 = pairs
-      L1_2 = L1_1
-      L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-      for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-        L6_2 = L5_2.construction
-        if not L6_2 then
-        else
-          L6_2 = os
-          L6_2 = L6_2.difftime
-          L7_2 = os
-          L7_2 = L7_2.time
-          L7_2 = L7_2()
-          L8_2 = L5_2.created
-          L6_2 = L6_2(L7_2, L8_2)
-          L7_2 = L5_2.construction
-          L7_2 = L7_2.duration
-          if L6_2 >= L7_2 then
-            L5_2.construction = nil
-            L7_2 = MySQL
-            L7_2 = L7_2.Sync
-            L7_2 = L7_2.execute
-            L8_2 = "UPDATE house_objects SET construction = NULL WHERE id = ?"
-            L9_2 = {}
-            L10_2 = L5_2.id
-            L9_2[1] = L10_2
-            L7_2(L8_2, L9_2)
-            L7_2 = TriggerClientEvent
-            L8_2 = "housing:updateHouseObject"
-            L9_2 = -1
-            L10_2 = L5_2.id
-            L11_2 = L5_2
-            L7_2(L8_2, L9_2, L10_2, L11_2)
-            L7_2 = Debug
-            L8_2 = "housing:construction"
-            L9_2 = "Construction finished"
-            L10_2 = L5_2.id
-            L7_2(L8_2, L9_2, L10_2)
+      for _, obj in pairs(houseObjects) do
+        if obj.construction then
+          local elapsed = os.difftime(os.time(), obj.created)
+          if elapsed >= obj.construction.duration then
+            obj.construction = nil
+            MySQL.Sync.execute("UPDATE house_objects SET construction = NULL WHERE id = ?", { obj.id })
+            TriggerClientEvent("housing:updateHouseObject", -1, obj.id, obj)
+            Debug("housing:construction", "Construction finished", obj.id)
           end
         end
       end
-      L0_2 = Wait
-      L1_2 = 2000
-      L0_2(L1_2)
+      Wait(2000)
     end
-  end
-  L27_1(L28_1)
+  end)
 end
-L27_1 = RegisterNetEvent
-L28_1 = "housing:showConstructionRemaining"
-function L29_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = source
-  L2_2 = table
-  L2_2 = L2_2.find
-  L3_2 = L1_1
-  function L4_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = A0_3.house
-    L2_3 = A0_2
-    L1_3 = L1_3 == L2_3
-    return L1_3
-  end
-  L2_2 = L2_2(L3_2, L4_2)
-  if not L2_2 then
-    L3_2 = Notification
-    L4_2 = L1_2
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "construction.not_found"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    L3_2(L4_2, L5_2, L6_2)
+
+
+-- Show construction remaining time
+RegisterNetEvent("housing:showConstructionRemaining", function(houseName)
+  local src = source
+  local obj = table.find(houseObjects, function(o) return o.house == houseName end)
+  if not obj then
+    Notification(src, i18n.t("construction.not_found"), "error")
     return
   end
-  L3_2 = L2_2.construction
-  if not L3_2 then
-    L3_2 = Notification
-    L4_2 = L1_2
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "construction.finished"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "info"
-    L3_2(L4_2, L5_2, L6_2)
+  if not obj.construction then
+    Notification(src, i18n.t("construction.finished"), "info")
     return
   end
-  L3_2 = os
-  L3_2 = L3_2.difftime
-  L4_2 = os
-  L4_2 = L4_2.time
-  L4_2 = L4_2()
-  L5_2 = L2_2.created
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = L2_2.construction
-  L4_2 = L4_2.duration
-  L4_2 = L4_2 - L3_2
-  L5_2 = Notification
-  L6_2 = L1_2
-  L7_2 = i18n
-  L7_2 = L7_2.t
-  L8_2 = "construction.remaining"
-  L9_2 = {}
-  L9_2.remaining = L4_2
-  L7_2 = L7_2(L8_2, L9_2)
-  L8_2 = "info"
-  L5_2(L6_2, L7_2, L8_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = AddEventHandler
-L28_1 = "housing:handleBuyHouse"
-function L29_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L4_2 = Debug
-  L5_2 = "housing:handleBuyHouse"
-  L6_2 = "Buying house"
-  L7_2 = "Source"
-  L8_2 = A0_2
-  L9_2 = A1_2
-  L10_2 = A2_2
-  L11_2 = A3_2
-  L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-end
-L27_1(L28_1, L29_1)
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L1_2 = GetJobName
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  L2_2 = GetJobGrade
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = PlayerIsAdmin
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L4_2 = Config
-    L4_2 = L4_2.AllowAdminsToCreateHouses
-    if L4_2 then
-      L4_2 = true
-      return L4_2
-    end
+  local elapsed = os.difftime(os.time(), obj.created)
+  local remaining = obj.construction.duration - elapsed
+  Notification(src, i18n.t("construction.remaining", { remaining = remaining }), "info")
+end)
+
+-- Handle buy house event (for external integrations)
+AddEventHandler("housing:handleBuyHouse", function(playerSource, houseName, price, isCredit)
+  Debug("housing:handleBuyHouse", "Buying house", "Source", playerSource, houseName, price, isCredit)
+end)
+
+-- Permission check
+function HasPermission(playerSource)
+  local jobName = GetJobName(playerSource)
+  local jobGrade = GetJobGrade(playerSource)
+  local isAdmin = PlayerIsAdmin(playerSource)
+
+  if isAdmin and Config.AllowAdminsToCreateHouses then
+    return true
   end
-  L4_2 = pairs
-  L5_2 = Config
-  L5_2 = L5_2.CreatorJobs
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = L9_2.job
-    if L10_2 == L1_2 then
-      L10_2 = L9_2.grade
-      if L10_2 then
-        L10_2 = table
-        L10_2 = L10_2.contains
-        L11_2 = L9_2.grade
-        L12_2 = L2_2
-        L10_2 = L10_2(L11_2, L12_2)
-        if not L10_2 then
-          goto lbl_38
+
+  for _, jobEntry in pairs(Config.CreatorJobs) do
+    if jobEntry.job == jobName then
+      if jobEntry.grade then
+        if not table.contains(jobEntry.grade, jobGrade) then
+          goto continue
         end
       end
-      L10_2 = true
-      return L10_2
+      return true
     end
-    ::lbl_38::
+    ::continue::
   end
-  L4_2 = false
-  return L4_2
+  return false
 end
-HasPermission = L27_1
-L27_1 = lib
-L27_1 = L27_1.callback
-L27_1 = L27_1.register
-L28_1 = "housing:hasPermission"
-function L29_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = PlayerIsAdmin
-  L3_2 = A0_2
-  L4_2 = A1_2
-  return L2_2(L3_2, L4_2)
-end
-L27_1(L28_1, L29_1)
-L27_1 = Citizen
-L27_1 = L27_1.CreateThread
-function L28_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = GetCurrentResourceName
-  L0_2 = L0_2()
-  if "qs-housing" == L0_2 then
+
+lib.callback.register("housing:hasPermission", function(source, data)
+  return PlayerIsAdmin(source, data)
+end)
+
+
+-- Resource name verification
+Citizen.CreateThread(function()
+  local resourceName = GetCurrentResourceName()
+  if "qs-housing" == resourceName then
     verify = true
   end
-  L1_2 = verify
-  if true ~= L1_2 then
+  if true ~= verify then
     repeat
-      L1_2 = Citizen
-      L1_2 = L1_2.Wait
-      L2_2 = 3000
-      L1_2(L2_2)
-      L1_2 = print
-      L2_2 = "^1[ERROR]^0: You have renamed the script! ^4qs-housing^0 must not be renamed."
-      L1_2(L2_2)
-      L1_2 = print
-      L2_2 = "^3[WARNING]^0: If you rename the script, your console will freeze and you won\226\128\153t be able to access the game."
-      L1_2(L2_2)
-      L1_2 = Citizen
-      L1_2 = L1_2.Wait
-      L2_2 = 5000
-      L1_2(L2_2)
-      while true do
-      end
-      L1_2 = verify
-    until true == L1_2
+      Citizen.Wait(3000)
+      print("^1[ERROR]^0: You have renamed the script! ^4qs-housing^0 must not be renamed.")
+      print("^3[WARNING]^0: If you rename the script, your console will freeze and you won\xE2\x80\x99t be able to access the game.")
+      Citizen.Wait(5000)
+      while true do end
+    until true == verify
   end
-end
-L27_1(L28_1)
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L1_2 = pairs
-  L2_2 = A0_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = GetCharacterName
-    L8_2 = L6_2.id
-    L7_2, L8_2 = L7_2(L8_2)
-    if not L7_2 or not L8_2 then
-      L9_2 = ""
-      L8_2 = ""
-      L7_2 = L9_2
+end)
+
+-- Initialize player names for nearby player list
+function InitPlayersName(players)
+  for idx, player in pairs(players) do
+    local first, last = GetCharacterName(player.id)
+    if not first or not last then
+      first = ""
+      last = ""
     end
-    L9_2 = A0_2[L5_2]
-    L10_2 = L7_2
-    L11_2 = " "
-    L12_2 = L8_2
-    L10_2 = L10_2 .. L11_2 .. L12_2
-    L9_2.name = L10_2
+    players[idx].name = first .. " " .. last
   end
-  return A0_2
+  return players
 end
-InitPlayersName = L27_1
-L27_1 = lib
-L27_1 = L27_1.callback
-L27_1 = L27_1.register
-L28_1 = "housing:getNearbyPlayers"
-function L29_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L1_2 = GetPlayerPed
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  L2_2 = GetEntityCoords
-  L3_2 = L1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = {}
-  L4_2 = pairs
-  L5_2 = GetPlayers
-  L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2 = L5_2()
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = GetPlayerPed
-    L11_2 = L9_2
-    L10_2 = L10_2(L11_2)
-    L11_2 = GetEntityCoords
-    L12_2 = L10_2
-    L11_2 = L11_2(L12_2)
-    L12_2 = L2_2 - L11_2
-    L12_2 = #L12_2
-    L13_2 = tonumber
-    L14_2 = L9_2
-    L13_2 = L13_2(L14_2)
-    L9_2 = L13_2
-    if L12_2 < 10.0 and L9_2 ~= A0_2 then
-      L13_2 = table
-      L13_2 = L13_2.insert
-      L14_2 = L3_2
-      L15_2 = {}
-      L15_2.id = L9_2
-      L15_2.distance = L12_2
-      L13_2(L14_2, L15_2)
+
+-- Get nearby players
+lib.callback.register("housing:getNearbyPlayers", function(source)
+  local myPed = GetPlayerPed(source)
+  local myCoords = GetEntityCoords(myPed)
+  local nearby = {}
+
+  for _, pid in pairs(GetPlayers()) do
+    local otherPed = GetPlayerPed(pid)
+    local otherCoords = GetEntityCoords(otherPed)
+    local dist = #(myCoords - otherCoords)
+    pid = tonumber(pid)
+    if dist < 10.0 and pid ~= source then
+      table.insert(nearby, { id = pid, distance = dist })
     end
   end
-  L4_2 = table
-  L4_2 = L4_2.sort
-  L5_2 = L3_2
-  function L6_2(A0_3, A1_3)
-    local L2_3, L3_3
-    L2_3 = A0_3.distance
-    L3_3 = A1_3.distance
-    L2_3 = L2_3 < L3_3
-    return L2_3
-  end
-  L4_2(L5_2, L6_2)
-  L4_2 = InitPlayersName
-  L5_2 = L3_2
-  L4_2 = L4_2(L5_2)
-  L3_2 = L4_2
-  return L3_2
-end
-L27_1(L28_1, L29_1)
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L1_2 = GetIdentifier
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  L2_2 = {}
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.fetchAll
-  L4_2 = "SELECT * FROM player_houses WHERE citizenid = ?"
-  L5_2 = {}
-  L6_2 = L1_2
-  L5_2[1] = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  if L3_2 then
-    L4_2 = L3_2[1]
-    if L4_2 then
-      L4_2 = pairs
-      L5_2 = L3_2
-      L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-      for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-        L10_2 = #L2_2
-        L10_2 = L10_2 + 1
-        L11_2 = L9_2.house
-        L2_2[L10_2] = L11_2
-      end
-    end
-  end
-  return L2_2
-end
-GetPlayerHouses = L27_1
-L27_1 = exports
-L28_1 = "GetPlayerHouses"
-L29_1 = GetPlayerHouses
-L27_1(L28_1, L29_1)
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  if not A0_2 then
-    L1_2 = {}
-    return L1_2
-  end
-  L1_2 = {}
-  L2_2 = MySQL
-  L2_2 = L2_2.Sync
-  L2_2 = L2_2.fetchAll
-  L3_2 = "SELECT house FROM player_houses WHERE citizenid = ?"
-  L4_2 = {}
-  L5_2 = A0_2
-  L4_2[1] = L5_2
-  L2_2 = L2_2(L3_2, L4_2)
-  if L2_2 then
-    L3_2 = L2_2[1]
-    if L3_2 then
-      goto lbl_23
-    end
-  end
-  do return L1_2 end
-  ::lbl_23::
-  L3_2 = pairs
-  L4_2 = L2_2
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.house
-    L10_2 = L9_2 or L10_2
-    if L9_2 then
-      L10_2 = Config
-      L10_2 = L10_2.Houses
-      L10_2 = L10_2[L9_2]
-    end
-    L11_2 = L10_2 or L11_2
-    if L10_2 then
-      L11_2 = L10_2.coords
-      if L11_2 then
-        L11_2 = L10_2.coords
-        L11_2 = L11_2.enter
-      end
-    end
-    if L11_2 then
-      L12_2 = #L1_2
-      L12_2 = L12_2 + 1
-      L13_2 = {}
-      L13_2.house = L9_2
-      L14_2 = L10_2.address
-      if not L14_2 then
-        L14_2 = L9_2
-      end
-      L13_2.label = L14_2
-      L14_2 = L10_2.address
-      if not L14_2 then
-        L14_2 = L9_2
-      end
-      L13_2.address = L14_2
-      L14_2 = {}
-      L15_2 = L11_2.x
-      L14_2.x = L15_2
-      L15_2 = L11_2.y
-      L14_2.y = L15_2
-      L15_2 = L11_2.z
-      L14_2.z = L15_2
-      L15_2 = L11_2.h
-      if not L15_2 then
-        L15_2 = L11_2.w
-        if not L15_2 then
-          L15_2 = 0.0
-        end
-      end
-      L14_2.h = L15_2
-      L13_2.coords = L14_2
-      L14_2 = L10_2.image
-      L13_2.image = L14_2
-      L14_2 = L10_2.description
-      L13_2.description = L14_2
-      L1_2[L12_2] = L13_2
-    end
-  end
-  return L1_2
-end
-GetPlayerPropertiesByIdentifier = L27_1
-L27_1 = exports
-L28_1 = "GetPlayerPropertiesByIdentifier"
-L29_1 = GetPlayerPropertiesByIdentifier
-L27_1(L28_1, L29_1)
-function L27_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  if not A0_2 then
-    L1_2 = false
-    return L1_2
-  end
-  L1_2 = Config
-  L1_2 = L1_2.Framework
-  if "esx" == L1_2 then
-    L1_2 = MySQL
-    L1_2 = L1_2.Sync
-    L1_2 = L1_2.execute
-    L2_2 = "UPDATE users SET inside = NULL WHERE identifier = ?"
-    L3_2 = {}
-    L4_2 = A0_2
-    L3_2[1] = L4_2
-    L1_2(L2_2, L3_2)
-    L1_2 = true
-    return L1_2
-  end
-  L1_2 = MySQL
-  L1_2 = L1_2.single
-  L1_2 = L1_2.await
-  L2_2 = "SELECT metadata FROM players WHERE citizenid = ? LIMIT 1"
-  L3_2 = {}
-  L4_2 = A0_2
-  L3_2[1] = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  if not L1_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = L1_2.metadata
-  if L2_2 then
-    L2_2 = json
-    L2_2 = L2_2.decode
-    L3_2 = L1_2.metadata
-    L2_2 = L2_2(L3_2)
-    if L2_2 then
-      goto lbl_44
-    end
-  end
-  L2_2 = {}
-  ::lbl_44::
-  L3_2 = type
-  L4_2 = L2_2
-  L3_2 = L3_2(L4_2)
-  if "table" ~= L3_2 then
-    L3_2 = {}
-    L2_2 = L3_2
-  end
-  L2_2.currentHouseId = nil
-  L3_2 = MySQL
-  L3_2 = L3_2.Sync
-  L3_2 = L3_2.execute
-  L4_2 = "UPDATE players SET metadata = ? WHERE citizenid = ?"
-  L5_2 = {}
-  L6_2 = json
-  L6_2 = L6_2.encode
-  L7_2 = L2_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = A0_2
-  L5_2[1] = L6_2
-  L5_2[2] = L7_2
-  L3_2(L4_2, L5_2)
-  L3_2 = true
-  return L3_2
-end
-ClearPlayerInsideByIdentifier = L27_1
-L27_1 = exports
-L28_1 = "ClearPlayerInsideByIdentifier"
-L29_1 = ClearPlayerInsideByIdentifier
-L27_1(L28_1, L29_1)
-function L27_1(A0_2, A1_2)
-  local L2_2, L3_2
-  L2_2 = PlayerIsAdmin
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = {}
-    return L2_2
-  end
-  L2_2 = db
-  L2_2 = L2_2.getApartmentUnits
-  L3_2 = A1_2
-  return L2_2(L3_2)
-end
-HousingGetApartmentUnits = L27_1
-L27_1 = lib
-L27_1 = L27_1.callback
-L27_1 = L27_1.register
-L28_1 = "housing:getApartmentUnits"
-L29_1 = HousingGetApartmentUnits
-L27_1(L28_1, L29_1)
-function L27_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = PlayerIsAdmin
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = db
-  L3_2 = L3_2.updateApartmentShell
-  L4_2 = A1_2
-  L5_2 = A2_2
-  return L3_2(L4_2, L5_2)
-end
-HousingUpdateApartmentShell = L27_1
-L27_1 = lib
-L27_1 = L27_1.callback
-L27_1 = L27_1.register
-L28_1 = "housing:updateApartmentShell"
-L29_1 = HousingUpdateApartmentShell
-L27_1(L28_1, L29_1)
-function L27_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = PlayerIsAdmin
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = db
-  L3_2 = L3_2.updateApartmentIpl
-  L4_2 = A1_2
-  L5_2 = A2_2
-  return L3_2(L4_2, L5_2)
-end
-HousingUpdateApartmentIpl = L27_1
-L27_1 = lib
-L27_1 = L27_1.callback
-L27_1 = L27_1.register
-L28_1 = "housing:updateApartmentIpl"
-L29_1 = HousingUpdateApartmentIpl
-L27_1(L28_1, L29_1)
-L27_1 = exports
-L28_1 = "GetPlayerInsideHouse"
-function L29_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = GetPlayerInsideHouse
-  L2_2 = A0_2
-  return L1_2(L2_2)
-end
-L27_1(L28_1, L29_1)
+
+  table.sort(nearby, function(a, b) return a.distance < b.distance end)
+  return InitPlayersName(nearby)
+end)
 
 
+-- Get player houses by source
+function GetPlayerHouses(playerSource)
+  local identifier = GetIdentifier(playerSource)
+  local houses = {}
+  local rows = MySQL.Sync.fetchAll("SELECT * FROM player_houses WHERE citizenid = ?", { identifier })
+  if rows and rows[1] then
+    for _, row in pairs(rows) do
+      houses[#houses + 1] = row.house
+    end
+  end
+  return houses
+end
+
+exports("GetPlayerHouses", GetPlayerHouses)
+
+-- Get player properties by identifier (for GPS/maps)
+function GetPlayerPropertiesByIdentifier(identifier)
+  if not identifier then return {} end
+  local properties = {}
+  local rows = MySQL.Sync.fetchAll("SELECT house FROM player_houses WHERE citizenid = ?", { identifier })
+  if not rows or not rows[1] then return properties end
+
+  for _, row in pairs(rows) do
+    local houseName = row.house
+    local houseConfig = houseName and Config.Houses[houseName]
+    local enterCoords = houseConfig and houseConfig.coords and houseConfig.coords.enter
+    if enterCoords then
+      properties[#properties + 1] = {
+        house = houseName,
+        label = houseConfig.address or houseName,
+        address = houseConfig.address or houseName,
+        coords = {
+          x = enterCoords.x,
+          y = enterCoords.y,
+          z = enterCoords.z,
+          h = enterCoords.h or enterCoords.w or 0.0,
+        },
+        image = houseConfig.image,
+        description = houseConfig.description,
+      }
+    end
+  end
+  return properties
+end
+
+exports("GetPlayerPropertiesByIdentifier", GetPlayerPropertiesByIdentifier)
 
 
+-- Clear player inside state by identifier (for logout/disconnect cleanup)
+function ClearPlayerInsideByIdentifier(identifier)
+  if not identifier then return false end
+  if "esx" == Config.Framework then
+    MySQL.Sync.execute("UPDATE users SET inside = NULL WHERE identifier = ?", { identifier })
+    return true
+  end
+  -- QB framework
+  local row = MySQL.single.await("SELECT metadata FROM players WHERE citizenid = ? LIMIT 1", { identifier })
+  if not row then return false end
+  local metadata = (row.metadata and json.decode(row.metadata)) or {}
+  if "table" ~= type(metadata) then metadata = {} end
+  metadata.currentHouseId = nil
+  MySQL.Sync.execute("UPDATE players SET metadata = ? WHERE citizenid = ?", { json.encode(metadata), identifier })
+  return true
+end
 
+exports("ClearPlayerInsideByIdentifier", ClearPlayerInsideByIdentifier)
 
+-- Get apartment units (admin only)
+function HousingGetApartmentUnits(source, houseName)
+  if not PlayerIsAdmin(source) then return {} end
+  return db.getApartmentUnits(houseName)
+end
+
+lib.callback.register("housing:getApartmentUnits", HousingGetApartmentUnits)
+
+-- Update apartment shell (admin only)
+function HousingUpdateApartmentShell(source, houseName, shellData)
+  if not PlayerIsAdmin(source) then return false end
+  return db.updateApartmentShell(houseName, shellData)
+end
+
+lib.callback.register("housing:updateApartmentShell", HousingUpdateApartmentShell)
+
+-- Update apartment IPL (admin only)
+function HousingUpdateApartmentIpl(source, houseName, iplData)
+  if not PlayerIsAdmin(source) then return false end
+  return db.updateApartmentIpl(houseName, iplData)
+end
+
+lib.callback.register("housing:updateApartmentIpl", HousingUpdateApartmentIpl)
+
+-- Export: Get player inside house
+exports("GetPlayerInsideHouse", function(playerSource)
+  return GetPlayerInsideHouse(playerSource)
+end)

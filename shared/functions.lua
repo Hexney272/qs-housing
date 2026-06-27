@@ -1,843 +1,317 @@
 
+local numbers = {}
+local characters = {}
 
-
-
-
-
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1, L8_1, L9_1
-L0_1 = {}
-L1_1 = {}
-L2_1 = 48
-L3_1 = 57
-L4_1 = 1
-for L5_1 = L2_1, L3_1, L4_1 do
-  L6_1 = table
-  L6_1 = L6_1.insert
-  L7_1 = L0_1
-  L8_1 = string
-  L8_1 = L8_1.char
-  L9_1 = L5_1
-  L8_1 = L8_1(L9_1)
-  L6_1(L7_1, L8_1)
+for i = 48, 57 do
+  table.insert(numbers, string.char(i))
 end
-L2_1 = 65
-L3_1 = 90
-L4_1 = 1
-for L5_1 = L2_1, L3_1, L4_1 do
-  L6_1 = table
-  L6_1 = L6_1.insert
-  L7_1 = L1_1
-  L8_1 = string
-  L8_1 = L8_1.char
-  L9_1 = L5_1
-  L8_1 = L8_1(L9_1)
-  L6_1(L7_1, L8_1)
+
+for i = 65, 90 do
+  table.insert(characters, string.char(i))
 end
-L2_1 = 97
-L3_1 = 122
-L4_1 = 1
-for L5_1 = L2_1, L3_1, L4_1 do
-  L6_1 = table
-  L6_1 = L6_1.insert
-  L7_1 = L1_1
-  L8_1 = string
-  L8_1 = L8_1.char
-  L9_1 = L5_1
-  L8_1 = L8_1(L9_1)
-  L6_1(L7_1, L8_1)
+
+for i = 97, 122 do
+  table.insert(characters, string.char(i))
 end
-function L2_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = Citizen
-  L1_2 = L1_2.Wait
-  L2_2 = 0
-  L1_2(L2_2)
-  if A0_2 > 0 then
-    L1_2 = GetRandomNumber
-    L2_2 = A0_2 - 1
-    L1_2 = L1_2(L2_2)
-    L2_2 = math
-    L2_2 = L2_2.random
-    L3_2 = 1
-    L4_2 = L0_1
-    L4_2 = #L4_2
-    L2_2 = L2_2(L3_2, L4_2)
-    L3_2 = L0_1
-    L2_2 = L3_2[L2_2]
-    L1_2 = L1_2 .. L2_2
-    return L1_2
+
+function GetRandomNumber(length)
+  Citizen.Wait(0)
+  if length > 0 then
+    local result = GetRandomNumber(length - 1)
+    local index = math.random(1, #numbers)
+    local char = numbers[index]
+    result = result .. char
+    return result
   else
-    L1_2 = ""
-    return L1_2
+    return ""
   end
 end
-GetRandomNumber = L2_1
-function L2_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = Citizen
-  L1_2 = L1_2.Wait
-  L2_2 = 0
-  L1_2(L2_2)
-  if A0_2 > 0 then
-    L1_2 = GetRandomLetter
-    L2_2 = A0_2 - 1
-    L1_2 = L1_2(L2_2)
-    L2_2 = math
-    L2_2 = L2_2.random
-    L3_2 = 1
-    L4_2 = L1_1
-    L4_2 = #L4_2
-    L2_2 = L2_2(L3_2, L4_2)
-    L3_2 = L1_1
-    L2_2 = L3_2[L2_2]
-    L1_2 = L1_2 .. L2_2
-    return L1_2
+
+function GetRandomLetter(length)
+  Citizen.Wait(0)
+  if length > 0 then
+    local result = GetRandomLetter(length - 1)
+    local index = math.random(1, #characters)
+    local char = characters[index]
+    result = result .. char
+    return result
   else
-    L1_2 = ""
-    return L1_2
+    return ""
   end
 end
-GetRandomLetter = L2_1
-function L2_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  if A0_2 then
-    L1_2 = string
-    L1_2 = L1_2.gsub
-    L2_2 = A0_2
-    L3_2 = "^%s*(.-)%s*$"
-    L4_2 = "%1"
-    L1_2 = L1_2(L2_2, L3_2, L4_2)
-    return L1_2
+
+function MathTrim(str)
+  if str then
+    return string.gsub(str, "^%s*(.-)%s*$", "%1")
   else
-    L1_2 = nil
-    return L1_2
+    return nil
   end
 end
-MathTrim = L2_1
-L2_1 = GetResourceMetadata
-L3_1 = GetCurrentResourceName
-L3_1 = L3_1()
-L4_1 = "version"
-L5_1 = 0
-L2_1 = L2_1(L3_1, L4_1, L5_1)
-function L3_1(...)
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L0_2 = Config
-  L0_2 = L0_2.Debug
-  if L0_2 then
-    L0_2 = {}
-    L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2 = ...
-    L0_2[1] = L1_2
-    L0_2[2] = L2_2
-    L0_2[3] = L3_2
-    L0_2[4] = L4_2
-    L0_2[5] = L5_2
-    L0_2[6] = L6_2
-    L0_2[7] = L7_2
-    L0_2[8] = L8_2
-    L1_2 = ipairs
-    L2_2 = L0_2
-    L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-    for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-      L7_2 = type
-      L8_2 = L6_2
-      L7_2 = L7_2(L8_2)
-      if "table" == L7_2 then
-        L7_2 = json
-        L7_2 = L7_2.encode
-        L8_2 = L6_2
-        L7_2 = L7_2(L8_2)
-        L0_2[L5_2] = L7_2
+
+local resourceVersion = GetResourceMetadata(GetCurrentResourceName(), "version", 0)
+
+function Debug(...)
+  if Config.Debug then
+    local args = {}
+    local a1, a2, a3, a4, a5, a6, a7, a8 = ...
+    args[1] = a1
+    args[2] = a2
+    args[3] = a3
+    args[4] = a4
+    args[5] = a5
+    args[6] = a6
+    args[7] = a7
+    args[8] = a8
+    for i, v in ipairs(args) do
+      if type(v) == "table" then
+        args[i] = json.encode(v)
       end
     end
-    L1_2 = print
-    L2_2 = "^5[DEBUG "
-    L3_2 = L2_1
-    L4_2 = "]^7"
-    L2_2 = L2_2 .. L3_2 .. L4_2
-    L3_2 = table
-    L3_2 = L3_2.unpack
-    L4_2 = L0_2
-    L3_2, L4_2, L5_2, L6_2, L7_2, L8_2 = L3_2(L4_2)
-    L1_2(L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2)
+    print("^5[DEBUG " .. resourceVersion .. "]^7", table.unpack(args))
   end
 end
-Debug = L3_1
-function L3_1(...)
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = "^3HOUSING WARNING:^0 "
-  L1_2 = pairs
-  L2_2 = {}
-  L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = ...
-  L2_2[1] = L3_2
-  L2_2[2] = L4_2
-  L2_2[3] = L5_2
-  L2_2[4] = L6_2
-  L2_2[5] = L7_2
-  L2_2[6] = L8_2
-  L2_2[7] = L9_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L0_2
-    L8_2 = tostring
-    L9_2 = L6_2
-    L8_2 = L8_2(L9_2)
-    L9_2 = "\t"
-    L7_2 = L7_2 .. L8_2 .. L9_2
-    L0_2 = L7_2
+
+function Warning(...)
+  local msg = "^3HOUSING WARNING:^0 "
+  local args = {}
+  local a1, a2, a3, a4, a5, a6, a7 = ...
+  args[1] = a1
+  args[2] = a2
+  args[3] = a3
+  args[4] = a4
+  args[5] = a5
+  args[6] = a6
+  args[7] = a7
+  for _, v in pairs(args) do
+    msg = msg .. tostring(v) .. "\t"
   end
-  L1_2 = print
-  L2_2 = L0_2
-  L1_2(L2_2)
+  print(msg)
 end
-Warning = L3_1
-function L3_1(...)
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = "^5HOUSING INFO:^0 "
-  L1_2 = pairs
-  L2_2 = {}
-  L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = ...
-  L2_2[1] = L3_2
-  L2_2[2] = L4_2
-  L2_2[3] = L5_2
-  L2_2[4] = L6_2
-  L2_2[5] = L7_2
-  L2_2[6] = L8_2
-  L2_2[7] = L9_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = type
-    L8_2 = L6_2
-    L7_2 = L7_2(L8_2)
-    if "table" == L7_2 then
-      L7_2 = L0_2
-      L8_2 = json
-      L8_2 = L8_2.encode
-      L9_2 = L6_2
-      L8_2 = L8_2(L9_2)
-      L9_2 = "\t"
-      L7_2 = L7_2 .. L8_2 .. L9_2
-      L0_2 = L7_2
+
+function Info(...)
+  local msg = "^5HOUSING INFO:^0 "
+  local args = {}
+  local a1, a2, a3, a4, a5, a6, a7 = ...
+  args[1] = a1
+  args[2] = a2
+  args[3] = a3
+  args[4] = a4
+  args[5] = a5
+  args[6] = a6
+  args[7] = a7
+  for _, v in pairs(args) do
+    if type(v) == "table" then
+      msg = msg .. json.encode(v) .. "\t"
     else
-      L7_2 = L0_2
-      L8_2 = tostring
-      L9_2 = L6_2
-      L8_2 = L8_2(L9_2)
-      L9_2 = "\t"
-      L7_2 = L7_2 .. L8_2 .. L9_2
-      L0_2 = L7_2
+      msg = msg .. tostring(v) .. "\t"
     end
   end
-  L1_2 = print
-  L2_2 = L0_2
-  L1_2(L2_2)
+  print(msg)
 end
-Info = L3_1
-function L3_1(...)
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = "^1HOUSING ERROR:^0 "
-  L1_2 = pairs
-  L2_2 = {}
-  L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = ...
-  L2_2[1] = L3_2
-  L2_2[2] = L4_2
-  L2_2[3] = L5_2
-  L2_2[4] = L6_2
-  L2_2[5] = L7_2
-  L2_2[6] = L8_2
-  L2_2[7] = L9_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = type
-    L8_2 = L6_2
-    L7_2 = L7_2(L8_2)
-    if "table" == L7_2 then
-      L7_2 = L0_2
-      L8_2 = json
-      L8_2 = L8_2.encode
-      L9_2 = L6_2
-      L8_2 = L8_2(L9_2)
-      L9_2 = "\t"
-      L7_2 = L7_2 .. L8_2 .. L9_2
-      L0_2 = L7_2
+
+function Error(...)
+  local msg = "^1HOUSING ERROR:^0 "
+  local args = {}
+  local a1, a2, a3, a4, a5, a6, a7 = ...
+  args[1] = a1
+  args[2] = a2
+  args[3] = a3
+  args[4] = a4
+  args[5] = a5
+  args[6] = a6
+  args[7] = a7
+  for _, v in pairs(args) do
+    if type(v) == "table" then
+      msg = msg .. json.encode(v) .. "\t"
     else
-      L7_2 = L0_2
-      L8_2 = tostring
-      L9_2 = L6_2
-      L8_2 = L8_2(L9_2)
-      L9_2 = "\t"
-      L7_2 = L7_2 .. L8_2 .. L9_2
-      L0_2 = L7_2
+      msg = msg .. tostring(v) .. "\t"
     end
   end
-  L1_2 = print
-  L2_2 = L0_2
-  L1_2(L2_2)
+  print(msg)
 end
-Error = L3_1
-function L3_1(...)
-  local L0_2, L1_2, L2_2
-  L0_2 = table
-  L0_2 = L0_2.unpack
-  L1_2 = {}
-  L2_2 = ...
-  L1_2[1] = L2_2
-  L0_2 = L0_2(L1_2)
-  L1_2 = CreateThread
-  function L2_2()
-    local L0_3, L1_3, L2_3
+
+function LoopError(...)
+  local errorMsg = table.unpack({...})
+  CreateThread(function()
     while true do
-      L0_3 = print
-      L1_3 = "^1[ERROR]^7"
-      L2_3 = L0_2
-      L0_3(L1_3, L2_3)
-      L0_3 = Wait
-      L1_3 = 2000
-      L0_3(L1_3)
+      print("^1[ERROR]^7", errorMsg)
+      Wait(2000)
+    end
+  end)
+end
+
+function table.includes(tbl, value)
+  if not tbl then
+    return false
+  end
+  for _, v in pairs(tbl) do
+    if v == value then
+      return true
     end
   end
-  L1_2(L2_2)
+  return false
 end
-LoopError = L3_1
-L3_1 = table
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  if not A0_2 then
-    L2_2 = false
-    return L2_2
+
+function table.find(tbl, predicate)
+  if not tbl then
+    return false, false
   end
-  L2_2 = pairs
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    if L7_2 == A1_2 then
-      L8_2 = true
-      return L8_2
-    end
-  end
-  L2_2 = false
-  return L2_2
-end
-L3_1.includes = L4_1
-L3_1 = table
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  if not A0_2 then
-    L2_2 = false
-    L3_2 = false
-    return L2_2, L3_2
-  end
-  L2_2 = pairs
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = type
-    L9_2 = A1_2
-    L8_2 = L8_2(L9_2)
-    if "function" == L8_2 then
-      L8_2 = A1_2
-      L9_2 = L7_2
-      L10_2 = L6_2
-      L8_2 = L8_2(L9_2, L10_2)
-      if L8_2 then
-        L8_2 = L7_2
-        L9_2 = L6_2
-        return L8_2, L9_2
+  for key, value in pairs(tbl) do
+    if type(predicate) == "function" then
+      if predicate(value, key) then
+        return value, key
       end
-    elseif L7_2 == A1_2 then
-      L8_2 = L7_2
-      L9_2 = L6_2
-      return L8_2, L9_2
+    elseif value == predicate then
+      return value, key
     end
   end
-  L2_2 = false
-  L3_2 = false
-  return L2_2, L3_2
+  return false, false
 end
-L3_1.find = L4_1
-L3_1 = string
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = A1_2 or nil
-  if not A1_2 then
-    L2_2 = ":"
-  end
-  L3_2 = {}
-  L4_2 = string
-  L4_2 = L4_2.format
-  L5_2 = "([^%s]+)"
-  L6_2 = L2_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.gsub
-  L7_2 = L4_2
-  function L8_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = L3_2
-    L1_3 = #L1_3
-    L2_3 = L1_3 + 1
-    L1_3 = L3_2
-    L1_3[L2_3] = A0_3
-  end
-  L5_2(L6_2, L7_2, L8_2)
-  return L3_2
+
+function string.split(str, separator)
+  local sep = separator or ":"
+  local result = {}
+  local pattern = string.format("([^%s]+)", sep)
+  str:gsub(pattern, function(match)
+    result[#result + 1] = match
+  end)
+  return result
 end
-L3_1.split = L4_1
-L3_1 = table
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L2_2 = {}
-  L3_2 = pairs
-  L4_2 = A0_2
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = A1_2
-    L10_2 = L8_2
-    L11_2 = L7_2
-    L12_2 = A0_2
-    L9_2 = L9_2(L10_2, L11_2, L12_2)
-    if L9_2 then
-      L9_2 = #L2_2
-      L9_2 = L9_2 + 1
-      L2_2[L9_2] = L8_2
+
+function table.filter(tbl, predicate)
+  local result = {}
+  for key, value in pairs(tbl) do
+    if predicate(value, key, tbl) then
+      result[#result + 1] = value
     end
   end
-  return L2_2
+  return result
 end
-L3_1.filter = L4_1
-L3_1 = table
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L2_2 = {}
-  L3_2 = pairs
-  L4_2 = A0_2
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = #L2_2
-    L9_2 = L9_2 + 1
-    L10_2 = A1_2
-    L11_2 = L8_2
-    L12_2 = L7_2
-    L13_2 = A0_2
-    L10_2 = L10_2(L11_2, L12_2, L13_2)
-    L2_2[L9_2] = L10_2
+
+function table.map(tbl, callback)
+  local result = {}
+  for key, value in pairs(tbl) do
+    result[#result + 1] = callback(value, key, tbl)
   end
-  return L2_2
+  return result
 end
-L3_1.map = L4_1
-L3_1 = table
-function L4_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L4_2 = {}
-  L5_2 = A1_2 or L5_2
-  if not A1_2 then
-    L5_2 = 1
+
+function table.slice(tbl, startIdx, endIdx, step)
+  local result = {}
+  local s = startIdx or 1
+  local e = endIdx or #tbl
+  local st = step or 1
+  for i = s, e, st do
+    result[#result + 1] = tbl[i]
   end
-  L6_2 = A2_2 or L6_2
-  if not A2_2 then
-    L6_2 = #A0_2
-  end
-  L7_2 = A3_2 or L7_2
-  if not A3_2 then
-    L7_2 = 1
-  end
-  for L8_2 = L5_2, L6_2, L7_2 do
-    L9_2 = #L4_2
-    L9_2 = L9_2 + 1
-    L10_2 = A0_2[L8_2]
-    L4_2[L9_2] = L10_2
-  end
-  return L4_2
+  return result
 end
-L3_1.slice = L4_1
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = pairs
-  L2_2 = A0_2
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = GetResourceState
-    L8_2 = L5_2
-    L7_2 = L7_2(L8_2)
-    L8_2 = L7_2
-    L7_2 = L7_2.find
-    L9_2 = "started"
-    L7_2 = L7_2(L8_2, L9_2)
-    if nil ~= L7_2 then
-      return L6_2
+
+function DependencyCheck(resources)
+  for name, value in pairs(resources) do
+    local state = GetResourceState(name)
+    if state:find("started") ~= nil then
+      return value
     end
   end
-  L1_2 = false
-  return L1_2
+  return false
 end
-DependencyCheck = L3_1
-function L3_1(A0_2)
-  local L1_2, L2_2
-  if A0_2 < 60 then
-    L1_2 = A0_2
-    L2_2 = " seconds"
-    L1_2 = L1_2 .. L2_2
-    return L1_2
+
+function FormatTime(seconds)
+  if seconds < 60 then
+    return seconds .. " seconds"
   else
-    L1_2 = 3600
-    if A0_2 < L1_2 then
-      L1_2 = math
-      L1_2 = L1_2.floor
-      L2_2 = A0_2 / 60
-      L1_2 = L1_2(L2_2)
-      L2_2 = " min"
-      L1_2 = L1_2 .. L2_2
-      return L1_2
+    if seconds < 3600 then
+      return math.floor(seconds / 60) .. " min"
     else
-      L1_2 = 86400
-      if A0_2 < L1_2 then
-        L1_2 = math
-        L1_2 = L1_2.floor
-        L2_2 = A0_2 / 3600
-        L1_2 = L1_2(L2_2)
-        L2_2 = " hours"
-        L1_2 = L1_2 .. L2_2
-        return L1_2
+      if seconds < 86400 then
+        return math.floor(seconds / 3600) .. " hours"
       else
-        L1_2 = math
-        L1_2 = L1_2.floor
-        L2_2 = A0_2 / 86400
-        L1_2 = L1_2(L2_2)
-        L2_2 = " days"
-        L1_2 = L1_2 .. L2_2
-        return L1_2
+        return math.floor(seconds / 86400) .. " days"
       end
     end
   end
 end
-FormatTime = L3_1
-function L3_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = A1_2.x
-  L3_2 = A1_2.y
-  L4_2 = A0_2.x
-  L5_2 = math
-  L5_2 = L5_2.cos
-  L6_2 = math
-  L6_2 = L6_2.rad
-  L7_2 = A0_2.w
-  L7_2 = L7_2 + 90
-  L6_2, L7_2, L8_2, L9_2, L10_2, L11_2 = L6_2(L7_2)
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-  L5_2 = L2_2 * L5_2
-  L4_2 = L4_2 + L5_2
-  L5_2 = math
-  L5_2 = L5_2.sin
-  L6_2 = math
-  L6_2 = L6_2.rad
-  L7_2 = A0_2.w
-  L7_2 = L7_2 + 90
-  L6_2, L7_2, L8_2, L9_2, L10_2, L11_2 = L6_2(L7_2)
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-  L5_2 = L3_2 * L5_2
-  L4_2 = L4_2 - L5_2
-  L5_2 = A0_2.y
-  L6_2 = math
-  L6_2 = L6_2.sin
-  L7_2 = math
-  L7_2 = L7_2.rad
-  L8_2 = A0_2.w
-  L8_2 = L8_2 + 90
-  L7_2, L8_2, L9_2, L10_2, L11_2 = L7_2(L8_2)
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
-  L6_2 = L2_2 * L6_2
-  L5_2 = L5_2 + L6_2
-  L6_2 = math
-  L6_2 = L6_2.cos
-  L7_2 = math
-  L7_2 = L7_2.rad
-  L8_2 = A0_2.w
-  L8_2 = L8_2 + 90
-  L7_2, L8_2, L9_2, L10_2, L11_2 = L7_2(L8_2)
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
-  L6_2 = L3_2 * L6_2
-  L5_2 = L5_2 + L6_2
-  L6_2 = A0_2.z
-  L7_2 = A1_2.z
-  L6_2 = L6_2 + L7_2
-  L7_2 = vec4
-  L8_2 = L4_2
-  L9_2 = L5_2
-  L10_2 = L6_2
-  L11_2 = A0_2.w
-  return L7_2(L8_2, L9_2, L10_2, L11_2)
+
+function GetCoordsWithOffset(origin, offset)
+  local offsetX = offset.x
+  local offsetY = offset.y
+  local newX = origin.x
+  newX = newX + offsetX * math.cos(math.rad(origin.w + 90))
+  newX = newX - offsetY * math.sin(math.rad(origin.w + 90))
+  local newY = origin.y
+  newY = newY + offsetX * math.sin(math.rad(origin.w + 90))
+  newY = newY + offsetY * math.cos(math.rad(origin.w + 90))
+  local newZ = origin.z + offset.z
+  return vec4(newX, newY, newZ, origin.w)
 end
-GetCoordsWithOffset = L3_1
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = {}
-  L2_2 = math
-  L2_2 = L2_2.pi
-  L2_2 = L2_2 / 180
-  L3_2 = A0_2.x
-  L2_2 = L2_2 * L3_2
-  L1_2.x = L2_2
-  L2_2 = math
-  L2_2 = L2_2.pi
-  L2_2 = L2_2 / 180
-  L3_2 = A0_2.y
-  L2_2 = L2_2 * L3_2
-  L1_2.y = L2_2
-  L2_2 = math
-  L2_2 = L2_2.pi
-  L2_2 = L2_2 / 180
-  L3_2 = A0_2.z
-  L2_2 = L2_2 * L3_2
-  L1_2.z = L2_2
-  L2_2 = {}
-  L3_2 = math
-  L3_2 = L3_2.sin
-  L4_2 = L1_2.z
-  L3_2 = L3_2(L4_2)
-  L3_2 = -L3_2
-  L4_2 = math
-  L4_2 = L4_2.abs
-  L5_2 = math
-  L5_2 = L5_2.cos
-  L6_2 = L1_2.x
-  L5_2, L6_2 = L5_2(L6_2)
-  L4_2 = L4_2(L5_2, L6_2)
-  L3_2 = L3_2 * L4_2
-  L2_2.x = L3_2
-  L3_2 = math
-  L3_2 = L3_2.cos
-  L4_2 = L1_2.z
-  L3_2 = L3_2(L4_2)
-  L4_2 = math
-  L4_2 = L4_2.abs
-  L5_2 = math
-  L5_2 = L5_2.cos
-  L6_2 = L1_2.x
-  L5_2, L6_2 = L5_2(L6_2)
-  L4_2 = L4_2(L5_2, L6_2)
-  L3_2 = L3_2 * L4_2
-  L2_2.y = L3_2
-  L3_2 = math
-  L3_2 = L3_2.sin
-  L4_2 = L1_2.x
-  L3_2 = L3_2(L4_2)
-  L2_2.z = L3_2
-  return L2_2
+
+function RotationToDirection(rotation)
+  local radians = {}
+  radians.x = math.pi / 180 * rotation.x
+  radians.y = math.pi / 180 * rotation.y
+  radians.z = math.pi / 180 * rotation.z
+  local direction = {}
+  direction.x = -math.sin(radians.z) * math.abs(math.cos(radians.x))
+  direction.y = math.cos(radians.z) * math.abs(math.cos(radians.x))
+  direction.z = math.sin(radians.x)
+  return direction
 end
-RotationToDirection = L3_1
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = GetGameplayCamRot
-  L1_2 = L1_2()
-  L2_2 = GetGameplayCamCoord
-  L2_2 = L2_2()
-  L3_2 = RotationToDirection
-  L4_2 = L1_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = {}
-  L5_2 = L2_2.x
-  L6_2 = L3_2.x
-  L6_2 = L6_2 * A0_2
-  L5_2 = L5_2 + L6_2
-  L4_2.x = L5_2
-  L5_2 = L2_2.y
-  L6_2 = L3_2.y
-  L6_2 = L6_2 * A0_2
-  L5_2 = L5_2 + L6_2
-  L4_2.y = L5_2
-  L5_2 = L2_2.z
-  L6_2 = L3_2.z
-  L6_2 = L6_2 * A0_2
-  L5_2 = L5_2 + L6_2
-  L4_2.z = L5_2
-  L5_2 = vec3
-  L6_2 = L4_2.x
-  L7_2 = L4_2.y
-  L8_2 = L4_2.z
-  L5_2 = L5_2(L6_2, L7_2, L8_2)
-  L6_2 = L1_2
-  return L5_2, L6_2
+
+function RayCastGamePlayCamera(distance)
+  local camRot = GetGameplayCamRot()
+  local camCoord = GetGameplayCamCoord()
+  local direction = RotationToDirection(camRot)
+  local destination = {}
+  destination.x = camCoord.x + direction.x * distance
+  destination.y = camCoord.y + direction.y * distance
+  destination.z = camCoord.z + direction.z * distance
+  local coords = vec3(destination.x, destination.y, destination.z)
+  return coords, camRot
 end
-RayCastGamePlayCamera = L3_1
-function L3_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L2_2 = nil
-  L3_2 = A1_2
-  L4_2 = pairs
-  L5_2 = GetActivePlayers
-  L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2 = L5_2()
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    L10_2 = GetEntityCoords
-    L11_2 = GetPlayerPed
-    L12_2 = L9_2
-    L11_2, L12_2, L13_2, L14_2 = L11_2(L12_2)
-    L10_2 = L10_2(L11_2, L12_2, L13_2, L14_2)
-    L11_2 = Debug
-    L12_2 = "GetClosestPlayer"
-    L13_2 = L10_2
-    L14_2 = A0_2
-    L11_2(L12_2, L13_2, L14_2)
-    L11_2 = L10_2 - A0_2
-    L11_2 = #L11_2
-    if L3_2 > L11_2 then
-      L3_2 = L11_2
-      L2_2 = L9_2
+
+function GetClosestPlayer(coords, maxDistance)
+  local closestPlayer = nil
+  local closestDist = maxDistance
+  for _, playerId in pairs(GetActivePlayers()) do
+    local playerCoords = GetEntityCoords(GetPlayerPed(playerId))
+    Debug("GetClosestPlayer", playerCoords, coords)
+    local dist = #(playerCoords - coords)
+    if closestDist > dist then
+      closestDist = dist
+      closestPlayer = playerId
     end
   end
-  return L2_2
+  return closestPlayer
 end
-GetClosestPlayer = L3_1
-function L3_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2
-  L3_2 = GetEntityCoords
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = GetEntityForwardVector
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = vector3
-  L6_2 = 0.0
-  L7_2 = 0.0
-  L8_2 = 1.0
-  L5_2 = L5_2(L6_2, L7_2, L8_2)
-  L6_2 = vector3
-  L7_2 = L4_2.y
-  L7_2 = -L7_2
-  L8_2 = L4_2.x
-  L9_2 = 0.0
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L7_2 = GetModelDimensions
-  L8_2 = GetEntityModel
-  L9_2 = A0_2
-  L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2 = L8_2(L9_2)
-  L7_2, L8_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2)
-  L9_2 = L8_2.z
-  L10_2 = L7_2.z
-  L9_2 = L9_2 - L10_2
-  L9_2 = L9_2 * 2
-  L10_2 = L8_2.x
-  L11_2 = L7_2.x
-  L10_2 = L10_2 - L11_2
-  L10_2 = L10_2 * 2
-  L11_2 = L8_2.y
-  L12_2 = L7_2.y
-  L11_2 = L11_2 - L12_2
-  L12_2 = {}
-  L13_2 = L4_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 - L14_2
-  L12_2["front-left"] = L13_2
-  L13_2 = L4_2 * A2_2
-  L12_2["front-middle"] = L13_2
-  L13_2 = L4_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["front-right"] = L13_2
-  L13_2 = -L4_2
-  L13_2 = L13_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 - L14_2
-  L12_2["back-left"] = L13_2
-  L13_2 = -L4_2
-  L13_2 = L13_2 * A2_2
-  L12_2["back-middle"] = L13_2
-  L13_2 = -L4_2
-  L13_2 = L13_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["back-right"] = L13_2
-  L13_2 = -L6_2
-  L14_2 = L10_2 * 0.5
-  L14_2 = A2_2 + L14_2
-  L13_2 = L13_2 * L14_2
-  L12_2.left = L13_2
-  L13_2 = L10_2 * 0.5
-  L13_2 = A2_2 + L13_2
-  L13_2 = L6_2 * L13_2
-  L12_2.right = L13_2
-  L13_2 = L4_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 - L14_2
-  L14_2 = L9_2 + A2_2
-  L14_2 = L5_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["top-left"] = L13_2
-  L13_2 = L5_2 * A2_2
-  L12_2["top-middle"] = L13_2
-  L13_2 = L4_2 * A2_2
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.5
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L14_2 = L9_2 + A2_2
-  L14_2 = L5_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["top-right"] = L13_2
-  L13_2 = vector3
-  L14_2 = 0.0
-  L15_2 = 0.0
-  L16_2 = L9_2
-  L13_2 = L13_2(L14_2, L15_2, L16_2)
-  L12_2.center = L13_2
-  L13_2 = L4_2 * A2_2
-  L13_2 = L13_2 * 0.7
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.7
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 - L14_2
-  L12_2["front-left-diagonal"] = L13_2
-  L13_2 = L4_2 * A2_2
-  L13_2 = L13_2 * 0.7
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.7
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["front-right-diagonal"] = L13_2
-  L13_2 = -L4_2
-  L13_2 = L13_2 * A2_2
-  L13_2 = L13_2 * 0.7
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.7
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 - L14_2
-  L12_2["back-left-diagonal"] = L13_2
-  L13_2 = -L4_2
-  L13_2 = L13_2 * A2_2
-  L13_2 = L13_2 * 0.7
-  L14_2 = L10_2 * 0.5
-  L15_2 = A2_2 * 0.7
-  L14_2 = L14_2 + L15_2
-  L14_2 = L6_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L12_2["back-right-diagonal"] = L13_2
-  L13_2 = L12_2[A1_2]
-  L13_2 = L3_2 + L13_2
-  return L13_2
+
+function GetRelativePosition(entity, position, distance)
+  local entityCoords = GetEntityCoords(entity)
+  local forward = GetEntityForwardVector(entity)
+  local up = vector3(0.0, 0.0, 1.0)
+  local right = vector3(-forward.y, forward.x, 0.0)
+  local minDim, maxDim = GetModelDimensions(GetEntityModel(entity))
+  local height = (maxDim.z - minDim.z) * 2
+  local width = (maxDim.x - minDim.x) * 2
+  local length = maxDim.y - minDim.y
+
+  local offsets = {}
+  offsets["front-left"] = forward * distance - right * (width * 0.5 + distance * 0.5)
+  offsets["front-middle"] = forward * distance
+  offsets["front-right"] = forward * distance + right * (width * 0.5 + distance * 0.5)
+  offsets["back-left"] = -forward * distance - right * (width * 0.5 + distance * 0.5)
+  offsets["back-middle"] = -forward * distance
+  offsets["back-right"] = -forward * distance + right * (width * 0.5 + distance * 0.5)
+  offsets.left = -right * (width * 0.5 + distance)
+  offsets.right = right * (width * 0.5 + distance)
+  offsets["top-left"] = forward * distance - right * (width * 0.5 + distance * 0.5) + up * (height + distance)
+  offsets["top-middle"] = up * distance
+  offsets["top-right"] = forward * distance + right * (width * 0.5 + distance * 0.5) + up * (height + distance)
+  offsets.center = vector3(0.0, 0.0, height)
+  offsets["front-left-diagonal"] = forward * distance * 0.7 - right * (width * 0.5 + distance * 0.7)
+  offsets["front-right-diagonal"] = forward * distance * 0.7 + right * (width * 0.5 + distance * 0.7)
+  offsets["back-left-diagonal"] = -forward * distance * 0.7 - right * (width * 0.5 + distance * 0.7)
+  offsets["back-right-diagonal"] = -forward * distance * 0.7 + right * (width * 0.5 + distance * 0.7)
+
+  return entityCoords + offsets[position]
 end
-GetRelativePosition = L3_1
-
-
-
-
-
-

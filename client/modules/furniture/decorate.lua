@@ -1,2767 +1,1185 @@
+local DisablePlayerFiring = DisablePlayerFiring
+local IsControlJustPressed = IsControlJustPressed
+local IsDisabledControlJustPressed = IsDisabledControlJustPressed
+local IsControlJustReleased = IsControlJustReleased
+local IsDisabledControlJustReleased = IsDisabledControlJustReleased
+local getCursorHitCoords = Utils.getCursorHitCoords
+
+local decorateState = {
+    active = false,
+    currentObject = nil,
+    hide = false,
+    focus = false,
+    keepInput = false,
+    objects = {},
+    currentPage = "dynamic",
+    mode = "mgizmo",
+    freeCamera = false,
+    cameraFocus = false,
+}
 
 
+_G.decorate = setmetatable({}, {
+    __index = function(_, key)
+        return decorateState[key]
+    end,
+    __newindex = function(_, key, value)
+        decorateState[key] = value
+        if key == "currentObject" then
+            if value then
+                if decorateState.currentPage == "stash" then
+                    SendReactMessage("select_stash_item", value.stashId)
+                end
+                if DoesEntityExist(value.handle) then
+                    decorate:selectEntity(value.handle)
+                else
+                    decorate:deselectEntity()
+                end
+            else
+                decorate:deselectEntity()
+            end
+        end
+    end,
+})
 
 
+function decorate.instructional(self, extraButtons)
+    if not self.active then return end
 
-
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1, L8_1, L9_1, L10_1, L11_1, L12_1, L13_1, L14_1, L15_1, L16_1, L17_1, L18_1, L19_1, L20_1, L21_1, L22_1, L23_1
-L0_1 = DisablePlayerFiring
-L1_1 = IsControlJustPressed
-L2_1 = IsDisabledControlJustPressed
-L3_1 = IsControlJustReleased
-L4_1 = IsDisabledControlJustReleased
-L5_1 = Utils
-L5_1 = L5_1.getCursorHitCoords
-L6_1 = {}
-L6_1.active = false
-L6_1.currentObject = nil
-L6_1.hide = false
-L6_1.focus = false
-L6_1.keepInput = false
-L7_1 = {}
-L6_1.objects = L7_1
-L6_1.currentPage = "dynamic"
-L6_1.mode = "mgizmo"
-L6_1.freeCamera = false
-L6_1.cameraFocus = false
-L7_1 = _G
-L8_1 = setmetatable
-L9_1 = {}
-L10_1 = {}
-function L11_1(A0_2, A1_2)
-  local L2_2
-  L2_2 = L6_1
-  L2_2 = L2_2[A1_2]
-  return L2_2
-end
-L10_1.__index = L11_1
-function L11_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = L6_1
-  L3_2[A1_2] = A2_2
-  if "currentObject" == A1_2 then
-    if A2_2 then
-      L3_2 = L6_1.currentPage
-      if "stash" == L3_2 then
-        L3_2 = SendReactMessage
-        L4_2 = "select_stash_item"
-        L5_2 = A2_2.stashId
-        L3_2(L4_2, L5_2)
-      end
-      L3_2 = DoesEntityExist
-      L4_2 = A2_2.handle
-      L3_2 = L3_2(L4_2)
-      if L3_2 then
-        L3_2 = decorate
-        L4_2 = L3_2
-        L3_2 = L3_2.selectEntity
-        L5_2 = A2_2.handle
-        L3_2(L4_2, L5_2)
-      else
-        L3_2 = decorate
-        L4_2 = L3_2
-        L3_2 = L3_2.deselectEntity
-        L3_2(L4_2)
-      end
-    else
-      L3_2 = decorate
-      L4_2 = L3_2
-      L3_2 = L3_2.deselectEntity
-      L3_2(L4_2)
+    if DrawingInstructional then
+        DrawingInstructional = false
     end
-  end
+
+    local buttons = {
+        { key = "place_object_on_ground", label = ActionControls.place_object_on_ground.label },
+        { key = "toggle_cursor", label = ActionControls.toggle_cursor.label },
+        { key = "toggle_free_mode", label = ActionControls.toggle_free_mode.label },
+        { key = "toggle_editor_mode", label = ActionControls.toggle_editor_mode.label },
+        { key = "toggle_gizmo_mode", label = ActionControls.toggle_gizmo_mode.label },
+        { key = "toggle_free_camera", label = ActionControls.toggle_free_camera.label },
+    }
+
+    local hasStashId = self.currentObject and self.currentObject.stashId
+    if not hasStashId then
+        buttons[#buttons + 1] = { key = "done", label = ActionControls.done.label }
+    end
+
+    if extraButtons then
+        for _, btn in pairs(extraButtons) do
+            buttons[#buttons + 1] = btn
+        end
+    end
+
+    Utils.DrawInstructional(buttons)
 end
-L10_1.__newindex = L11_1
-L8_1 = L8_1(L9_1, L10_1)
-L7_1.decorate = L8_1
-L7_1 = decorate
-function L8_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = A0_2.active
-  if not L2_2 then
-    return
-  end
-  L2_2 = DrawingInstructional
-  if L2_2 then
+
+
+function decorate.open(self)
+    if self.active then
+        return Debug("decorate:open ::: decorate is already active")
+    end
+
+    if not CurrentHouse then
+        return Notification(i18n.t("decorate.not_in_garage"), "error")
+    end
+
+    if cleanerRobot and cleanerRobot.hasActiveCleaningRobot then
+        if cleanerRobot:hasActiveCleaningRobot() then
+            return Notification(i18n.t("decorate.robot_not_docked"), "error")
+        end
+    end
+
+    local isAvailable = lib.callback.await("housing:decorate:getDecorationAvailable", false, CurrentHouse)
+    if not isAvailable then
+        return Notification(i18n.t("decorate.decoration_not_available"), "error")
+    end
+
+    TriggerServerEvent("housing:decorate:updateDecorationUsedBy", CurrentHouse, true)
+
+    self.active = true
+    self:toggleFreeCamera(true)
+    self:setFocus(true)
+    DisableIdleCamera(true)
+    self:getObjects(CurrentHouse)
+
+    SendReactMessage("toggle_decorate_menu", {
+        visible = true,
+        navigation = Config.FurnitureNavigation,
+        furniture = Config.Furniture,
+        enableShop = Config.EnableF3Shop,
+    })
+
+    ToggleHud(false)
+    TriggerServerEvent("housing:fiveguard:freecam", true)
+    self:instructional()
+    gizmo:handleCameraUpdate()
+    mgizmo:loop()
+    self:handleControls()
+    self:checkDistance()
+end
+
+
+function decorate.close(self)
+    if not self.active then return end
+
+    self.active = false
+    ToggleHud(true)
+    DisableIdleCamera(false)
+    self:removeCurrentObject()
+    Utils.RemoveInstructional()
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    SendReactMessage("toggle_decorate_menu", { visible = false })
+    self.focus = false
+    self.keepInput = false
     DrawingInstructional = false
-  end
-  L2_2 = {}
-  L3_2 = {}
-  L3_2.key = "place_object_on_ground"
-  L4_2 = ActionControls
-  L4_2 = L4_2.place_object_on_ground
-  L4_2 = L4_2.label
-  L3_2.label = L4_2
-  L4_2 = {}
-  L4_2.key = "toggle_cursor"
-  L5_2 = ActionControls
-  L5_2 = L5_2.toggle_cursor
-  L5_2 = L5_2.label
-  L4_2.label = L5_2
-  L5_2 = {}
-  L5_2.key = "toggle_free_mode"
-  L6_2 = ActionControls
-  L6_2 = L6_2.toggle_free_mode
-  L6_2 = L6_2.label
-  L5_2.label = L6_2
-  L6_2 = {}
-  L6_2.key = "toggle_editor_mode"
-  L7_2 = ActionControls
-  L7_2 = L7_2.toggle_editor_mode
-  L7_2 = L7_2.label
-  L6_2.label = L7_2
-  L7_2 = {}
-  L7_2.key = "toggle_gizmo_mode"
-  L8_2 = ActionControls
-  L8_2 = L8_2.toggle_gizmo_mode
-  L8_2 = L8_2.label
-  L7_2.label = L8_2
-  L8_2 = {}
-  L8_2.key = "toggle_free_camera"
-  L9_2 = ActionControls
-  L9_2 = L9_2.toggle_free_camera
-  L9_2 = L9_2.label
-  L8_2.label = L9_2
-  L2_2[1] = L3_2
-  L2_2[2] = L4_2
-  L2_2[3] = L5_2
-  L2_2[4] = L6_2
-  L2_2[5] = L7_2
-  L2_2[6] = L8_2
-  L3_2 = A0_2.currentObject
-  if L3_2 then
-    L3_2 = L3_2.stashId
-  end
-  if not L3_2 then
-    L3_2 = #L2_2
-    L3_2 = L3_2 + 1
-    L4_2 = {}
-    L4_2.key = "done"
-    L5_2 = ActionControls
-    L5_2 = L5_2.done
-    L5_2 = L5_2.label
-    L4_2.label = L5_2
-    L2_2[L3_2] = L4_2
-  end
-  if A1_2 then
-    L3_2 = pairs
-    L4_2 = A1_2
-    L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-    for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-      L9_2 = #L2_2
-      L9_2 = L9_2 + 1
-      L2_2[L9_2] = L8_2
-    end
-  end
-  L3_2 = Utils
-  L3_2 = L3_2.DrawInstructional
-  L4_2 = L2_2
-  L3_2(L4_2)
+    TriggerServerEvent("housing:fiveguard:freecam", false)
+    TriggerServerEvent("housing:decorate:updateDecorationUsedBy", CurrentHouse, false)
 end
-L7_1.instructional = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = A0_2.active
-  if L1_2 then
-    L1_2 = Debug
-    L2_2 = "decorate:open ::: decorate is already active"
-    return L1_2(L2_2)
-  end
-  L1_2 = CurrentHouse
-  if not L1_2 then
-    L1_2 = Notification
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "decorate.not_in_garage"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    return L1_2(L2_2, L3_2)
-  end
-  L1_2 = cleanerRobot
-  if L1_2 then
-    L1_2 = cleanerRobot
-    L1_2 = L1_2.hasActiveCleaningRobot
-    if L1_2 then
-      L1_2 = cleanerRobot
-      L2_2 = L1_2
-      L1_2 = L1_2.hasActiveCleaningRobot
-      L1_2 = L1_2(L2_2)
-      if L1_2 then
-        L2_2 = Notification
-        L3_2 = i18n
-        L3_2 = L3_2.t
-        L4_2 = "decorate.robot_not_docked"
-        L3_2 = L3_2(L4_2)
-        L4_2 = "error"
-        return L2_2(L3_2, L4_2)
-      end
-    end
-  end
-  L1_2 = lib
-  L1_2 = L1_2.callback
-  L1_2 = L1_2.await
-  L2_2 = "housing:decorate:getDecorationAvailable"
-  L3_2 = false
-  L4_2 = CurrentHouse
-  L1_2 = L1_2(L2_2, L3_2, L4_2)
-  if not L1_2 then
-    L2_2 = Notification
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "decorate.decoration_not_available"
-    L3_2 = L3_2(L4_2)
-    L4_2 = "error"
-    return L2_2(L3_2, L4_2)
-  end
-  L2_2 = TriggerServerEvent
-  L3_2 = "housing:decorate:updateDecorationUsedBy"
-  L4_2 = CurrentHouse
-  L5_2 = true
-  L2_2(L3_2, L4_2, L5_2)
-  A0_2.active = true
-  L3_2 = A0_2
-  L2_2 = A0_2.toggleFreeCamera
-  L4_2 = true
-  L2_2(L3_2, L4_2)
-  L3_2 = A0_2
-  L2_2 = A0_2.setFocus
-  L4_2 = true
-  L2_2(L3_2, L4_2)
-  L2_2 = DisableIdleCamera
-  L3_2 = true
-  L2_2(L3_2)
-  L3_2 = A0_2
-  L2_2 = A0_2.getObjects
-  L4_2 = CurrentHouse
-  L2_2(L3_2, L4_2)
-  L2_2 = SendReactMessage
-  L3_2 = "toggle_decorate_menu"
-  L4_2 = {}
-  L4_2.visible = true
-  L5_2 = Config
-  L5_2 = L5_2.FurnitureNavigation
-  L4_2.navigation = L5_2
-  L5_2 = Config
-  L5_2 = L5_2.Furniture
-  L4_2.furniture = L5_2
-  L5_2 = Config
-  L5_2 = L5_2.EnableF3Shop
-  L4_2.enableShop = L5_2
-  L2_2(L3_2, L4_2)
-  L2_2 = ToggleHud
-  L3_2 = false
-  L2_2(L3_2)
-  L2_2 = TriggerServerEvent
-  L3_2 = "housing:fiveguard:freecam"
-  L4_2 = true
-  L2_2(L3_2, L4_2)
-  L3_2 = A0_2
-  L2_2 = A0_2.instructional
-  L2_2(L3_2)
-  L2_2 = gizmo
-  L3_2 = L2_2
-  L2_2 = L2_2.handleCameraUpdate
-  L2_2(L3_2)
-  L2_2 = mgizmo
-  L3_2 = L2_2
-  L2_2 = L2_2.loop
-  L2_2(L3_2)
-  L3_2 = A0_2
-  L2_2 = A0_2.handleControls
-  L2_2(L3_2)
-  L3_2 = A0_2
-  L2_2 = A0_2.checkDistance
-  L2_2(L3_2)
-end
-L7_1.open = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = A0_2.active
-  if not L1_2 then
-    return
-  end
-  A0_2.active = false
-  L1_2 = ToggleHud
-  L2_2 = true
-  L1_2(L2_2)
-  L1_2 = DisableIdleCamera
-  L2_2 = false
-  L1_2(L2_2)
-  L2_2 = A0_2
-  L1_2 = A0_2.removeCurrentObject
-  L1_2(L2_2)
-  L1_2 = Utils
-  L1_2 = L1_2.RemoveInstructional
-  L1_2()
-  L1_2 = SetNuiFocus
-  L2_2 = false
-  L3_2 = false
-  L1_2(L2_2, L3_2)
-  L1_2 = SetNuiFocusKeepInput
-  L2_2 = false
-  L1_2(L2_2)
-  L1_2 = SendReactMessage
-  L2_2 = "toggle_decorate_menu"
-  L3_2 = {}
-  L3_2.visible = false
-  L1_2(L2_2, L3_2)
-  A0_2.focus = false
-  A0_2.keepInput = false
-  DrawingInstructional = false
-  L1_2 = TriggerServerEvent
-  L2_2 = "housing:fiveguard:freecam"
-  L3_2 = false
-  L1_2(L2_2, L3_2)
-  L1_2 = TriggerServerEvent
-  L2_2 = "housing:decorate:updateDecorationUsedBy"
-  L3_2 = CurrentHouse
-  L4_2 = false
-  L1_2(L2_2, L3_2, L4_2)
-end
-L7_1.close = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = Config
-  L1_2 = L1_2.MaximumDistanceForDecorate
-  if not L1_2 then
-    return
-  end
-  L1_2 = GetEntityCoords
-  L2_2 = cache
-  L2_2 = L2_2.ped
-  L1_2 = L1_2(L2_2)
-  L2_2 = CreateThread
-  function L3_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3
-    while true do
-      L0_3 = A0_2.active
-      if not L0_3 then
-        break
-      end
-      L0_3 = CurrentHouse
-      if not L0_3 then
-        break
-      end
-      L0_3 = GetFinalRenderedCamCoord
-      L0_3 = L0_3()
-      L1_3 = L1_2
-      L1_3 = L0_3 - L1_3
-      L1_3 = #L1_3
-      L2_3 = Config
-      L2_3 = L2_3.MaximumDistanceForDecorate
-      L1_3 = L1_3 > L2_3
-      if L1_3 then
-        L2_3 = Notification
-        L3_3 = i18n
-        L3_3 = L3_3.t
-        L4_3 = "decorate.too_far"
-        L3_3 = L3_3(L4_3)
-        L4_3 = "error"
-        L2_3(L3_3, L4_3)
-        L2_3 = A0_2
-        L3_3 = L2_3
-        L2_3 = L2_3.close
-        L2_3(L3_3)
-      end
-      L2_3 = Wait
-      L3_3 = 500
-      L2_3(L3_3)
-    end
-  end
-  L2_2(L3_2)
-end
-L7_1.checkDistance = L8_1
-L7_1 = decorate
-function L8_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = A0_2.mode
-  if "gizmo" == L2_2 then
-    L2_2 = gizmo
-    if L2_2 then
-      goto lbl_8
-    end
-  end
-  L2_2 = mgizmo
-  ::lbl_8::
-  if A1_2 then
-    L3_2 = DoesEntityExist
-    L4_2 = A1_2
-    L3_2 = L3_2(L4_2)
-    if not L3_2 then
-      L2_2.entity = nil
-      L2_2.decorateData = nil
-      return
-    end
-  end
-  L3_2 = nil
-  if A1_2 then
-    L3_2 = A1_2
-  else
-    L4_2 = L5_1
-    L4_2, L5_2 = L4_2()
-    if L4_2 and L5_2 and 0 ~= L5_2 then
-      L3_2 = L5_2
-    end
-  end
-  if not L3_2 then
-    return
-  end
-  L4_2 = decorate
-  L4_2 = L4_2.currentPage
-  if "stash" ~= L4_2 and not A1_2 then
-    L4_2 = decorate
-    L4_2 = L4_2.currentObject
-    if L4_2 then
-      L4_2 = L4_2.handle
-    end
-    if L4_2 ~= L3_2 then
-      L4_2 = Notification
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "decorate.you_cant_select_entity"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "error"
-      return L4_2(L5_2, L6_2)
-    end
-  end
-  L4_2 = decorate
-  L5_2 = L4_2
-  L4_2 = L4_2.getObjectData
-  L6_2 = L3_2
-  L4_2 = L4_2(L5_2, L6_2)
-  if not A1_2 and not L4_2 then
-    return
-  end
-  L2_2.entity = L3_2
-  L2_2.decorateData = L4_2
-  L5_2 = decorate
-  L5_2 = L5_2.currentObject
-  if L5_2 then
-    L5_2 = L5_2.handle
-  end
-  if L5_2 ~= L3_2 then
-    L5_2 = decorate
-    L6_2 = {}
-    L6_2.handle = L3_2
-    L7_2 = L4_2.modelName
-    L6_2.modelName = L7_2
-    L7_2 = L4_2.id
-    L6_2.stashId = L7_2
-    L5_2.currentObject = L6_2
-  end
-  L6_2 = L2_2
-  L5_2 = L2_2.selectEntity
-  L5_2(L6_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.instructional
-  L5_2(L6_2)
-end
-L7_1.selectEntity = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = gizmo
-  L2_2 = L1_2
-  L1_2 = L1_2.deselectEntity
-  L1_2(L2_2)
-  L2_2 = A0_2
-  L1_2 = A0_2.instructional
-  L1_2(L2_2)
-end
-L7_1.deselectEntity = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2
-  L1_2 = GetFinalRenderedCamCoord
-  return L1_2()
-end
-L7_1.getCamCoords = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = GetFinalRenderedCamRot
-  L2_2 = 2
-  return L1_2(L2_2)
-end
-L7_1.getCamRot = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = A0_2.hide
-  L1_2 = not L1_2
-  A0_2.hide = L1_2
-  L1_2 = SendReactMessage
-  L2_2 = "toggle_hide_decorate"
-  L3_2 = A0_2.hide
-  L1_2(L2_2, L3_2)
-  L1_2 = A0_2.hide
-  if L1_2 then
-    L2_2 = A0_2
-    L1_2 = A0_2.setFocus
-    L3_2 = true
-    L4_2 = true
-    L1_2(L2_2, L3_2, L4_2)
-  else
-    L2_2 = A0_2
-    L1_2 = A0_2.setFocus
-    L3_2 = true
-    L4_2 = false
-    L1_2(L2_2, L3_2, L4_2)
-  end
-end
-L7_1.toggleHideDecorate = L8_1
-L7_1 = decorate
-function L8_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = A1_2 or L3_2
-  if not A1_2 or not A1_2 then
-    L3_2 = A0_2.focus
-    L3_2 = not L3_2
-  end
-  A0_2.focus = L3_2
-  L3_2 = SetNuiFocus
-  L4_2 = A0_2.focus
-  L5_2 = A0_2.focus
-  L3_2(L4_2, L5_2)
-  if nil ~= A2_2 then
-    A0_2.keepInput = A2_2
-  else
-    L3_2 = A0_2.focus
-    L3_2 = not L3_2
-    A0_2.keepInput = L3_2
-  end
-  A0_2.keepInput = A2_2
-  L3_2 = SetNuiFocusKeepInput
-  L4_2 = A0_2.keepInput
-  L3_2(L4_2)
-  L3_2 = A0_2.keepInput
-  if not L3_2 then
-    L3_2 = A0_2.mode
-    if "mgizmo" == L3_2 then
-      L4_2 = A0_2
-      L3_2 = A0_2.toggleGizmoMode
-      L5_2 = "gizmo"
-      L3_2(L4_2, L5_2)
-      L3_2 = Debug
-      L4_2 = "setFocus ::: toggleGizmoMode to gizmo because keepInput is false"
-      L3_2(L4_2)
-    end
-  end
-end
-L7_1.setFocus = L8_1
-L7_1 = decorate
-function L8_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = decorate
-  L1_2 = L1_2.currentObject
-  if L1_2 then
-    L1_2 = L1_2.handle
-  end
-  if not L1_2 then
-    return
-  end
-  L1_2 = PlaceObjectOnGroundProperly
-  L2_2 = decorate
-  L2_2 = L2_2.currentObject
-  L2_2 = L2_2.handle
-  L1_2(L2_2)
-  L1_2 = gizmo
-  L2_2 = L1_2
-  L1_2 = L1_2.updateGizmoEntity
-  L1_2(L2_2)
-end
-L7_1.placeObjectOnGround = L8_1
-L7_1 = decorate
-function L8_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = A0_2.mode
-  if "gizmo" == L2_2 then
-    L2_2 = A0_2.keepInput
-    if not L2_2 then
-      L2_2 = Debug
-      L3_2 = "toggleGizmoMode ::: mgizmo mode is enabled and keepInput is true, so we do not toggle mode"
-      return L2_2(L3_2)
-    end
-  end
-  if A1_2 then
-    L2_2 = A0_2.mode
-    if A1_2 == L2_2 then
-      L2_2 = Debug
-      L3_2 = "toggleGizmoMode ::: mode is already same"
-      L4_2 = "mode"
-      L5_2 = A1_2
-      return L2_2(L3_2, L4_2, L5_2)
-    end
-    A0_2.mode = A1_2
-  else
-    L2_2 = A0_2.mode
-    if "gizmo" == L2_2 then
-      L2_2 = "mgizmo"
-      if L2_2 then
-        goto lbl_31
-      end
-    end
-    L2_2 = "gizmo"
-    ::lbl_31::
-    A0_2.mode = L2_2
-  end
-  L2_2 = SendReactMessage
-  L3_2 = "toggle_gizmo_mode"
-  L4_2 = A0_2.mode
-  L2_2(L3_2, L4_2)
-  L2_2 = Notification
-  L3_2 = i18n
-  L3_2 = L3_2.t
-  L4_2 = "decorate.gizmo_mode_toggled"
-  L5_2 = {}
-  L6_2 = A0_2.mode
-  L5_2.mode = L6_2
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = "info"
-  L2_2(L3_2, L4_2)
-  L2_2 = gizmo
-  L3_2 = L2_2
-  L2_2 = L2_2.deselectEntity
-  L2_2(L3_2)
-  L2_2 = mgizmo
-  L3_2 = L2_2
-  L2_2 = L2_2.deselectEntity
-  L2_2(L3_2)
-  L2_2 = A0_2.mode
-  if "gizmo" == L2_2 then
-    L2_2 = gizmo
-    L3_2 = L2_2
-    L2_2 = L2_2.handleCameraUpdate
-    L2_2(L3_2)
-  else
-    L2_2 = mgizmo
-    L3_2 = L2_2
-    L2_2 = L2_2.loop
-    L2_2(L3_2)
-  end
-end
-L7_1.toggleGizmoMode = L8_1
-L7_1 = Config
-L7_1 = L7_1.Furniture
-L7_1 = L7_1.light
-L7_1 = L7_1.items
-LIGHT_ITEMS = L7_1
-L7_1 = table
-L7_1 = L7_1.deepclone
-L8_1 = Config
-L8_1 = L8_1.DynamicFurnitures
-L7_1 = L7_1(L8_1)
-L8_1 = {}
-function L9_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2
-  L0_2 = Config
-  L1_2 = table
-  L1_2 = L1_2.deepclone
-  L2_2 = L7_1
-  L1_2 = L1_2(L2_2)
-  L0_2.DynamicFurnitures = L1_2
-  L0_2 = Config
-  L1_2 = {}
-  L0_2.DoorModels = L1_2
-  L0_2 = {}
-  L8_1 = L0_2
-  L0_2 = pairs
-  L1_2 = Config
-  L1_2 = L1_2.Furniture
-  L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-  for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-    if "navigation" ~= L4_2 then
-      L6_2 = pairs
-      L7_2 = L5_2.items
-      L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-      for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-        L12_2 = L11_2.type
-        if L12_2 then
-          L12_2 = Config
-          L12_2 = L12_2.DynamicFurnitures
-          L13_2 = L11_2.object
-          L12_2[L13_2] = L11_2
-        end
-        L12_2 = L11_2.isDoor
-        if L12_2 then
-          L12_2 = Config
-          L12_2 = L12_2.DoorModels
-          L13_2 = L11_2.object
-          L12_2[L13_2] = L11_2
-        end
-        L12_2 = L11_2.onlyInside
-        if L12_2 then
-          L13_2 = L11_2.object
-          L12_2 = L8_1
-          L12_2[L13_2] = true
-        end
-        L12_2 = L11_2.colors
-        if L12_2 then
-          L12_2 = pairs
-          L13_2 = L11_2.colors
-          L12_2, L13_2, L14_2, L15_2 = L12_2(L13_2)
-          for L16_2, L17_2 in L12_2, L13_2, L14_2, L15_2 do
-            L18_2 = L17_2.type
-            if L18_2 then
-              L18_2 = Config
-              L18_2 = L18_2.DynamicFurnitures
-              L19_2 = L17_2.object
-              L18_2[L19_2] = L17_2
+
+function decorate.checkDistance(self)
+    if not Config.MaximumDistanceForDecorate then return end
+
+    local startCoords = GetEntityCoords(cache.ped)
+
+    CreateThread(function()
+        while true do
+            if not self.active then break end
+            if not CurrentHouse then break end
+
+            local camCoords = GetFinalRenderedCamCoord()
+            local dist = #(camCoords - startCoords)
+
+            if dist > Config.MaximumDistanceForDecorate then
+                Notification(i18n.t("decorate.too_far"), "error")
+                self:close()
             end
-            L18_2 = L11_2.isDoor
-            if L18_2 then
-              L18_2 = Config
-              L18_2 = L18_2.DoorModels
-              L19_2 = L17_2.object
-              L18_2[L19_2] = L17_2
-            end
-            L18_2 = L11_2.onlyInside
-            if L18_2 then
-              L19_2 = L17_2.object
-              L18_2 = L8_1
-              L18_2[L19_2] = true
-            end
-          end
+
+            Wait(500)
         end
-      end
-    end
-  end
+    end)
 end
-InitializeFurnitures = L9_1
-function L9_1(A0_2)
-  local L1_2
-  L1_2 = L8_1
-  L1_2 = L1_2[A0_2]
-  L1_2 = true == L1_2
-  return L1_2
-end
-IsOnlyInsideModel = L9_1
-L9_1 = CreateThread
-L10_1 = InitializeFurnitures
-L9_1(L10_1)
-L9_1 = {}
-L10_1 = {}
-function L11_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = tostring
-  L2_2 = A0_2.id
-  if not L2_2 then
-    L2_2 = A0_2.uniq
-    if not L2_2 then
-      L2_2 = A0_2.modelName
-    end
-  end
-  return L1_2(L2_2)
-end
-function L12_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = Config
-  L1_2 = L1_2.DynamicFurnitures
-  L1_2 = L1_2[A0_2]
-  if L1_2 then
-    L2_2 = L1_2.type
-    if "wallart" == L2_2 then
-      goto lbl_11
-    end
-  end
-  L2_2 = nil
-  do return L2_2 end
-  ::lbl_11::
-  L2_2 = L1_2.wallart
-  return L2_2
-end
-function L13_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = "%s:%s"
-  L3_2 = L2_2
-  L2_2 = L2_2.format
-  L4_2 = A0_2
-  L5_2 = A1_2
-  return L2_2(L3_2, L4_2, L5_2)
-end
-function L14_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = "wallart_%s"
-  L2_2 = L1_2
-  L1_2 = L1_2.format
-  L4_2 = A0_2
-  L3_2 = A0_2.gsub
-  L5_2 = "[^%w_]"
-  L6_2 = "_"
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2, L5_2, L6_2)
-  return L1_2(L2_2, L3_2, L4_2, L5_2, L6_2)
-end
-function L15_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = L11_1
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  L2_2 = L10_1
-  L2_2 = L2_2[L1_2]
-  if not L2_2 then
-    return
-  end
-  L3_2 = L10_1
-  L3_2[L1_2] = nil
-  L3_2 = table
-  L3_2 = L3_2.find
-  L4_2 = L10_1
-  function L5_2(A0_3)
-    local L1_3
-    L1_3 = L2_2
-    L1_3 = A0_3 == L1_3
-    return L1_3
-  end
-  L3_2 = L3_2(L4_2, L5_2)
-  if L3_2 then
-    return
-  end
-  L4_2 = L9_1
-  L4_2 = L4_2[L2_2]
-  if not L4_2 then
-    return
-  end
-  L5_2 = L4_2.duiObj
-  if L5_2 then
-    L5_2 = DestroyDui
-    L6_2 = L4_2.duiObj
-    L5_2(L6_2)
-  end
-  L5_2 = L9_1
-  L5_2[L2_2] = nil
-end
-function L16_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2
-  L1_2 = Debug
-  L2_2 = "ApplyWallartTexture ::: Applying wallart texture"
-  L3_2 = "objectData"
-  L4_2 = A0_2
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = L12_1
-  L2_2 = A0_2.modelName
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = A0_2.wallartData
-  if not L2_2 then
-    L2_2 = {}
-  end
-  L3_2 = L2_2.textureDict
-  if not L3_2 then
-    L3_2 = L1_2.textureDict
-  end
-  L4_2 = L2_2.textureName
-  if not L4_2 then
-    L4_2 = L1_2.textureName
-  end
-  if not L3_2 or not L4_2 then
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = L2_2.url
-  if not L5_2 then
-    L5_2 = L1_2.defaultUrl
-  end
-  L6_2 = type
-  L7_2 = L5_2
-  L6_2 = L6_2(L7_2)
-  if "string" ~= L6_2 then
-    L6_2 = false
-    return L6_2
-  end
-  L7_2 = L5_2
-  L6_2 = L5_2.match
-  L8_2 = "^%s*(.-)%s*$"
-  L6_2 = L6_2(L7_2, L8_2)
-  L5_2 = L6_2
-  if "" == L5_2 then
-    L6_2 = false
-    return L6_2
-  end
-  L6_2 = A0_2.wallartData
-  if not L6_2 then
-    L6_2 = {}
-  end
-  A0_2.wallartData = L6_2
-  L6_2 = A0_2.wallartData
-  L6_2.url = L5_2
-  L6_2 = A0_2.wallartData
-  L6_2.textureName = L4_2
-  L6_2 = A0_2.wallartData
-  L6_2.textureDict = L3_2
-  L6_2 = L13_1
-  L7_2 = L3_2
-  L8_2 = L4_2
-  L6_2 = L6_2(L7_2, L8_2)
-  L7_2 = L11_1
-  L8_2 = A0_2
-  L7_2 = L7_2(L8_2)
-  L8_2 = L9_1
-  L8_2 = L8_2[L6_2]
-  if L8_2 then
-    L9_2 = L8_2.url
-    if L9_2 == L5_2 then
-      L9_2 = L10_1
-      L9_2[L7_2] = L6_2
-      L9_2 = true
-      return L9_2
-    end
-  end
-  if L8_2 then
-    L9_2 = L8_2.duiObj
-    if L9_2 then
-      L9_2 = DestroyDui
-      L10_2 = L8_2.duiObj
-      L9_2(L10_2)
-    end
-  end
-  L9_2 = L14_1
-  L10_2 = L6_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = CreateRuntimeTxd
-  L11_2 = L9_2
-  L10_2 = L10_2(L11_2)
-  L11_2 = CreateDui
-  L12_2 = L5_2
-  L13_2 = 512
-  L14_2 = 512
-  L11_2 = L11_2(L12_2, L13_2, L14_2)
-  L12_2 = GetGameTimer
-  L12_2 = L12_2()
-  L12_2 = L12_2 + 12500
-  while true do
-    L13_2 = IsDuiAvailable
-    L14_2 = L11_2
-    L13_2 = L13_2(L14_2)
-    if L13_2 then
-      break
-    end
-    L13_2 = GetGameTimer
-    L13_2 = L13_2()
-    if not (L12_2 > L13_2) then
-      break
-    end
-    L13_2 = Wait
-    L14_2 = 50
-    L13_2(L14_2)
-  end
-  L13_2 = IsDuiAvailable
-  L14_2 = L11_2
-  L13_2 = L13_2(L14_2)
-  if not L13_2 then
-    L13_2 = Debug
-    L14_2 = "ApplyWallartTexture ::: Dui is not available"
-    L15_2 = "url"
-    L16_2 = L5_2
-    L13_2(L14_2, L15_2, L16_2)
-    L13_2 = DestroyDui
-    L14_2 = L11_2
-    L13_2(L14_2)
-    L13_2 = false
-    return L13_2
-  end
-  L13_2 = GetDuiHandle
-  L14_2 = L11_2
-  L13_2 = L13_2(L14_2)
-  L14_2 = CreateRuntimeTextureFromDuiHandle
-  L15_2 = L10_2
-  L16_2 = "skin"
-  L17_2 = L13_2
-  L14_2(L15_2, L16_2, L17_2)
-  L14_2 = AddReplaceTexture
-  L15_2 = L3_2
-  L16_2 = L4_2
-  L17_2 = L9_2
-  L18_2 = "skin"
-  L14_2(L15_2, L16_2, L17_2, L18_2)
-  L14_2 = Debug
-  L15_2 = "ApplyWallartTexture ::: Added replace texture"
-  L16_2 = "textureDict"
-  L17_2 = L3_2
-  L18_2 = "textureName"
-  L19_2 = L4_2
-  L20_2 = "txdName"
-  L21_2 = L9_2
-  L14_2(L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2)
-  L14_2 = L9_1
-  L15_2 = {}
-  L15_2.txdName = L9_2
-  L15_2.duiObj = L11_2
-  L15_2.url = L5_2
-  L14_2[L6_2] = L15_2
-  L14_2 = L10_1
-  L14_2[L7_2] = L6_2
-  L14_2 = true
-  return L14_2
-end
-L17_1 = decorate
-function L18_1(A0_2, A1_2)
-  local L2_2, L3_2
-  L2_2 = L16_1
-  L3_2 = A1_2
-  return L2_2(L3_2)
-end
-L17_1.applyWallartTexture = L18_1
-function L17_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L0_2 = pairs
-  L1_2 = L9_1
-  L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-  for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-    L6_2 = L5_2.duiObj
-    if L6_2 then
-      L6_2 = DestroyDui
-      L7_2 = L5_2.duiObj
-      L6_2(L7_2)
-    end
-  end
-  L0_2 = {}
-  L9_1 = L0_2
-  L0_2 = {}
-  L10_1 = L0_2
-end
-L18_1 = decorate
-function L19_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = CreateThread
-  function L2_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3
-    L0_3 = 0
-    while true do
-      L1_3 = A0_2.active
-      if not L1_3 then
-        break
-      end
-      L1_3 = L0_1
-      L2_3 = cache
-      L2_3 = L2_3.playerId
-      L3_3 = true
-      L1_3(L2_3, L3_3)
-      L1_3 = A0_2.currentObject
-      if L1_3 then
-        L1_3 = L1_3.handle
-      end
-      L1_3 = L0_3 ~= L1_3
-      if L1_3 then
-        L2_3 = SetEntityDrawOutline
-        L3_3 = L0_3
-        L4_3 = false
-        L2_3(L3_3, L4_3)
-        L2_3 = SetEntityDrawOutline
-        L3_3 = A0_2.currentObject
-        if L3_3 then
-          L3_3 = L3_3.handle
-        end
-        L4_3 = true
-        L2_3(L3_3, L4_3)
-        L2_3 = SetEntityDrawOutlineColor
-        L3_3 = 0
-        L4_3 = 180
-        L5_3 = 255
-        L6_3 = 255
-        L2_3(L3_3, L4_3, L5_3, L6_3)
-      end
-      L2_3 = A0_2.currentObject
-      if L2_3 then
-        L2_3 = L2_3.handle
-      end
-      L0_3 = L2_3
-      L2_3 = L1_1
-      L3_3 = 0
-      L4_3 = ActionControls
-      L4_3 = L4_3.toggle_cursor
-      L4_3 = L4_3.codes
-      L4_3 = L4_3[1]
-      L2_3 = L2_3(L3_3, L4_3)
-      if not L2_3 then
-        L2_3 = L2_1
-        L3_3 = 0
-        L4_3 = ActionControls
-        L4_3 = L4_3.toggle_cursor
-        L4_3 = L4_3.codes
-        L4_3 = L4_3[1]
-        L2_3 = L2_3(L3_3, L4_3)
-        if not L2_3 then
-          goto lbl_64
-        end
-      end
-      L2_3 = A0_2
-      L3_3 = L2_3
-      L2_3 = L2_3.setFocus
-      L4_3 = true
-      L2_3(L3_3, L4_3)
-      ::lbl_64::
-      L2_3 = L1_1
-      L3_3 = 0
-      L4_3 = ActionControls
-      L4_3 = L4_3.toggle_free_camera
-      L4_3 = L4_3.codes
-      L4_3 = L4_3[1]
-      L2_3 = L2_3(L3_3, L4_3)
-      if not L2_3 then
-        L2_3 = L2_1
-        L3_3 = 0
-        L4_3 = ActionControls
-        L4_3 = L4_3.toggle_free_camera
-        L4_3 = L4_3.codes
-        L4_3 = L4_3[1]
-        L2_3 = L2_3(L3_3, L4_3)
-        if not L2_3 then
-          goto lbl_85
-        end
-      end
-      L2_3 = A0_2
-      L3_3 = L2_3
-      L2_3 = L2_3.toggleFreeCamera
-      L2_3(L3_3)
-      ::lbl_85::
-      L2_3 = L1_1
-      L3_3 = 0
-      L4_3 = ActionControls
-      L4_3 = L4_3.done
-      L4_3 = L4_3.codes
-      L4_3 = L4_3[1]
-      L2_3 = L2_3(L3_3, L4_3)
-      if not L2_3 then
-        L2_3 = L2_1
-        L3_3 = 0
-        L4_3 = ActionControls
-        L4_3 = L4_3.done
-        L4_3 = L4_3.codes
-        L4_3 = L4_3[1]
-        L2_3 = L2_3(L3_3, L4_3)
-        if not L2_3 then
-          goto lbl_112
-        end
-      end
-      L2_3 = A0_2.currentObject
-      if L2_3 then
-        L2_3 = L2_3.stashId
-      end
-      if not L2_3 then
-        L2_3 = A0_2
-        L3_3 = L2_3
-        L2_3 = L2_3.openBuyObjectModal
-        L2_3(L3_3)
-      end
-      ::lbl_112::
-      if L0_3 then
-        L2_3 = L3_1
-        L3_3 = 0
-        L4_3 = ActionControls
-        L4_3 = L4_3.place_object_on_ground
-        L4_3 = L4_3.codes
-        L4_3 = L4_3[1]
-        L2_3 = L2_3(L3_3, L4_3)
-        if not L2_3 then
-          L2_3 = L4_1
-          L3_3 = 0
-          L4_3 = ActionControls
-          L4_3 = L4_3.place_object_on_ground
-          L4_3 = L4_3.codes
-          L4_3 = L4_3[1]
-          L2_3 = L2_3(L3_3, L4_3)
-          if not L2_3 then
-            goto lbl_135
-          end
-        end
-        L2_3 = A0_2
-        L3_3 = L2_3
-        L2_3 = L2_3.placeObjectOnGround
-        L2_3(L3_3)
-      end
-      ::lbl_135::
-      L2_3 = Wait
-      L3_3 = 0
-      L2_3(L3_3)
-    end
-  end
-  L1_2(L2_2)
-end
-L18_1.handleControls = L19_1
-L18_1 = RegisterNetEvent
-L19_1 = "housing:decorate:open"
-function L20_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = CurrentHouse
-  if not L0_2 then
-    L0_2 = Notification
-    L1_2 = i18n
-    L1_2 = L1_2.t
-    L2_2 = "decorate.not_in_house"
-    L1_2 = L1_2(L2_2)
-    L2_2 = "error"
-    return L0_2(L1_2, L2_2)
-  end
-  L0_2 = Config
-  L0_2 = L0_2.Houses
-  L1_2 = CurrentHouse
-  L0_2 = L0_2[L1_2]
-  if not L0_2 then
-    L1_2 = Notification
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "decorate.invalid_data"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    return L1_2(L2_2, L3_2)
-  end
-  L1_2 = Config
-  L1_2 = L1_2.DecorateOnlyAccessForOwner
-  if L1_2 then
-    L1_2 = CurrentHouseData
-    L1_2 = L1_2.isOwnedByMe
-    if not L1_2 then
-      L1_2 = Notification
-      L2_2 = i18n
-      L2_2 = L2_2.t
-      L3_2 = "you_are_not_owner"
-      L2_2 = L2_2(L3_2)
-      L3_2 = "error"
-      return L1_2(L2_2, L3_2)
-    end
-  end
-  L1_2 = CurrentHouseData
-  L1_2 = L1_2.billsCutOff
-  if L1_2 then
-    L1_2 = Notification
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "decorate.bills_cut_off"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    return L1_2(L2_2, L3_2)
-  end
-  L1_2 = CurrentHouseData
-  L1_2 = L1_2.haskey
-  if not L1_2 then
-    L1_2 = Notification
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "decorate.not_key_holder"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    return L1_2(L2_2, L3_2)
-  end
-  L1_2 = decorate
-  L2_2 = L1_2
-  L1_2 = L1_2.open
-  L1_2(L2_2)
-end
-L18_1(L19_1, L20_1)
-L18_1 = 0.01
-L19_1 = decorate
-function L20_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  if nil ~= A1_2 then
-    A0_2.freeCamera = A1_2
-  else
-    L2_2 = A0_2.freeCamera
-    L2_2 = not L2_2
-    A0_2.freeCamera = L2_2
-  end
-  L2_2 = A0_2.freeCamera
-  if not L2_2 then
-    return
-  end
-  L2_2 = SetPlayerControl
-  L3_2 = cache
-  L3_2 = L3_2.playerId
-  L4_2 = false
-  L5_2 = 0
-  L2_2(L3_2, L4_2, L5_2)
-  L2_2 = GetEntityMatrix
-  L3_2 = cache
-  L3_2 = L3_2.ped
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  L6_2 = L5_2 + L4_2
-  L7_2 = GetEntityRotation
-  L8_2 = cache
-  L8_2 = L8_2.ped
-  L7_2 = L7_2(L8_2)
-  L8_2 = Utils
-  L8_2 = L8_2.CreateCamera
-  L9_2 = "DEFAULT_SCRIPTED_CAMERA"
-  L10_2 = L6_2
-  L11_2 = L7_2
-  L12_2 = true
-  L13_2 = nil
-  L14_2 = 1000
-  L8_2 = L8_2(L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L10_2 = A0_2
-  L9_2 = A0_2.instructional
-  L11_2 = {}
-  L12_2 = {}
-  L12_2.key = "focus_free_camera"
-  L12_2.label = "Focus Object"
-  L11_2[1] = L12_2
-  L9_2(L10_2, L11_2)
-  A0_2.cameraFocus = false
-  L9_2 = CreateThread
-  function L10_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3, L13_3, L14_3, L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3
-    while true do
-      L0_3 = A0_2.active
-      if not L0_3 then
-        break
-      end
-      L0_3 = A0_2.freeCamera
-      if not L0_3 then
-        break
-      end
-      L0_3 = Utils
-      L0_3 = L0_3.HandleFlyCam
-      L1_3 = L8_2
-      L2_3 = {}
-      L3_3 = A0_2.cameraFocus
-      L3_3 = not L3_3
-      L2_3.mouse = L3_3
-      L0_3, L1_3 = L0_3(L1_3, L2_3)
-      L7_2 = L1_3
-      L6_2 = L0_3
-      L0_3 = DisableAllControlActions
-      L1_3 = 0
-      L0_3(L1_3)
-      L0_3 = L2_1
-      L1_3 = 0
-      L2_3 = Keys
-      L2_3 = L2_3.F
-      L0_3 = L0_3(L1_3, L2_3)
-      if L0_3 then
-        L0_3 = A0_2.mode
-        if "gizmo" == L0_3 then
-          L0_3 = A0_2.cameraFocus
-          L0_3 = not L0_3
-          A0_2.cameraFocus = L0_3
-        else
-          L0_3 = Notification
-          L1_3 = i18n
-          L1_3 = L1_3.t
-          L2_3 = "decorate.focus_object_not_supported"
-          L1_3 = L1_3(L2_3)
-          L2_3 = "error"
-          L0_3(L1_3, L2_3)
-        end
-      end
-      L0_3 = A0_2.cameraFocus
-      if L0_3 then
-        L0_3 = A0_2.mode
-        if "mgizmo" == L0_3 then
-          A0_2.cameraFocus = false
-        end
-      end
-      L0_3 = A0_2.cameraFocus
-      if L0_3 then
-        L0_3 = A0_2.currentObject
-        if L0_3 then
-          L0_3 = L0_3.handle
-        end
-        if L0_3 then
-          L0_3 = A0_2.currentObject
-          L0_3 = L0_3.handle
-          if L0_3 then
-            L1_3 = DoesEntityExist
-            L2_3 = L0_3
-            L1_3 = L1_3(L2_3)
-            if L1_3 then
-              L1_3 = GetEntityCoords
-              L2_3 = L0_3
-              L1_3 = L1_3(L2_3)
-              L2_3 = GetEntityModel
-              L3_3 = L0_3
-              L2_3 = L2_3(L3_3)
-              L3_3 = GetModelDimensions
-              L4_3 = L2_3
-              L3_3, L4_3 = L3_3(L4_3)
-              L5_3 = L4_3 - L3_3
-              L5_3 = #L5_3
-              L6_3 = math
-              L6_3 = L6_3.max
-              L7_3 = L5_3 * 2.0
-              L8_3 = 3.0
-              L6_3 = L6_3(L7_3, L8_3)
-              L7_3 = L4_3.z
-              L8_3 = L3_3.z
-              L7_3 = L7_3 - L8_3
-              L8_3 = L6_2
-              L9_3 = L8_3 - L1_3
-              L9_3 = #L9_3
-              L10_3 = L1_3 - L8_3
-              L11_3 = vec3
-              L12_3 = math
-              L12_3 = L12_3.deg
-              L13_3 = math
-              L13_3 = L13_3.asin
-              L14_3 = L10_3.z
-              L15_3 = #L10_3
-              L14_3 = L14_3 / L15_3
-              L13_3, L14_3, L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3 = L13_3(L14_3)
-              L12_3 = L12_3(L13_3, L14_3, L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3)
-              L13_3 = 0.0
-              L14_3 = math
-              L14_3 = L14_3.deg
-              L15_3 = math
-              L15_3 = L15_3.atan
-              L16_3 = L10_3.x
-              L16_3 = -L16_3
-              L17_3 = L10_3.y
-              L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3 = L15_3(L16_3, L17_3)
-              L14_3, L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3 = L14_3(L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3)
-              L11_3 = L11_3(L12_3, L13_3, L14_3, L15_3, L16_3, L17_3, L18_3, L19_3, L20_3, L21_3, L22_3)
-              L12_3 = vec3
-              L13_3 = L7_2.x
-              L14_3 = L11_3.x
-              L15_3 = L7_2.x
-              L14_3 = L14_3 - L15_3
-              L15_3 = L18_1
-              L14_3 = L14_3 * L15_3
-              L13_3 = L13_3 + L14_3
-              L14_3 = L7_2.y
-              L15_3 = L11_3.y
-              L16_3 = L7_2.y
-              L15_3 = L15_3 - L16_3
-              L16_3 = L18_1
-              L15_3 = L15_3 * L16_3
-              L14_3 = L14_3 + L15_3
-              L15_3 = L7_2.z
-              L16_3 = L11_3.z
-              L17_3 = L7_2.z
-              L16_3 = L16_3 - L17_3
-              L17_3 = L18_1
-              L16_3 = L16_3 * L17_3
-              L15_3 = L15_3 + L16_3
-              L12_3 = L12_3(L13_3, L14_3, L15_3)
-              L13_3 = SetCamRot
-              L14_3 = L8_2
-              L15_3 = L12_3.x
-              L16_3 = L12_3.y
-              L17_3 = L12_3.z
-              L18_3 = 2
-              L13_3(L14_3, L15_3, L16_3, L17_3, L18_3)
-              L13_3 = L6_3 * 1.5
-              if not (L9_3 > L13_3) then
-                L13_3 = L6_3 * 0.5
-                if not (L9_3 < L13_3) then
-                  goto lbl_215
-                end
-              end
-              L13_3 = L10_3 / L9_3
-              L14_3 = L13_3 * L6_3
-              L14_3 = L1_3 - L14_3
-              L15_3 = vec3
-              L16_3 = L6_2.x
-              L17_3 = L14_3.x
-              L18_3 = L6_2.x
-              L17_3 = L17_3 - L18_3
-              L18_3 = L18_1
-              L17_3 = L17_3 * L18_3
-              L17_3 = L17_3 * 0.5
-              L16_3 = L16_3 + L17_3
-              L17_3 = L6_2.y
-              L18_3 = L14_3.y
-              L19_3 = L6_2.y
-              L18_3 = L18_3 - L19_3
-              L19_3 = L18_1
-              L18_3 = L18_3 * L19_3
-              L18_3 = L18_3 * 0.5
-              L17_3 = L17_3 + L18_3
-              L18_3 = L6_2.z
-              L19_3 = L14_3.z
-              L20_3 = L6_2.z
-              L19_3 = L19_3 - L20_3
-              L20_3 = L18_1
-              L19_3 = L19_3 * L20_3
-              L19_3 = L19_3 * 0.5
-              L18_3 = L18_3 + L19_3
-              L15_3 = L15_3(L16_3, L17_3, L18_3)
-              L16_3 = SetCamCoord
-              L17_3 = L8_2
-              L18_3 = L15_3.x
-              L19_3 = L15_3.y
-              L20_3 = L15_3.z
-              L16_3(L17_3, L18_3, L19_3, L20_3)
-              L6_2 = L15_3
-              ::lbl_215::
-              L13_3 = L6_3 * 0.7
-              if L9_3 < L13_3 then
-                L13_3 = 0.3
-                L14_3 = GetGameTimer
-                L14_3 = L14_3()
-                L14_3 = L14_3 / 1000.0
-                L14_3 = L14_3 * L13_3
-                L15_3 = L6_3 * 0.8
-                L16_3 = vec3
-                L17_3 = L1_3.x
-                L18_3 = math
-                L18_3 = L18_3.cos
-                L19_3 = L14_3
-                L18_3 = L18_3(L19_3)
-                L18_3 = L18_3 * L15_3
-                L17_3 = L17_3 + L18_3
-                L18_3 = L1_3.y
-                L19_3 = math
-                L19_3 = L19_3.sin
-                L20_3 = L14_3
-                L19_3 = L19_3(L20_3)
-                L19_3 = L19_3 * L15_3
-                L18_3 = L18_3 + L19_3
-                L19_3 = L1_3.z
-                L19_3 = L19_3 + L7_3
-                L16_3 = L16_3(L17_3, L18_3, L19_3)
-                L17_3 = vec3
-                L18_3 = L6_2.x
-                L19_3 = L16_3.x
-                L20_3 = L6_2.x
-                L19_3 = L19_3 - L20_3
-                L19_3 = L19_3 * 0.05
-                L18_3 = L18_3 + L19_3
-                L19_3 = L6_2.y
-                L20_3 = L16_3.y
-                L21_3 = L6_2.y
-                L20_3 = L20_3 - L21_3
-                L20_3 = L20_3 * 0.05
-                L19_3 = L19_3 + L20_3
-                L20_3 = L6_2.z
-                L21_3 = L16_3.z
-                L22_3 = L6_2.z
-                L21_3 = L21_3 - L22_3
-                L21_3 = L21_3 * 0.05
-                L20_3 = L20_3 + L21_3
-                L17_3 = L17_3(L18_3, L19_3, L20_3)
-                L18_3 = SetCamCoord
-                L19_3 = L8_2
-                L20_3 = L17_3.x
-                L21_3 = L17_3.y
-                L22_3 = L17_3.z
-                L18_3(L19_3, L20_3, L21_3, L22_3)
-              end
-            end
-          end
-        end
-      end
-      L0_3 = Wait
-      L1_3 = 0
-      L0_3(L1_3)
-    end
-    L0_3 = Utils
-    L0_3 = L0_3.DestroyFlyCam
-    L1_3 = L8_2
-    L2_3 = 1000
-    L0_3(L1_3, L2_3)
-    L0_3 = SetPlayerControl
-    L1_3 = cache
-    L1_3 = L1_3.playerId
-    L2_3 = true
-    L3_3 = 0
-    L0_3(L1_3, L2_3, L3_3)
-    L0_3 = A0_2
-    L1_3 = L0_3
-    L0_3 = L0_3.instructional
-    L0_3(L1_3)
-  end
-  L9_2(L10_2)
-end
-L19_1.toggleFreeCamera = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = decorate
-  L1_2 = L1_2.currentObject
-  if not L1_2 then
-    return
-  end
-  L1_2 = decorate
-  L1_2 = L1_2.currentObject
-  if L1_2 then
-    L1_2 = L1_2.handle
-  end
-  if L1_2 then
-    L1_2 = decorate
-    L1_2 = L1_2.currentObject
-    L1_2 = L1_2.stashId
-    if not L1_2 then
-      L1_2 = DeleteObject
-      L2_2 = decorate
-      L2_2 = L2_2.currentObject
-      L2_2 = L2_2.handle
-      L1_2(L2_2)
-    end
-  end
-  L1_2 = gizmo
-  L2_2 = L1_2
-  L1_2 = L1_2.deselectEntity
-  L1_2(L2_2)
-  L1_2 = decorate
-  L1_2.currentObject = nil
-  L1_2 = SendReactMessage
-  L2_2 = "remove_current_object"
-  L1_2(L2_2)
-  L1_2 = Debug
-  L2_2 = "Removed current object"
-  L3_2 = decorate
-  L3_2 = L3_2.currentObject
-  L1_2(L2_2, L3_2)
-end
-L19_1.removeCurrentObject = L20_1
-L19_1 = exports
-L20_1 = "inDecorate"
-function L21_1()
-  local L0_2, L1_2
-  L0_2 = decorate
-  L0_2 = L0_2.active
-  return L0_2
-end
-L19_1(L20_1, L21_1)
-L19_1 = decorate
-function L20_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = A0_2.currentObject
-  if L2_2 then
-    L2_2 = L2_2.handle
-  end
-  if A1_2 == L2_2 then
-    L2_2 = A0_2.currentObject
-    return L2_2
-  end
-  L2_2 = pairs
-  L3_2 = decorate
-  L3_2 = L3_2.objects
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2.handle
-    if L8_2 then
-      L8_2 = DoesEntityExist
-      L9_2 = L7_2.handle
-      L8_2 = L8_2(L9_2)
-      if L8_2 then
-        L8_2 = L7_2.handle
-        if L8_2 == A1_2 then
-          return L7_2
-        end
-      end
-    end
-  end
-  L2_2 = false
-  return L2_2
-end
-L19_1.getObjectData = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = Debug
-  L2_2 = "saveCurrentObject"
-  L3_2 = "Current object"
-  L4_2 = decorate
-  L4_2 = L4_2.currentObject
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = A0_2.currentObject
-  if not L1_2 then
-    return
-  end
-  L1_2 = {}
-  L2_2 = A0_2.currentObject
-  L2_2 = L2_2.modelName
-  L1_2.modelName = L2_2
-  L2_2 = GetEntityCoords
-  L3_2 = A0_2.currentObject
-  L3_2 = L3_2.handle
-  L2_2 = L2_2(L3_2)
-  L1_2.coords = L2_2
-  L2_2 = GetEntityRotation
-  L3_2 = A0_2.currentObject
-  L3_2 = L3_2.handle
-  L2_2 = L2_2(L3_2)
-  L1_2.rotation = L2_2
-  L2_2 = A0_2.currentObject
-  L2_2 = L2_2.handle
-  L1_2.handle = L2_2
-  L1_2.inStash = false
-  L2_2 = EnteredHouse
-  L2_2 = nil ~= L2_2
-  L1_2.inHouse = L2_2
-  L2_2 = CurrentHouse
-  L1_2.house = L2_2
-  L2_2 = A0_2.currentObject
-  L2_2 = L2_2.price
-  L1_2.price = L2_2
-  L2_2 = A0_2.currentObject
-  L2_2 = L2_2.wallartData
-  L1_2.wallartData = L2_2
-  L3_2 = A0_2
-  L2_2 = A0_2.removeCurrentObject
-  L2_2(L3_2)
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:saveObject"
-  L4_2 = false
-  L5_2 = CurrentHouse
-  L6_2 = L1_2
-  return L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L19_1.saveCurrentObject = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = table
-  L1_2 = L1_2.deepclone
-  L2_2 = decorate
-  L2_2 = L2_2.objects
-  L1_2 = L1_2(L2_2)
-  L2_2 = decorate
-  L3_2 = {}
-  L2_2.objects = L3_2
-  L2_2 = pairs
-  L3_2 = L1_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = RemoveSpawnedObject
-    L9_2 = L7_2
-    L8_2(L9_2)
-  end
-  L2_2 = cleanerRobot
-  if L2_2 then
-    L2_2 = cleanerRobot
-    L3_2 = L2_2
-    L2_2 = L2_2.stopInteractionLoop
-    L2_2(L3_2)
-    L2_2 = cleanerRobot
-    L3_2 = L2_2
-    L2_2 = L2_2.cleanAll
-    L2_2(L3_2)
-  end
-end
-L19_1.destroyObjects = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = pairs
-  L2_2 = decorate
-  L2_2 = L2_2.objects
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = RemoveSpawnedObject
-    L8_2 = L6_2
-    L7_2(L8_2)
-  end
-end
-L19_1.refreshObjects = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2
-  L1_2 = pairs
-  L2_2 = decorate
-  L2_2 = L2_2.objects
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L6_2.spawned
-    if L7_2 then
-      L7_2 = DoesEntityExist
-      L8_2 = L6_2.handle
-      L7_2 = L7_2(L8_2)
-      if L7_2 then
-        L7_2 = GetEntityCoords
-        L8_2 = L6_2.handle
-        L7_2 = L7_2(L8_2)
-        L8_2 = GetEntityRotation
-        L9_2 = L6_2.handle
-        L8_2 = L8_2(L9_2)
-        L9_2 = vec3
-        L10_2 = L7_2.x
-        L11_2 = L7_2.y
-        L12_2 = L7_2.z
-        L9_2 = L9_2(L10_2, L11_2, L12_2)
-        L10_2 = vec3
-        L11_2 = L8_2.x
-        L12_2 = L8_2.y
-        L13_2 = L8_2.z
-        L10_2 = L10_2(L11_2, L12_2, L13_2)
-        L11_2 = L9_2.x
-        L12_2 = L6_2.coords
-        L12_2 = L12_2.x
-        L11_2 = L11_2 == L12_2
-        L12_2 = L10_2.x
-        L13_2 = L6_2.rotation
-        L13_2 = L13_2.x
-        L12_2 = L12_2 == L13_2
-        if not L11_2 or not L12_2 then
-          L6_2.coords = L7_2
-          L6_2.rotation = L8_2
-          L13_2 = TriggerServerEvent
-          L14_2 = "housing:updateObject"
-          L15_2 = CurrentHouse
-          L16_2 = L6_2.id
-          L17_2 = {}
-          L18_2 = json
-          L18_2 = L18_2.encode
-          L19_2 = L7_2
-          L18_2 = L18_2(L19_2)
-          L17_2.coords = L18_2
-          L18_2 = json
-          L18_2 = L18_2.encode
-          L19_2 = L8_2
-          L18_2 = L18_2(L19_2)
-          L17_2.rotation = L18_2
-          L13_2(L14_2, L15_2, L16_2, L17_2)
-        end
-      end
-    end
-  end
-end
-L19_1.saveObjects = L20_1
-L19_1 = decorate
-function L20_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = A0_2.currentObject
-  if not L1_2 then
-    return
-  end
-  L1_2 = SendReactMessage
-  L2_2 = "open_buy_object_modal"
-  L1_2(L2_2)
-end
-L19_1.openBuyObjectModal = L20_1
-L19_1 = RegisterNetEvent
-L20_1 = "housing:updateObject"
-function L21_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2
-  L3_2 = CurrentHouse
-  if L3_2 ~= A0_2 then
-    L3_2 = Debug
-    L4_2 = "housing:updateObject ::: house is not same"
-    L5_2 = "CurrentHouse"
-    L6_2 = CurrentHouse
-    L7_2 = "house"
-    L8_2 = A0_2
-    return L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-  end
-  L3_2 = table
-  L3_2 = L3_2.find
-  L4_2 = decorate
-  L4_2 = L4_2.objects
-  function L5_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = A0_3.id
-    L2_3 = A1_2
-    L1_3 = L1_3 == L2_3
-    return L1_3
-  end
-  L3_2 = L3_2(L4_2, L5_2)
-  if not L3_2 then
-    L4_2 = Error
-    L5_2 = "housing:updateObject :: Object not found"
-    L6_2 = "id"
-    L7_2 = A1_2
-    L4_2(L5_2, L6_2, L7_2)
-    return
-  end
-  L4_2 = pairs
-  L5_2 = A2_2
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    if "coords" == L8_2 then
-      L10_2 = L3_2.spawned
-      if L10_2 then
-        L10_2 = Debug
-        L11_2 = "housing:updateObject ::: SetEntityCoords"
-        L12_2 = "object"
-        L13_2 = L3_2.handle
-        L14_2 = "coords"
-        L15_2 = L9_2
-        L10_2(L11_2, L12_2, L13_2, L14_2, L15_2)
-        L10_2 = SetEntityCoords
-        L11_2 = L3_2.handle
-        L12_2 = L9_2.x
-        L13_2 = L9_2.y
-        L14_2 = L9_2.z
-        L15_2 = false
-        L16_2 = false
-        L17_2 = false
-        L18_2 = false
-        L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2)
-    end
-    elseif "rotation" == L8_2 then
-      L10_2 = L3_2.spawned
-      if L10_2 then
-        L10_2 = Debug
-        L11_2 = "housing:updateObject ::: SetEntityRotation"
-        L12_2 = "object"
-        L13_2 = L3_2.handle
-        L14_2 = "rotation"
-        L15_2 = L9_2
-        L10_2(L11_2, L12_2, L13_2, L14_2, L15_2)
-        L10_2 = SetEntityRotation
-        L11_2 = L3_2.handle
-        L12_2 = L9_2.x
-        L13_2 = L9_2.y
-        L14_2 = L9_2.z
-        L15_2 = 0
-        L16_2 = false
-        L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2)
-      end
-    end
-    L3_2[L8_2] = L9_2
-    if "wallartData" == L8_2 then
-      L10_2 = L3_2.spawned
-      if L10_2 then
-        L10_2 = L16_1
-        L11_2 = L3_2
-        L10_2(L11_2)
-      end
-    end
-    L10_2 = Debug
-    L11_2 = "Updated object"
-    L12_2 = "object"
-    L13_2 = L3_2.id
-    L14_2 = "key"
-    L15_2 = L8_2
-    L16_2 = "value"
-    L17_2 = L9_2
-    L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-  end
-end
-L19_1(L20_1, L21_1)
-function L19_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = A0_2.spawned
-  if not L1_2 then
-    L1_2 = false
-    return L1_2
-  end
-  L1_2 = cleanerRobot
-  if L1_2 then
-    L1_2 = A0_2.id
-    if L1_2 then
-      L1_2 = cleanerRobot
-      L2_2 = L1_2
-      L1_2 = L1_2.isCleanerModel
-      L3_2 = A0_2.modelName
-      L1_2 = L1_2(L2_2, L3_2)
-      if L1_2 then
-        L2_2 = cleanerRobot
-        L3_2 = L2_2
-        L2_2 = L2_2.despawn
-        L4_2 = A0_2.id
-        L2_2(L3_2, L4_2)
-      end
-    end
-  end
-  L1_2 = L15_1
-  L2_2 = A0_2
-  L1_2(L2_2)
-  L1_2 = DeleteObject
-  L2_2 = A0_2.handle
-  L1_2(L2_2)
-  A0_2.spawned = false
-end
-RemoveSpawnedObject = L19_1
-L19_1 = RegisterNetEvent
-L20_1 = "housing:decorate:sellFurniture"
-function L21_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = CurrentHouse
-  if L2_2 ~= A0_2 then
-    L2_2 = Debug
-    L3_2 = "housing:decorate:sellFurniture ::: house is not same"
-    L4_2 = "house"
-    L5_2 = A0_2
-    L6_2 = "CurrentHouse"
-    L7_2 = CurrentHouse
-    return L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  end
-  L2_2 = table
-  L2_2 = L2_2.find
-  L3_2 = decorate
-  L3_2 = L3_2.objects
-  function L4_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = A0_3.id
-    L2_3 = A1_2
-    L1_3 = L1_3 == L2_3
-    return L1_3
-  end
-  L2_2 = L2_2(L3_2, L4_2)
-  if not L2_2 then
-    L3_2 = Error
-    L4_2 = "housing:decorate:sellFurniture ::: Object not found"
-    L5_2 = "id"
-    L6_2 = A1_2
-    L3_2(L4_2, L5_2, L6_2)
-    return
-  end
-  L3_2 = RemoveSpawnedObject
-  L4_2 = L2_2
-  L3_2(L4_2)
-  L3_2 = decorate
-  L4_2 = table
-  L4_2 = L4_2.filter
-  L5_2 = decorate
-  L5_2 = L5_2.objects
-  function L6_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = A0_3.id
-    L2_3 = A1_2
-    L1_3 = L1_3 ~= L2_3
-    return L1_3
-  end
-  L4_2 = L4_2(L5_2, L6_2)
-  L3_2.objects = L4_2
-  L3_2 = Debug
-  L4_2 = "housing:decorate:sellFurniture"
-  L5_2 = "object is deleted from cache"
-  L6_2 = L2_2.id
-  L3_2(L4_2, L5_2, L6_2)
-end
-L19_1(L20_1, L21_1)
-L19_1 = RegisterNetEvent
-L20_1 = "housing:addObject"
-function L21_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = CurrentHouse
-  if L2_2 ~= A0_2 then
-    L2_2 = Debug
-    L3_2 = "housing:addObject ::: house is not same"
-    L4_2 = "house"
-    L5_2 = A0_2
-    L6_2 = "CurrentHouse"
-    L7_2 = CurrentHouse
-    return L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  end
-  L2_2 = decorate
-  L2_2 = L2_2.objects
-  L3_2 = decorate
-  L3_2 = L3_2.objects
-  L3_2 = #L3_2
-  L3_2 = L3_2 + 1
-  L2_2[L3_2] = A1_2
-  L2_2 = Debug
-  L3_2 = "Added object to data"
-  L4_2 = "data"
-  L5_2 = A1_2
-  L2_2(L3_2, L4_2, L5_2)
-end
-L19_1(L20_1, L21_1)
-L19_1 = RegisterNetEvent
-L20_1 = "housing:removeFurniture"
-function L21_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = CurrentHouse
-  if L2_2 ~= A0_2 then
-    return
-  end
-  L2_2 = decorate
-  L2_2 = L2_2.objects
-  if not L2_2 then
-    return
-  end
-  L2_2 = pairs
-  L3_2 = decorate
-  L3_2 = L3_2.objects
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2.id
-    if L8_2 == A1_2 then
-      L8_2 = cleanerRobot
-      if L8_2 then
-        L8_2 = cleanerRobot
-        L9_2 = L8_2
-        L8_2 = L8_2.isCleanerModel
-        L10_2 = L7_2.modelName
-        L8_2 = L8_2(L9_2, L10_2)
-        if L8_2 then
-          L9_2 = cleanerRobot
-          L10_2 = L9_2
-          L9_2 = L9_2.despawn
-          L11_2 = A1_2
-          L9_2(L10_2, L11_2)
-        end
-      end
-      L8_2 = L7_2.handle
-      if L8_2 then
-        L8_2 = DoesEntityExist
-        L9_2 = L7_2.handle
-        L8_2 = L8_2(L9_2)
-        if L8_2 then
-          L8_2 = DeleteObject
-          L9_2 = L7_2.handle
-          L8_2(L9_2)
-        end
-      end
-      L8_2 = decorate
-      L8_2 = L8_2.objects
-      L8_2[L6_2] = nil
-      L8_2 = Debug
-      L9_2 = "Removed furniture:"
-      L10_2 = A1_2
-      L8_2(L9_2, L10_2)
-      break
-    end
-  end
-end
-L19_1(L20_1, L21_1)
-function L19_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L3_2 = joaat
-  L4_2 = A0_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = lib
-  L4_2 = L4_2.requestModel
-  L5_2 = L3_2
-  L6_2 = Config
-  L6_2 = L6_2.DefaultRequestModelTimeout
-  L4_2(L5_2, L6_2)
-  L4_2 = CreateObject
-  L5_2 = L3_2
-  L6_2 = A1_2.x
-  L7_2 = A1_2.y
-  L8_2 = A1_2.z
-  L9_2 = false
-  L10_2 = false
-  L11_2 = false
-  L4_2 = L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-  L5_2 = SetEntityAlpha
-  L6_2 = L4_2
-  L7_2 = 0
-  L8_2 = false
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = CreateThread
-  function L6_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-    L0_3 = 0
-    L1_3 = 255
-    L2_3 = 51
-    for L3_3 = L0_3, L1_3, L2_3 do
-      L4_3 = Wait
-      L5_3 = 50
-      L4_3(L5_3)
-      L4_3 = SetEntityAlpha
-      L5_3 = L4_2
-      L6_3 = L3_3
-      L7_3 = false
-      L4_3(L5_3, L6_3, L7_3)
-    end
-  end
-  L5_2(L6_2)
-  if A2_2 then
-    L5_2 = SetEntityRotation
-    L6_2 = L4_2
-    L7_2 = A2_2.x
-    L8_2 = A2_2.y
-    L9_2 = A2_2.z
-    L10_2 = 0
-    L11_2 = false
-    L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-  end
-  L5_2 = SetEntityAsMissionEntity
-  L6_2 = L4_2
-  L7_2 = true
-  L8_2 = true
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = SetEntityInvincible
-  L6_2 = L4_2
-  L7_2 = true
-  L5_2(L6_2, L7_2)
-  L5_2 = SetEntityCompletelyDisableCollision
-  L6_2 = L4_2
-  L7_2 = true
-  L8_2 = false
-  L5_2(L6_2, L7_2, L8_2)
-  L5_2 = Config
-  L5_2 = L5_2.DynamicDoors
-  if L5_2 then
-    L5_2 = Config
-    L5_2 = L5_2.DoorModels
-    L5_2 = L5_2[A0_2]
-    if L5_2 then
-      goto lbl_64
-    end
-  end
-  L5_2 = FreezeEntityPosition
-  L6_2 = L4_2
-  L7_2 = true
-  L5_2(L6_2, L7_2)
-  ::lbl_64::
-  L5_2 = SetModelAsNoLongerNeeded
-  L6_2 = L3_2
-  L5_2(L6_2)
-  L5_2 = Wait
-  L6_2 = 0
-  L5_2(L6_2)
-  L5_2 = SetEntityCoords
-  L6_2 = L4_2
-  L7_2 = A1_2.x
-  L8_2 = A1_2.y
-  L9_2 = A1_2.z
-  L10_2 = false
-  L11_2 = false
-  L12_2 = false
-  L13_2 = false
-  L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2)
-  return L4_2
-end
-SpawnObject = L19_1
-L19_1 = decorate
-function L20_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L3_2 = A0_2
-  L2_2 = A0_2.destroyObjects
-  L2_2(L3_2)
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:getDecorations"
-  L4_2 = 0
-  L5_2 = A1_2
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  A0_2.objects = L2_2
-  L2_2 = cleanerRobot
-  if L2_2 then
-    L2_2 = CurrentHouse
-    if L2_2 then
-      L2_2 = EnteredHouse
-      if L2_2 then
-        L2_2 = CreateThread
-        function L3_2()
-          local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3
-          L0_3 = Wait
-          L1_3 = 500
-          L0_3(L1_3)
-          L0_3 = decorate
-          L0_3 = L0_3.objects
-          if L0_3 then
-            L0_3 = pairs
-            L1_3 = decorate
-            L1_3 = L1_3.objects
-            L0_3, L1_3, L2_3, L3_3 = L0_3(L1_3)
-            for L4_3, L5_3 in L0_3, L1_3, L2_3, L3_3 do
-              L6_3 = L5_3.spawned
-              if L6_3 then
-                L6_3 = L5_3.handle
-                if L6_3 then
-                  L6_3 = DoesEntityExist
-                  L7_3 = L5_3.handle
-                  L6_3 = L6_3(L7_3)
-                  if L6_3 then
-                    L6_3 = cleanerRobot
-                    L7_3 = L6_3
-                    L6_3 = L6_3.isCleanerModel
-                    L8_3 = L5_3.modelName
-                    L6_3 = L6_3(L7_3, L8_3)
-                    if L6_3 then
-                      L7_3 = cleanerRobot
-                      L8_3 = L7_3
-                      L7_3 = L7_3.spawnForDecoration
-                      L9_3 = L5_3
-                      L10_3 = CurrentHouse
-                      L7_3(L8_3, L9_3, L10_3)
-                    end
-                  end
-                end
-              end
-            end
-            L0_3 = cleanerRobot
-            L1_3 = L0_3
-            L0_3 = L0_3.hasRobots
-            L0_3 = L0_3(L1_3)
-            if L0_3 then
-              L0_3 = Config
-              L0_3 = L0_3.UseTarget
-              if not L0_3 then
-                L0_3 = cleanerRobot
-                L1_3 = L0_3
-                L0_3 = L0_3.startInteractionLoop
-                L0_3(L1_3)
-              end
-            end
-          end
-        end
-        L2_2(L3_2)
-      end
-    end
-  end
-end
-L19_1.getObjects = L20_1
-L19_1 = exports
-L20_1 = "refreshCurrentDecorations"
-function L21_1()
-  local L0_2, L1_2
-  L0_2 = decorate
-  L1_2 = L0_2
-  L0_2 = L0_2.refreshObjects
-  return L0_2(L1_2)
-end
-L19_1(L20_1, L21_1)
-L19_1 = exports
-L20_1 = "initCurrentDecorations"
-function L21_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = CurrentHouse
-  if not L0_2 then
-    L0_2 = Debug
-    L1_2 = "initDecorations ::: No Current House"
-    return L0_2(L1_2)
-  end
-  L0_2 = decorate
-  L1_2 = L0_2
-  L0_2 = L0_2.getObjects
-  L2_2 = CurrentHouse
-  return L0_2(L1_2, L2_2)
-end
-L19_1(L20_1, L21_1)
-L19_1 = {}
-L20_1 = {}
-L21_1 = CreateThread
-function L22_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = pairs
-  L1_2 = LIGHT_ITEMS
-  L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-  for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-    L6_2 = table
-    L6_2 = L6_2.insert
-    L7_2 = L20_1
-    L8_2 = L5_2.object
-    L6_2(L7_2, L8_2)
-  end
-  while true do
-    L0_2 = decorate
-    L0_2 = L0_2.objects
-    if not L0_2 then
-      L0_2 = {}
-      L19_1 = L0_2
+
+
+function decorate.selectEntity(self, entityHandle)
+    local activeGizmo
+    if decorate.mode == "gizmo" and gizmo then
+        activeGizmo = gizmo
     else
-      L0_2 = table
-      L0_2 = L0_2.deepclone
-      L1_2 = table
-      L1_2 = L1_2.filter
-      L2_2 = decorate
-      L2_2 = L2_2.objects
-      function L3_2(A0_3)
-        local L1_3, L2_3, L3_3
-        L1_3 = table
-        L1_3 = L1_3.includes
-        L2_3 = L20_1
-        L3_3 = A0_3.modelName
-        return L1_3(L2_3, L3_3)
-      end
-      L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = L1_2(L2_2, L3_2)
-      L0_2 = L0_2(L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-      L19_1 = L0_2
-      L0_2 = pairs
-      L1_2 = L19_1
-      L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-      for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-        L6_2 = L5_2.handle
-        if L6_2 then
-          L6_2 = DoesEntityExist
-          L7_2 = L5_2.handle
-          L6_2 = L6_2(L7_2)
-          if L6_2 then
-            L6_2 = L5_2.inside
-            if L6_2 then
-              L6_2 = CurrentHouse
-              if not L6_2 then
-            end
-            else
-              L6_2 = GetEntityRotation
-              L7_2 = L5_2.handle
-              L6_2 = L6_2(L7_2)
-              L7_2 = GetEntityCoords
-              L8_2 = L5_2.handle
-              L7_2 = L7_2(L8_2)
-              L8_2 = RotationToDirection
-              L9_2 = L6_2
-              L8_2 = L8_2(L9_2)
-              L9_2 = L19_1
-              L9_2 = L9_2[L4_2]
-              L9_2.position = L7_2
-              L9_2 = L19_1
-              L9_2 = L9_2[L4_2]
-              L9_2.direction = L8_2
-            end
-          end
+        activeGizmo = mgizmo
+    end
+
+    if entityHandle then
+        if not DoesEntityExist(entityHandle) then
+            activeGizmo.entity = nil
+            activeGizmo.decorateData = nil
+            return
         end
-      end
     end
-    L0_2 = Wait
-    L1_2 = 500
-    L0_2(L1_2)
-  end
-end
-L21_1(L22_1)
-L21_1 = CreateThread
-function L22_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2
-  while true do
-    L0_2 = 1250
-    L1_2 = CurrentHouseData
-    L1_2 = L1_2.billsCutOff
-    if not L1_2 then
-      L1_2 = CurrentHouseData
-      L1_2 = L1_2.lightsOn
-      if L1_2 then
-        L1_2 = pairs
-        L2_2 = L19_1
-        L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-        for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-          L7_2 = L6_2.handle
-          if L7_2 then
-            L7_2 = DoesEntityExist
-            L8_2 = L6_2.handle
-            L7_2 = L7_2(L8_2)
-            if L7_2 then
-              L7_2 = L6_2.lightData
-              if L7_2 then
-                L7_2 = L6_2.lightData
-                if L7_2 then
-                  L7_2 = L7_2.active
-                end
-                if not L7_2 then
-                  goto lbl_74
-                end
-              end
-              L7_2 = L6_2.position
-              if L7_2 then
-                L0_2 = 0
-                L7_2 = L6_2.position
-                L8_2 = L6_2.direction
-                L9_2 = L6_2.lightData
-                if L9_2 then
-                  L9_2 = L9_2.rgb
-                end
-                if not L9_2 then
-                  L9_2 = {}
-                  L9_2.r = 255
-                  L9_2.g = 255
-                  L9_2.b = 255
-                end
-                L10_2 = L6_2.lightData
-                if L10_2 then
-                  L10_2 = L10_2.intensity
-                end
-                if not L10_2 then
-                  L10_2 = Config
-                  L10_2 = L10_2.DefaultLightIntensity
-                end
-                L10_2 = L10_2 + 0.0
-                L11_2 = DrawSpotLight
-                L12_2 = L7_2.x
-                L13_2 = L7_2.y
-                L14_2 = L7_2.z
-                L15_2 = L8_2.x
-                L16_2 = L8_2.y
-                L17_2 = L8_2.z
-                L18_2 = L9_2.r
-                L19_2 = L9_2.g
-                L20_2 = L9_2.b
-                L21_2 = 100.0
-                L22_2 = 20.0
-                L23_2 = 1.0
-                L24_2 = L10_2
-                L25_2 = 0.0
-                L11_2(L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2)
-              end
-            end
-          end
-          ::lbl_74::
-        end
-      end
-    end
-    L1_2 = Wait
-    L2_2 = L0_2
-    L1_2(L2_2)
-  end
-end
-L21_1(L22_1)
-L21_1 = CreateThread
-function L22_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  while true do
-    L0_2 = decorate
-    L0_2 = L0_2.active
-    if L0_2 then
-      L0_2 = 300
-      if L0_2 then
-        goto lbl_9
-      end
-    end
-    L0_2 = 1250
-    ::lbl_9::
-    L1_2 = GetEntityCoords
-    L2_2 = cache
-    L2_2 = L2_2.ped
-    L1_2 = L1_2(L2_2)
-    L2_2 = decorate
-    L2_2 = L2_2.objects
-    if not L2_2 then
-      L2_2 = Wait
-      L3_2 = L0_2
-      L2_2(L3_2)
+
+    local targetEntity = nil
+    if entityHandle then
+        targetEntity = entityHandle
     else
-      L2_2 = pairs
-      L3_2 = decorate
-      L3_2 = L3_2.objects
-      L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-      for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-        L8_2 = L7_2.inStash
-        if L8_2 then
-          L8_2 = L7_2.spawned
-          if L8_2 then
-            L8_2 = DeleteObject
-            L9_2 = L7_2.handle
-            L8_2(L9_2)
-            L7_2.spawned = false
-            L8_2 = Debug
-            L9_2 = "Deleted object because its setted to inStash"
-            L10_2 = "object"
-            L11_2 = L7_2.handle
-            L8_2(L9_2, L10_2, L11_2)
-          end
-        else
-          L8_2 = L7_2.coords
-          if not L8_2 then
-            L8_2 = Error
-            L9_2 = "Object coords is nil we skipping it."
-            L10_2 = "object"
-            L11_2 = L7_2
-            L8_2(L9_2, L10_2, L11_2)
-          else
-            L8_2 = IsOnlyInsideModel
-            L9_2 = L7_2.modelName
-            L8_2 = L8_2(L9_2)
-            if L8_2 then
-              L8_2 = EnteredHouse
-              if not L8_2 then
-                L8_2 = L7_2.spawned
-                if L8_2 then
-                  L8_2 = RemoveSpawnedObject
-                  L9_2 = L7_2
-                  L8_2(L9_2)
-                  L8_2 = Debug
-                  L9_2 = "Deleted onlyInside object because player left the house"
-                  L10_2 = "object"
-                  L11_2 = L7_2.handle
-                  L8_2(L9_2, L10_2, L11_2)
+        local hitCoords, hitEntity = getCursorHitCoords()
+        if hitCoords and hitEntity and hitEntity ~= 0 then
+            targetEntity = hitEntity
+        end
+    end
+
+    if not targetEntity then return end
+
+    if decorate.currentPage ~= "stash" and not entityHandle then
+        local currentHandle = decorate.currentObject and decorate.currentObject.handle
+        if currentHandle ~= targetEntity then
+            return Notification(i18n.t("decorate.you_cant_select_entity"), "error")
+        end
+    end
+
+    local objectData = decorate:getObjectData(targetEntity)
+    if not entityHandle and not objectData then return end
+
+    activeGizmo.entity = targetEntity
+    activeGizmo.decorateData = objectData
+
+    local currentHandle = decorate.currentObject and decorate.currentObject.handle
+    if currentHandle ~= targetEntity then
+        decorate.currentObject = {
+            handle = targetEntity,
+            modelName = objectData.modelName,
+            stashId = objectData.id,
+        }
+    end
+
+    activeGizmo:selectEntity()
+    self:instructional()
+end
+
+
+function decorate.deselectEntity(self)
+    gizmo:deselectEntity()
+    self:instructional()
+end
+
+function decorate.getCamCoords(self)
+    return GetFinalRenderedCamCoord()
+end
+
+function decorate.getCamRot(self)
+    return GetFinalRenderedCamRot(2)
+end
+
+function decorate.toggleHideDecorate(self)
+    self.hide = not self.hide
+    SendReactMessage("toggle_hide_decorate", self.hide)
+    if self.hide then
+        self:setFocus(true, true)
+    else
+        self:setFocus(true, false)
+    end
+end
+
+
+function decorate.setFocus(self, focusState, keepInputState)
+    local newFocus = focusState
+    if not focusState or not focusState then
+        newFocus = not self.focus
+    end
+
+    self.focus = newFocus
+    SetNuiFocus(self.focus, self.focus)
+
+    if nil ~= keepInputState then
+        self.keepInput = keepInputState
+    else
+        self.keepInput = not self.focus
+    end
+
+    self.keepInput = keepInputState
+    SetNuiFocusKeepInput(self.keepInput)
+
+    if not self.keepInput then
+        if self.mode == "mgizmo" then
+            self:toggleGizmoMode("gizmo")
+            Debug("setFocus ::: toggleGizmoMode to gizmo because keepInput is false")
+        end
+    end
+end
+
+function decorate.placeObjectOnGround(self)
+    local currentObj = decorate.currentObject
+    if not currentObj or not currentObj.handle then return end
+
+    PlaceObjectOnGroundProperly(decorate.currentObject.handle)
+    gizmo:updateGizmoEntity()
+end
+
+
+function decorate.toggleGizmoMode(self, targetMode)
+    if self.mode == "gizmo" and not self.keepInput then
+        return Debug("toggleGizmoMode ::: mgizmo mode is enabled and keepInput is true, so we do not toggle mode")
+    end
+
+    if targetMode then
+        if targetMode == self.mode then
+            return Debug("toggleGizmoMode ::: mode is already same", "mode", targetMode)
+        end
+        self.mode = targetMode
+    else
+        self.mode = (self.mode == "gizmo") and "mgizmo" or "gizmo"
+    end
+
+    SendReactMessage("toggle_gizmo_mode", self.mode)
+    Notification(i18n.t("decorate.gizmo_mode_toggled", { mode = self.mode }), "info")
+
+    gizmo:deselectEntity()
+    mgizmo:deselectEntity()
+
+    if self.mode == "gizmo" then
+        gizmo:handleCameraUpdate()
+    else
+        mgizmo:loop()
+    end
+end
+
+
+LIGHT_ITEMS = Config.Furniture.light.items
+
+local originalDynamicFurnitures = table.deepclone(Config.DynamicFurnitures)
+local onlyInsideModels = {}
+
+function InitializeFurnitures()
+    Config.DynamicFurnitures = table.deepclone(originalDynamicFurnitures)
+    Config.DoorModels = {}
+    onlyInsideModels = {}
+
+    for category, categoryData in pairs(Config.Furniture) do
+        if category ~= "navigation" then
+            for _, item in pairs(categoryData.items) do
+                if item.type then
+                    Config.DynamicFurnitures[item.object] = item
                 end
-            end
-            else
-              L8_2 = vec3
-              L9_2 = L7_2.coords
-              L9_2 = L9_2.x
-              L10_2 = L7_2.coords
-              L10_2 = L10_2.y
-              L11_2 = L7_2.coords
-              L11_2 = L11_2.z
-              L8_2 = L8_2(L9_2, L10_2, L11_2)
-              L7_2.coords = L8_2
-              L8_2 = L7_2.coords
-              L8_2 = L8_2.x
-              if 0.0 == L8_2 then
-                L8_2 = L7_2.coords
-                L8_2 = L8_2.y
-                if 0.0 == L8_2 then
-                  L8_2 = L7_2.coords
-                  L8_2 = L8_2.z
-                  if 0.0 == L8_2 then
-                    L8_2 = decorate
-                    L8_2 = L8_2.active
-                    if L8_2 then
-                      L8_2 = Utils
-                      L8_2 = L8_2.GetCamera
-                      L8_2 = L8_2()
-                      L9_2 = L8_2.coords
-                      L10_2 = L8_2.rotation
-                      L11_2 = Utils
-                      L11_2 = L11_2.GetForwardVector
-                      L12_2 = L10_2
-                      L11_2 = L11_2(L12_2)
-                      L12_2 = L11_2 * 5.0
-                      L12_2 = L9_2 + L12_2
-                      L13_2 = L12_2
-                      L14_2 = Debug
-                      L15_2 = "Load Decorations : Object is from ikea. We setted it to camera center"
-                      L16_2 = "v"
-                      L17_2 = L7_2
-                      L14_2(L15_2, L16_2, L17_2)
-                      L14_2 = vec3
-                      L15_2 = L13_2.x
-                      L16_2 = L13_2.y
-                      L17_2 = L13_2.z
-                      L14_2 = L14_2(L15_2, L16_2, L17_2)
-                      L7_2.coords = L14_2
-                      L14_2 = decorate
-                      L15_2 = L14_2
-                      L14_2 = L14_2.saveObjects
-                      L14_2(L15_2)
-                    end
-                  end
+                if item.isDoor then
+                    Config.DoorModels[item.object] = item
                 end
-              end
-              L8_2 = L7_2.coords
-              L8_2 = L1_2 - L8_2
-              L8_2 = #L8_2
-              L9_2 = Config
-              L9_2 = L9_2.SpawnDistance
-              if L8_2 <= L9_2 then
-                L9_2 = L7_2.spawned
-                if not L9_2 then
-                  L9_2 = SpawnObject
-                  L10_2 = L7_2.modelName
-                  L11_2 = L7_2.coords
-                  L12_2 = L7_2.rotation
-                  L9_2 = L9_2(L10_2, L11_2, L12_2)
-                  if L9_2 then
-                    L7_2.handle = L9_2
-                    L10_2 = L16_1
-                    L11_2 = L7_2
-                    L10_2(L11_2)
-                    L10_2 = decorate
-                    L10_2 = L10_2.currentObject
-                    if L10_2 then
-                      L10_2 = L10_2.stashId
-                    end
-                    L11_2 = L7_2.id
-                    if L10_2 == L11_2 then
-                      L10_2 = decorate
-                      L10_2 = L10_2.currentObject
-                      L10_2.handle = L9_2
-                      L10_2 = decorate
-                      L11_2 = L10_2
-                      L10_2 = L10_2.selectEntity
-                      L12_2 = L9_2
-                      L10_2(L11_2, L12_2)
-                    end
-                    L10_2 = cleanerRobot
-                    if L10_2 then
-                      L10_2 = CurrentHouse
-                      if L10_2 then
-                        L10_2 = EnteredHouse
-                        if L10_2 then
-                          L10_2 = cleanerRobot
-                          L11_2 = L10_2
-                          L10_2 = L10_2.isCleanerModel
-                          L12_2 = L7_2.modelName
-                          L10_2 = L10_2(L11_2, L12_2)
-                          if L10_2 then
-                            L11_2 = cleanerRobot
-                            L12_2 = L11_2
-                            L11_2 = L11_2.spawnForDecoration
-                            L13_2 = L7_2
-                            L14_2 = CurrentHouse
-                            L11_2(L12_2, L13_2, L14_2)
-                            L11_2 = cleanerRobot
-                            L12_2 = L11_2
-                            L11_2 = L11_2.hasRobots
-                            L11_2 = L11_2(L12_2)
-                            if L11_2 then
-                              L11_2 = Config
-                              L11_2 = L11_2.UseTarget
-                              if not L11_2 then
-                                L11_2 = cleanerRobot
-                                L12_2 = L11_2
-                                L11_2 = L11_2.startInteractionLoop
-                                L11_2(L12_2)
-                              end
-                            end
-                          end
+                if item.onlyInside then
+                    onlyInsideModels[item.object] = true
+                end
+                if item.colors then
+                    for _, colorVariant in pairs(item.colors) do
+                        if colorVariant.type then
+                            Config.DynamicFurnitures[colorVariant.object] = colorVariant
                         end
-                      end
+                        if item.isDoor then
+                            Config.DoorModels[colorVariant.object] = colorVariant
+                        end
+                        if item.onlyInside then
+                            onlyInsideModels[colorVariant.object] = true
+                        end
                     end
-                  else
-                    L7_2.handle = 0
-                    L10_2 = Warning
-                    L11_2 = "This model is not loaded. Please check if the model is valid. if its not delete it from the list"
-                    L12_2 = L7_2.modelName
-                    L10_2(L11_2, L12_2)
-                  end
-                  L7_2.spawned = true
-              end
-              else
-                L9_2 = Config
-                L9_2 = L9_2.SpawnDistance
-                if L8_2 > L9_2 then
-                  L9_2 = L7_2.spawned
-                  if L9_2 then
-                    L9_2 = RemoveSpawnedObject
-                    L10_2 = L7_2
-                    L9_2(L10_2)
-                    L9_2 = Debug
-                    L10_2 = "Deleted object"
-                    L11_2 = "object"
-                    L12_2 = L7_2.handle
-                    L9_2(L10_2, L11_2, L12_2)
-                  end
                 end
-              end
             end
-          end
         end
-      end
-      L2_2 = Wait
-      L3_2 = L0_2
-      L2_2(L3_2)
     end
-  end
 end
-L21_1(L22_1)
-L21_1 = exports
-L22_1 = "AddFurniture"
-function L23_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = GetInvokingResource
-  L2_2 = L2_2()
-  L3_2 = Error
-  L4_2 = "AddFurniture ::: This export is moved to server side. Please use exports['qs-housing']:AddFurniture(category, item) instead. on the server side. Resource"
-  L5_2 = L2_2
-  L3_2(L4_2, L5_2)
+
+function IsOnlyInsideModel(modelName)
+    return onlyInsideModels[modelName] == true
 end
-L21_1(L22_1, L23_1)
-L21_1 = exports
-L22_1 = "AddShell"
-function L23_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = Config
-  L1_2 = L1_2.Shells
-  L2_2 = Config
-  L2_2 = L2_2.Shells
-  L2_2 = #L2_2
-  L2_2 = L2_2 + 1
-  L1_2[L2_2] = A0_2
-  L1_2 = Debug
-  L2_2 = "Added shell"
-  L3_2 = A0_2
-  L1_2(L2_2, L3_2)
+
+CreateThread(InitializeFurnitures)
+
+
+local wallartTextures = {}
+local wallartObjectMap = {}
+
+local function getObjectKey(objectData)
+    return tostring(objectData.id or objectData.uniq or objectData.modelName)
 end
-L21_1(L22_1, L23_1)
-L21_1 = AddEventHandler
-L22_1 = "onResourceStop"
-function L23_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = GetCurrentResourceName
-  L1_2 = L1_2()
-  if L1_2 ~= A0_2 then
-    return
-  end
-  L1_2 = decorate
-  L2_2 = L1_2
-  L1_2 = L1_2.destroyObjects
-  L1_2(L2_2)
-  L1_2 = decorate
-  L2_2 = L1_2
-  L1_2 = L1_2.close
-  L1_2(L2_2)
-  L1_2 = L17_1
-  L1_2()
+
+local function getWallartConfig(modelName)
+    local furnitureData = Config.DynamicFurnitures[modelName]
+    if furnitureData and furnitureData.type == "wallart" then
+        return furnitureData.wallart
+    end
+    return nil
 end
-L21_1(L22_1, L23_1)
+
+local function makeTextureKey(textureDict, textureName)
+    return ("%s:%s"):format(textureDict, textureName)
+end
+
+local function makeTxdName(textureKey)
+    local sanitized = textureKey:gsub("[^%w_]", "_")
+    return ("wallart_%s"):format(sanitized)
+end
 
 
+local function removeWallartTexture(objectData)
+    local objKey = getObjectKey(objectData)
+    local textureKey = wallartObjectMap[objKey]
+    if not textureKey then return end
+
+    wallartObjectMap[objKey] = nil
+
+    local stillUsed = table.find(wallartObjectMap, function(v)
+        return v == textureKey
+    end)
+    if stillUsed then return end
+
+    local texData = wallartTextures[textureKey]
+    if not texData then return end
+
+    if texData.duiObj then
+        DestroyDui(texData.duiObj)
+    end
+    wallartTextures[textureKey] = nil
+end
+
+local function ApplyWallartTexture(objectData)
+    Debug("ApplyWallartTexture ::: Applying wallart texture", "objectData", objectData)
+
+    local wallartConfig = getWallartConfig(objectData.modelName)
+    if not wallartConfig then
+        return false
+    end
+
+    local wallartData = objectData.wallartData or {}
+    local textureDict = wallartData.textureDict or wallartConfig.textureDict
+    local textureName = wallartData.textureName or wallartConfig.textureName
+
+    if not textureDict or not textureName then
+        return false
+    end
+
+    local url = wallartData.url or wallartConfig.defaultUrl
+    if type(url) ~= "string" then
+        return false
+    end
+
+    url = url:match("^%s*(.-)%s*$")
+    if url == "" then
+        return false
+    end
 
 
+    -- Update objectData wallart fields
+    if not objectData.wallartData then
+        objectData.wallartData = {}
+    end
+    objectData.wallartData.url = url
+    objectData.wallartData.textureName = textureName
+    objectData.wallartData.textureDict = textureDict
+
+    local textureKey = makeTextureKey(textureDict, textureName)
+    local objKey = getObjectKey(objectData)
+
+    local existing = wallartTextures[textureKey]
+    if existing and existing.url == url then
+        wallartObjectMap[objKey] = textureKey
+        return true
+    end
+
+    if existing and existing.duiObj then
+        DestroyDui(existing.duiObj)
+    end
+
+    local txdName = makeTxdName(textureKey)
+    local txdHandle = CreateRuntimeTxd(txdName)
+    local duiObj = CreateDui(url, 512, 512)
+
+    local timeout = GetGameTimer() + 12500
+    while true do
+        if IsDuiAvailable(duiObj) then break end
+        if not (timeout > GetGameTimer()) then break end
+        Wait(50)
+    end
+
+    if not IsDuiAvailable(duiObj) then
+        Debug("ApplyWallartTexture ::: Dui is not available", "url", url)
+        DestroyDui(duiObj)
+        return false
+    end
 
 
+    local duiHandle = GetDuiHandle(duiObj)
+    CreateRuntimeTextureFromDuiHandle(txdHandle, "skin", duiHandle)
+    AddReplaceTexture(textureDict, textureName, txdName, "skin")
+
+    Debug("ApplyWallartTexture ::: Added replace texture",
+        "textureDict", textureDict, "textureName", textureName, "txdName", txdName)
+
+    wallartTextures[textureKey] = {
+        txdName = txdName,
+        duiObj = duiObj,
+        url = url,
+    }
+    wallartObjectMap[objKey] = textureKey
+    return true
+end
+
+function decorate.applyWallartTexture(self, objectData)
+    return ApplyWallartTexture(objectData)
+end
+
+local function DestroyAllWallartTextures()
+    for _, texData in pairs(wallartTextures) do
+        if texData.duiObj then
+            DestroyDui(texData.duiObj)
+        end
+    end
+    wallartTextures = {}
+    wallartObjectMap = {}
+end
+
+
+local CAMERA_LERP_SPEED = 0.01
+
+function decorate.handleControls(self)
+    CreateThread(function()
+        local lastHandle = 0
+        while true do
+            if not self.active then break end
+
+            DisablePlayerFiring(cache.playerId, true)
+
+            -- Outline current object
+            local currentHandle = self.currentObject and self.currentObject.handle
+            if lastHandle ~= currentHandle then
+                SetEntityDrawOutline(lastHandle, false)
+                local newHandle = self.currentObject and self.currentObject.handle
+                SetEntityDrawOutline(newHandle, true)
+                SetEntityDrawOutlineColor(0, 180, 255, 255)
+            end
+            lastHandle = self.currentObject and self.currentObject.handle
+
+            -- Toggle cursor
+            local toggleCursorCode = ActionControls.toggle_cursor.codes[1]
+            if IsControlJustPressed(0, toggleCursorCode) or IsDisabledControlJustPressed(0, toggleCursorCode) then
+                self:setFocus(true)
+            end
+
+            -- Toggle free camera
+            local freeCamCode = ActionControls.toggle_free_camera.codes[1]
+            if IsControlJustPressed(0, freeCamCode) or IsDisabledControlJustPressed(0, freeCamCode) then
+                self:toggleFreeCamera()
+            end
+
+
+            -- Done button (buy object)
+            local doneCode = ActionControls.done.codes[1]
+            if IsControlJustPressed(0, doneCode) or IsDisabledControlJustPressed(0, doneCode) then
+                local hasStashId = self.currentObject and self.currentObject.stashId
+                if not hasStashId then
+                    self:openBuyObjectModal()
+                end
+            end
+
+            -- Place object on ground
+            if lastHandle then
+                local groundCode = ActionControls.place_object_on_ground.codes[1]
+                if IsControlJustReleased(0, groundCode) or IsDisabledControlJustReleased(0, groundCode) then
+                    self:placeObjectOnGround()
+                end
+            end
+
+            Wait(0)
+        end
+    end)
+end
+
+
+RegisterNetEvent("housing:decorate:open", function()
+    if not CurrentHouse then
+        return Notification(i18n.t("decorate.not_in_house"), "error")
+    end
+
+    local houseConfig = Config.Houses[CurrentHouse]
+    if not houseConfig then
+        return Notification(i18n.t("decorate.invalid_data"), "error")
+    end
+
+    if Config.DecorateOnlyAccessForOwner then
+        if not CurrentHouseData.isOwnedByMe then
+            return Notification(i18n.t("you_are_not_owner"), "error")
+        end
+    end
+
+    if CurrentHouseData.billsCutOff then
+        return Notification(i18n.t("decorate.bills_cut_off"), "error")
+    end
+
+    if not CurrentHouseData.haskey then
+        return Notification(i18n.t("decorate.not_key_holder"), "error")
+    end
+
+    decorate:open()
+end)
+
+
+function decorate.toggleFreeCamera(self, enable)
+    if nil ~= enable then
+        self.freeCamera = enable
+    else
+        self.freeCamera = not self.freeCamera
+    end
+
+    if not self.freeCamera then return end
+
+    SetPlayerControl(cache.playerId, false, 0)
+
+    local _, _, up, pos = GetEntityMatrix(cache.ped)
+    local camPos = pos + up
+    local camRot = GetEntityRotation(cache.ped)
+
+    local cam = Utils.CreateCamera("DEFAULT_SCRIPTED_CAMERA", camPos, camRot, true, nil, 1000)
+
+    self:instructional({
+        { key = "focus_free_camera", label = "Focus Object" }
+    })
+
+    self.cameraFocus = false
+
+    CreateThread(function()
+        while true do
+            if not self.active then break end
+            if not self.freeCamera then break end
+
+            local newPos, newRot = Utils.HandleFlyCam(cam, { mouse = not self.cameraFocus })
+            camRot = newRot
+            camPos = newPos
+
+            DisableAllControlActions(0)
+
+
+            -- Toggle camera focus with F key
+            if IsDisabledControlJustPressed(0, Keys.F) then
+                if self.mode == "gizmo" then
+                    self.cameraFocus = not self.cameraFocus
+                else
+                    Notification(i18n.t("decorate.focus_object_not_supported"), "error")
+                end
+            end
+
+            if self.cameraFocus and self.mode == "mgizmo" then
+                self.cameraFocus = false
+            end
+
+            if self.cameraFocus then
+                local objHandle = self.currentObject and self.currentObject.handle
+                if objHandle and objHandle and DoesEntityExist(objHandle) then
+                    local entityCoords = GetEntityCoords(objHandle)
+                    local entityModel = GetEntityModel(objHandle)
+                    local minDim, maxDim = GetModelDimensions(entityModel)
+                    local dimSize = #(maxDim - minDim)
+                    local orbitRadius = math.max(dimSize * 2.0, 3.0)
+                    local entityHeight = maxDim.z - minDim.z
+
+                    local distToEntity = #(camPos - entityCoords)
+                    local dirToEntity = entityCoords - camPos
+
+
+                    -- Calculate target rotation to look at entity
+                    local targetRot = vec3(
+                        math.deg(math.asin(dirToEntity.z / #dirToEntity)),
+                        0.0,
+                        math.deg(math.atan(-dirToEntity.x, dirToEntity.y))
+                    )
+
+                    -- Smoothly interpolate camera rotation
+                    local smoothRot = vec3(
+                        camRot.x + (targetRot.x - camRot.x) * CAMERA_LERP_SPEED,
+                        camRot.y + (targetRot.y - camRot.y) * CAMERA_LERP_SPEED,
+                        camRot.z + (targetRot.z - camRot.z) * CAMERA_LERP_SPEED
+                    )
+                    SetCamRot(cam, smoothRot.x, smoothRot.y, smoothRot.z, 2)
+
+                    -- Keep camera at appropriate distance
+                    if distToEntity > orbitRadius * 1.5 or distToEntity < orbitRadius * 0.5 then
+                        local normalizedDir = dirToEntity / distToEntity
+                        local targetPos = entityCoords - normalizedDir * orbitRadius
+                        local smoothPos = vec3(
+                            camPos.x + (targetPos.x - camPos.x) * CAMERA_LERP_SPEED * 0.5,
+                            camPos.y + (targetPos.y - camPos.y) * CAMERA_LERP_SPEED * 0.5,
+                            camPos.z + (targetPos.z - camPos.z) * CAMERA_LERP_SPEED * 0.5
+                        )
+                        SetCamCoord(cam, smoothPos.x, smoothPos.y, smoothPos.z)
+                        camPos = smoothPos
+                    end
+
+
+                    -- Auto-orbit when very close
+                    if distToEntity < orbitRadius * 0.7 then
+                        local orbitSpeed = 0.3
+                        local time = GetGameTimer() / 1000.0 * orbitSpeed
+                        local radius = orbitRadius * 0.8
+                        local orbitTarget = vec3(
+                            entityCoords.x + math.cos(time) * radius,
+                            entityCoords.y + math.sin(time) * radius,
+                            entityCoords.z + entityHeight
+                        )
+                        local smoothOrbit = vec3(
+                            camPos.x + (orbitTarget.x - camPos.x) * 0.05,
+                            camPos.y + (orbitTarget.y - camPos.y) * 0.05,
+                            camPos.z + (orbitTarget.z - camPos.z) * 0.05
+                        )
+                        SetCamCoord(cam, smoothOrbit.x, smoothOrbit.y, smoothOrbit.z)
+                    end
+                end
+            end
+
+            Wait(0)
+        end
+
+        Utils.DestroyFlyCam(cam, 1000)
+        SetPlayerControl(cache.playerId, true, 0)
+        self:instructional()
+    end)
+end
+
+
+function decorate.removeCurrentObject(self)
+    if not decorate.currentObject then return end
+
+    local handle = decorate.currentObject and decorate.currentObject.handle
+    if handle then
+        if not decorate.currentObject.stashId then
+            DeleteObject(decorate.currentObject.handle)
+        end
+    end
+
+    gizmo:deselectEntity()
+    decorate.currentObject = nil
+    SendReactMessage("remove_current_object")
+    Debug("Removed current object", decorate.currentObject)
+end
+
+exports("inDecorate", function()
+    return decorate.active
+end)
+
+function decorate.getObjectData(self, entityHandle)
+    local currentObj = self.currentObject
+    if currentObj and currentObj.handle then
+        if entityHandle == currentObj.handle then
+            return currentObj
+        end
+    end
+
+    for _, obj in pairs(decorate.objects) do
+        if obj.handle and DoesEntityExist(obj.handle) then
+            if obj.handle == entityHandle then
+                return obj
+            end
+        end
+    end
+
+    return false
+end
+
+
+function decorate.saveCurrentObject(self)
+    Debug("saveCurrentObject", "Current object", decorate.currentObject)
+    if not self.currentObject then return end
+
+    local saveData = {
+        modelName = self.currentObject.modelName,
+        coords = GetEntityCoords(self.currentObject.handle),
+        rotation = GetEntityRotation(self.currentObject.handle),
+        handle = self.currentObject.handle,
+        inStash = false,
+        inHouse = nil ~= EnteredHouse,
+        house = CurrentHouse,
+        price = self.currentObject.price,
+        wallartData = self.currentObject.wallartData,
+    }
+
+    self:removeCurrentObject()
+    return lib.callback.await("housing:saveObject", false, CurrentHouse, saveData)
+end
+
+function decorate.destroyObjects(self)
+    local objectsCopy = table.deepclone(decorate.objects)
+    decorate.objects = {}
+
+    for _, obj in pairs(objectsCopy) do
+        RemoveSpawnedObject(obj)
+    end
+
+    if cleanerRobot then
+        cleanerRobot:stopInteractionLoop()
+        cleanerRobot:cleanAll()
+    end
+end
+
+function decorate.refreshObjects(self)
+    for _, obj in pairs(decorate.objects) do
+        RemoveSpawnedObject(obj)
+    end
+end
+
+
+function decorate.saveObjects(self)
+    for _, obj in pairs(decorate.objects) do
+        if obj.spawned and DoesEntityExist(obj.handle) then
+            local coords = GetEntityCoords(obj.handle)
+            local rotation = GetEntityRotation(obj.handle)
+            local currentCoords = vec3(coords.x, coords.y, coords.z)
+            local currentRotation = vec3(rotation.x, rotation.y, rotation.z)
+
+            local coordsChanged = currentCoords.x ~= obj.coords.x
+            local rotationChanged = currentRotation.x ~= obj.rotation.x
+
+            if not coordsChanged or not rotationChanged then
+                -- nothing to update
+            else
+                obj.coords = coords
+                obj.rotation = rotation
+                TriggerServerEvent("housing:updateObject", CurrentHouse, obj.id, {
+                    coords = json.encode(coords),
+                    rotation = json.encode(rotation),
+                })
+            end
+        end
+    end
+end
+
+function decorate.openBuyObjectModal(self)
+    if not self.currentObject then return end
+    SendReactMessage("open_buy_object_modal")
+end
+
+
+RegisterNetEvent("housing:updateObject", function(house, objectId, updateData)
+    if CurrentHouse ~= house then
+        return Debug("housing:updateObject ::: house is not same", "CurrentHouse", CurrentHouse, "house", house)
+    end
+
+    local objectEntry = table.find(decorate.objects, function(obj)
+        return obj.id == objectId
+    end)
+
+    if not objectEntry then
+        Error("housing:updateObject :: Object not found", "id", objectId)
+        return
+    end
+
+    for key, value in pairs(updateData) do
+        if key == "coords" then
+            if objectEntry.spawned then
+                Debug("housing:updateObject ::: SetEntityCoords", "object", objectEntry.handle, "coords", value)
+                SetEntityCoords(objectEntry.handle, value.x, value.y, value.z, false, false, false, false)
+            end
+        elseif key == "rotation" then
+            if objectEntry.spawned then
+                Debug("housing:updateObject ::: SetEntityRotation", "object", objectEntry.handle, "rotation", value)
+                SetEntityRotation(objectEntry.handle, value.x, value.y, value.z, 0, false)
+            end
+        end
+
+        objectEntry[key] = value
+
+        if key == "wallartData" then
+            if objectEntry.spawned then
+                ApplyWallartTexture(objectEntry)
+            end
+        end
+
+        Debug("Updated object", "object", objectEntry.id, "key", key, "value", value)
+    end
+end)
+
+
+function RemoveSpawnedObject(objectData)
+    if not objectData.spawned then
+        return false
+    end
+
+    if cleanerRobot and objectData.id then
+        if cleanerRobot:isCleanerModel(objectData.modelName) then
+            cleanerRobot:despawn(objectData.id)
+        end
+    end
+
+    removeWallartTexture(objectData)
+    DeleteObject(objectData.handle)
+    objectData.spawned = false
+end
+
+RegisterNetEvent("housing:decorate:sellFurniture", function(house, objectId)
+    if CurrentHouse ~= house then
+        return Debug("housing:decorate:sellFurniture ::: house is not same", "house", house, "CurrentHouse", CurrentHouse)
+    end
+
+    local objectEntry = table.find(decorate.objects, function(obj)
+        return obj.id == objectId
+    end)
+
+    if not objectEntry then
+        Error("housing:decorate:sellFurniture ::: Object not found", "id", objectId)
+        return
+    end
+
+    RemoveSpawnedObject(objectEntry)
+
+    decorate.objects = table.filter(decorate.objects, function(obj)
+        return obj.id ~= objectId
+    end)
+
+    Debug("housing:decorate:sellFurniture", "object is deleted from cache", objectEntry.id)
+end)
+
+
+RegisterNetEvent("housing:addObject", function(house, objectData)
+    if CurrentHouse ~= house then
+        return Debug("housing:addObject ::: house is not same", "house", house, "CurrentHouse", CurrentHouse)
+    end
+
+    decorate.objects[#decorate.objects + 1] = objectData
+    Debug("Added object to data", "data", objectData)
+end)
+
+RegisterNetEvent("housing:removeFurniture", function(house, objectId)
+    if CurrentHouse ~= house then return end
+    if not decorate.objects then return end
+
+    for idx, obj in pairs(decorate.objects) do
+        if obj.id == objectId then
+            if cleanerRobot then
+                if cleanerRobot:isCleanerModel(obj.modelName) then
+                    cleanerRobot:despawn(objectId)
+                end
+            end
+
+            if obj.handle and DoesEntityExist(obj.handle) then
+                DeleteObject(obj.handle)
+            end
+
+            decorate.objects[idx] = nil
+            Debug("Removed furniture:", objectId)
+            break
+        end
+    end
+end)
+
+
+function SpawnObject(modelName, coords, rotation)
+    local modelHash = joaat(modelName)
+    lib.requestModel(modelHash, Config.DefaultRequestModelTimeout)
+
+    local handle = CreateObject(modelHash, coords.x, coords.y, coords.z, false, false, false)
+    SetEntityAlpha(handle, 0, false)
+
+    CreateThread(function()
+        for alpha = 0, 255, 51 do
+            Wait(50)
+            SetEntityAlpha(handle, alpha, false)
+        end
+    end)
+
+    if rotation then
+        SetEntityRotation(handle, rotation.x, rotation.y, rotation.z, 0, false)
+    end
+
+    SetEntityAsMissionEntity(handle, true, true)
+    SetEntityInvincible(handle, true)
+    SetEntityCompletelyDisableCollision(handle, true, false)
+
+    if not (Config.DynamicDoors and Config.DoorModels[modelName]) then
+        FreezeEntityPosition(handle, true)
+    end
+
+    SetModelAsNoLongerNeeded(modelHash)
+    Wait(0)
+    SetEntityCoords(handle, coords.x, coords.y, coords.z, false, false, false, false)
+
+    return handle
+end
+
+
+function decorate.getObjects(self, house)
+    self:destroyObjects()
+
+    local objects = lib.callback.await("housing:getDecorations", 0, house)
+    self.objects = objects
+
+    if cleanerRobot and CurrentHouse and EnteredHouse then
+        CreateThread(function()
+            Wait(500)
+
+            if not decorate.objects then return end
+
+            for _, obj in pairs(decorate.objects) do
+                if obj.spawned and obj.handle and DoesEntityExist(obj.handle) then
+                    if cleanerRobot:isCleanerModel(obj.modelName) then
+                        cleanerRobot:spawnForDecoration(obj, CurrentHouse)
+                    end
+                end
+            end
+
+            if cleanerRobot:hasRobots() then
+                if not Config.UseTarget then
+                    cleanerRobot:startInteractionLoop()
+                end
+            end
+        end)
+    end
+end
+
+exports("refreshCurrentDecorations", function()
+    return decorate:refreshObjects()
+end)
+
+exports("initCurrentDecorations", function()
+    if not CurrentHouse then
+        return Debug("initDecorations ::: No Current House")
+    end
+    return decorate:getObjects(CurrentHouse)
+end)
+
+
+-- Light rendering system
+local lightObjects = {}
+local lightModelNames = {}
+
+CreateThread(function()
+    for _, lightItem in pairs(LIGHT_ITEMS) do
+        table.insert(lightModelNames, lightItem.object)
+    end
+
+    while true do
+        if not decorate.objects then
+            lightObjects = {}
+        else
+            lightObjects = table.deepclone(table.filter(decorate.objects, function(obj)
+                return table.includes(lightModelNames, obj.modelName)
+            end))
+
+            for idx, obj in pairs(lightObjects) do
+                if obj.handle and DoesEntityExist(obj.handle) then
+                    if not obj.inside or CurrentHouse then
+                        local rotation = GetEntityRotation(obj.handle)
+                        local coords = GetEntityCoords(obj.handle)
+                        local direction = RotationToDirection(rotation)
+                        lightObjects[idx].position = coords
+                        lightObjects[idx].direction = direction
+                    end
+                end
+            end
+        end
+
+        Wait(500)
+    end
+end)
+
+
+CreateThread(function()
+    while true do
+        local waitTime = 1250
+
+        if not CurrentHouseData.billsCutOff and CurrentHouseData.lightsOn then
+            for _, obj in pairs(lightObjects) do
+                if obj.handle and DoesEntityExist(obj.handle) then
+                    if obj.lightData then
+                        if not (obj.lightData and obj.lightData.active) then
+                            goto continue
+                        end
+                    end
+
+                    if obj.position then
+                        waitTime = 0
+                        local position = obj.position
+                        local direction = obj.direction
+
+                        local rgb = (obj.lightData and obj.lightData.rgb) or { r = 255, g = 255, b = 255 }
+                        local intensity = (obj.lightData and obj.lightData.intensity) or Config.DefaultLightIntensity
+                        intensity = intensity + 0.0
+
+                        DrawSpotLight(
+                            position.x, position.y, position.z,
+                            direction.x, direction.y, direction.z,
+                            rgb.r, rgb.g, rgb.b,
+                            100.0, 20.0, 1.0,
+                            intensity, 0.0
+                        )
+                    end
+                end
+                ::continue::
+            end
+        end
+
+        Wait(waitTime)
+    end
+end)
+
+
+-- Main decoration spawning/despawning loop
+CreateThread(function()
+    while true do
+        local waitTime = decorate.active and 300 or 1250
+        local playerCoords = GetEntityCoords(cache.ped)
+
+        if not decorate.objects then
+            Wait(waitTime)
+        else
+            for _, obj in pairs(decorate.objects) do
+                if obj.inStash then
+                    if obj.spawned then
+                        DeleteObject(obj.handle)
+                        obj.spawned = false
+                        Debug("Deleted object because its setted to inStash", "object", obj.handle)
+                    end
+                elseif not obj.coords then
+                    Error("Object coords is nil we skipping it.", "object", obj)
+                else
+                    if IsOnlyInsideModel(obj.modelName) then
+                        if not EnteredHouse then
+                            if obj.spawned then
+                                RemoveSpawnedObject(obj)
+                                Debug("Deleted onlyInside object because player left the house", "object", obj.handle)
+                            end
+                        end
+                    else
+                        obj.coords = vec3(obj.coords.x, obj.coords.y, obj.coords.z)
+
+
+                        -- Handle objects at origin (from shop/ikea)
+                        if obj.coords.x == 0.0 and obj.coords.y == 0.0 and obj.coords.z == 0.0 then
+                            if decorate.active then
+                                local camera = Utils.GetCamera()
+                                local camCoords = camera.coords
+                                local camRotation = camera.rotation
+                                local forward = Utils.GetForwardVector(camRotation)
+                                local newPos = camCoords + forward * 5.0
+                                Debug("Load Decorations : Object is from ikea. We setted it to camera center", "v", obj)
+                                obj.coords = vec3(newPos.x, newPos.y, newPos.z)
+                                decorate:saveObjects()
+                            end
+                        end
+
+                        local dist = #(playerCoords - obj.coords)
+
+                        if dist <= Config.SpawnDistance then
+                            if not obj.spawned then
+                                local handle = SpawnObject(obj.modelName, obj.coords, obj.rotation)
+                                if handle then
+                                    obj.handle = handle
+                                    ApplyWallartTexture(obj)
+
+
+                                    -- Re-select entity if it matches current selected stash object
+                                    local selectedStashId = decorate.currentObject and decorate.currentObject.stashId
+                                    if selectedStashId == obj.id then
+                                        decorate.currentObject.handle = handle
+                                        decorate:selectEntity(handle)
+                                    end
+
+                                    -- Handle cleaner robot spawning
+                                    if cleanerRobot and CurrentHouse and EnteredHouse then
+                                        if cleanerRobot:isCleanerModel(obj.modelName) then
+                                            cleanerRobot:spawnForDecoration(obj, CurrentHouse)
+                                            if cleanerRobot:hasRobots() then
+                                                if not Config.UseTarget then
+                                                    cleanerRobot:startInteractionLoop()
+                                                end
+                                            end
+                                        end
+                                    end
+                                else
+                                    obj.handle = 0
+                                    Warning("This model is not loaded. Please check if the model is valid. if its not delete it from the list", obj.modelName)
+                                end
+                                obj.spawned = true
+                            end
+                        elseif dist > Config.SpawnDistance then
+                            if obj.spawned then
+                                RemoveSpawnedObject(obj)
+                                Debug("Deleted object", "object", obj.handle)
+                            end
+                        end
+                    end
+                end
+            end
+
+            Wait(waitTime)
+        end
+    end
+end)
+
+
+exports("AddFurniture", function(category, item)
+    local invokingResource = GetInvokingResource()
+    Error("AddFurniture ::: This export is moved to server side. Please use exports['qs-housing']:AddFurniture(category, item) instead. on the server side. Resource", invokingResource)
+end)
+
+exports("AddShell", function(shellData)
+    Config.Shells[#Config.Shells + 1] = shellData
+    Debug("Added shell", shellData)
+end)
+
+AddEventHandler("onResourceStop", function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    decorate:destroyObjects()
+    decorate:close()
+    DestroyAllWallartTextures()
+end)

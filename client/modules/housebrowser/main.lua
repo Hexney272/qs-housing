@@ -1,769 +1,420 @@
+_G.housebrowser = {
+    visible = false,
+    houses = {}
+}
 
+function housebrowser:collectHouses()
+    local houseList = {}
+    local browserData = lib.callback.await("housing:getHouseBrowserData", false)
+    if not browserData then
+        browserData = {}
+    end
 
-
-
-
-
-local L0_1, L1_1, L2_1, L3_1
-L0_1 = _G
-L1_1 = {}
-L1_1.visible = false
-L2_1 = {}
-L1_1.houses = L2_1
-L0_1.housebrowser = L1_1
-L0_1 = housebrowser
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2, L27_2
-  L1_2 = {}
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:getHouseBrowserData"
-  L4_2 = false
-  L2_2 = L2_2(L3_2, L4_2)
-  if not L2_2 then
-    L2_2 = {}
-  end
-  L3_2 = pairs
-  L4_2 = Config
-  L4_2 = L4_2.Houses
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.hideFromBrowser
-    if L9_2 then
-    else
-      L9_2 = L8_2.apartmentNumber
-      if L9_2 then
-        L9_2 = L8_2.apartmentNumber
-        if "apt-0" ~= L9_2 then
-      end
-      else
-        L9_2 = L2_2[L7_2]
-        if not L9_2 then
-          L9_2 = {}
+    for houseId, houseConfig in pairs(Config.Houses) do
+        if houseConfig.hideFromBrowser then
+            goto continue
         end
-        L10_2 = L9_2.rentable
-        if not L10_2 then
-          L10_2 = false
+
+        if houseConfig.apartmentNumber then
+            if "apt-0" ~= houseConfig.apartmentNumber then
+                goto continue
+            end
         end
-        L11_2 = L9_2.purchasable
-        if not L11_2 then
-          L11_2 = false
+
+        local serverData = browserData[houseId]
+        if not serverData then
+            serverData = {}
         end
-        L12_2 = L9_2.owned
-        if not L12_2 then
-          L12_2 = false
+
+        local rentable = serverData.rentable or false
+        local purchasable = serverData.purchasable or false
+        local owned = serverData.owned or false
+
+        if owned and not rentable and not purchasable then
+            goto continue
         end
-        if L12_2 and not L10_2 and not L11_2 then
+
+        local enterCoords = houseConfig.coords.enter
+        local houseType = "shell"
+        if houseConfig.mlo then
+            houseType = "mlo"
+        elseif houseConfig.ipl then
+            houseType = "ipl"
+        end
+
+        local sellType = "purchasable"
+        local seller = nil
+        if rentable then
+            sellType = "rentable"
+        elseif purchasable and owned then
+            sellType = "player_selling"
+            if serverData.ownerName then
+                seller = { name = serverData.ownerName }
+            end
+        elseif purchasable then
+            sellType = "purchasable"
+        elseif not owned then
+            sellType = "purchasable"
+        end
+
+        local owner = nil
+        if owned then
+            if serverData.ownerName then
+                owner = {
+                    name = serverData.ownerName,
+                    phone = serverData.ownerPhone
+                }
+            end
+        end
+
+        local photos = houseConfig.photos
+        if not photos then
+            photos = {}
+        end
+
+        local description
+        if type(houseConfig.description) == "string" and houseConfig.description ~= "" and houseConfig.description then
+            description = houseConfig.description
         else
-          L13_2 = L8_2.coords
-          L13_2 = L13_2.enter
-          L14_2 = "shell"
-          L15_2 = L8_2.mlo
-          if L15_2 then
-            L14_2 = "mlo"
-          else
-            L15_2 = L8_2.ipl
-            if L15_2 then
-              L14_2 = "ipl"
+            description = i18n.t("housebrowser.no_description")
+        end
+
+        local furnished = nil
+        if sellType == "player_selling" then
+            furnished = serverData.saleFurnished
+        end
+
+        local isApartment = nil ~= houseConfig.apartmentCount
+        local apartmentCount
+        if isApartment and houseConfig.apartmentCount then
+            apartmentCount = houseConfig.apartmentCount
+        else
+            apartmentCount = nil
+        end
+
+        local displayName = houseConfig.apartmentName
+        if not displayName then
+            displayName = houseId:gsub("_", " "):gsub("^%l", string.upper)
+        end
+
+        local address = houseConfig.address
+        if not address then
+            address = i18n.t("housebrowser.unknown_address")
+        end
+
+        local price = houseConfig.price
+        if not price then
+            price = 0
+        end
+
+        local locked = houseConfig.locked
+        if not locked then
+            locked = false
+        end
+
+        local houseEntry = {
+            id = houseId,
+            name = displayName,
+            address = address,
+            price = price,
+            sellType = sellType,
+            type = houseType,
+            owned = owned,
+            locked = locked,
+            hasGarage = nil ~= houseConfig.garage,
+            photos = photos,
+            description = description,
+            tier = houseConfig.tier,
+            coords = {
+                x = enterCoords.x,
+                y = enterCoords.y,
+                z = enterCoords.z
+            },
+            blip = houseConfig.blip,
+            owner = owner,
+            seller = seller,
+            furnished = furnished,
+            isApartment = isApartment,
+            apartmentCount = apartmentCount
+        }
+
+        houseList[#houseList + 1] = houseEntry
+
+        ::continue::
+    end
+
+    return houseList
+end
+
+function housebrowser:open()
+    if self.visible then
+        return
+    end
+
+    if IsNuiFocused() then
+        return
+    end
+
+    self.houses = self:collectHouses()
+    self.visible = true
+
+    SetNuiFocus(true, true)
+    ToggleHud(false)
+
+    local minPrice = math.huge
+    local maxPrice = 0
+
+    for _, house in pairs(self.houses) do
+        if minPrice > house.price then
+            minPrice = house.price
+        end
+        if maxPrice < house.price then
+            maxPrice = house.price
+        end
+    end
+
+    if minPrice == math.huge then
+        minPrice = 0
+    end
+    if maxPrice == 0 then
+        maxPrice = 10000000
+    end
+
+    local ped = PlayerPedId()
+    local playerCoords = GetEntityCoords(ped)
+
+    SendReactMessage("toggle_house_browser", {
+        visible = true,
+        houses = self.houses,
+        priceRange = { minPrice, maxPrice },
+        playerCoords = {
+            x = playerCoords.x,
+            y = playerCoords.y,
+            z = playerCoords.z
+        }
+    })
+
+    Debug("HouseBrowser opened with", #self.houses, "houses")
+end
+
+function housebrowser:close()
+    if not self.visible then
+        return
+    end
+
+    self.visible = false
+    SetNuiFocus(false, false)
+    ToggleHud(true)
+    SendReactMessage("toggle_house_browser", { visible = false })
+    Debug("HouseBrowser closed")
+end
+
+function housebrowser:setWaypoint(houseName)
+    local houseConfig = Config.Houses[houseName]
+    if not houseConfig then
+        return Notification(i18n.t("house_not_found"), "error")
+    end
+
+    local enterCoords = houseConfig.coords.enter
+    if enterCoords and enterCoords.x and enterCoords.y then
+        SetNewWaypoint(enterCoords.x, enterCoords.y)
+        Notification(i18n.t("housebrowser.waypoint_set", { house = houseConfig.address }), "success")
+    end
+end
+
+housebrowser.realeStateNPC = {
+    ped = nil,
+    spawned = false,
+    blip = nil
+}
+
+local function getPedStreamingDistances(pedType, defaultSpawn, defaultDespawn)
+    local pedStreamingConfig = Config.PedStreaming
+    if not pedStreamingConfig then
+        pedStreamingConfig = {}
+    end
+
+    local defaultConfig = pedStreamingConfig.default
+    if not defaultConfig then
+        defaultConfig = {}
+    end
+
+    local specificConfig = pedStreamingConfig[pedType]
+    if not specificConfig then
+        specificConfig = {}
+    end
+
+    local spawnDistance = specificConfig.spawnDistance
+    if not spawnDistance then
+        spawnDistance = defaultConfig.spawnDistance
+        if not spawnDistance then
+            spawnDistance = defaultSpawn
+        end
+    end
+
+    local despawnDistance = specificConfig.despawnDistance
+    if not despawnDistance then
+        despawnDistance = defaultConfig.despawnDistance
+        if not despawnDistance then
+            despawnDistance = defaultDespawn
+        end
+    end
+
+    if spawnDistance >= despawnDistance then
+        despawnDistance = spawnDistance + 5.0
+    end
+
+    return spawnDistance, despawnDistance
+end
+
+function housebrowser:spawnRealeStateNPC()
+    if self.realeStateNPC.spawned then
+        if DoesEntityExist(self.realeStateNPC.ped) then
+            return
+        end
+    end
+
+    if not Config.RealeStateNPC or not Config.RealeStateNPC.enabled then
+        return
+    end
+
+    local npcConfig = Config.RealeStateNPC
+    local location = npcConfig.location
+
+    lib.requestModel(npcConfig.pedModel, Config.DefaultRequestModelTimeout)
+
+    local ped = CreatePed(28, npcConfig.pedModel, location.x, location.y, location.z - 1.0, location.w or 0.0, false, false)
+
+    SetEntityInvincible(ped, true)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    FreezeEntityPosition(ped, true)
+    SetEntityCollision(ped, false, false)
+    SetPedRandomComponentVariation(ped, 0)
+    SetPedRandomProps(ped)
+
+    if npcConfig.anim and npcConfig.anim.dict and npcConfig.anim.name then
+        lib.requestAnimDict(npcConfig.anim.dict)
+        TaskPlayAnim(ped, npcConfig.anim.dict, npcConfig.anim.name, 8.0, -8.0, -1, 1, 0, false, false, false)
+    end
+
+    self.realeStateNPC.ped = ped
+    self.realeStateNPC.spawned = true
+
+    if npcConfig.blip and npcConfig.blip.enabled then
+        local blipConfig = npcConfig.blip
+        local blipText = blipConfig.text
+        if not blipText then
+            blipText = i18n.t("housebrowser.reale_state")
+            if not blipText then
+                blipText = "Real Estate"
             end
-          end
-          L15_2 = "purchasable"
-          L16_2 = nil
-          if L10_2 then
-            L15_2 = "rentable"
-          elseif L11_2 and L12_2 then
-            L15_2 = "player_selling"
-            L17_2 = L9_2.ownerName
-            if L17_2 then
-              L17_2 = {}
-              L18_2 = L9_2.ownerName
-              L17_2.name = L18_2
-              L16_2 = L17_2
+        end
+
+        self.realeStateNPC.blip = Utils.CreateBlip({
+            location = location,
+            sprite = blipConfig.sprite or 374,
+            color = blipConfig.color or 3,
+            scale = blipConfig.scale or 0.8,
+            text = blipText,
+            shortRange = true
+        })
+    end
+
+    SetModelAsNoLongerNeeded(npcConfig.pedModel)
+end
+
+function housebrowser:deleteRealeStateNPC()
+    if self.realeStateNPC.ped then
+        if DoesEntityExist(self.realeStateNPC.ped) then
+            DeleteEntity(self.realeStateNPC.ped)
+        end
+    end
+
+    if self.realeStateNPC.blip then
+        Utils.RemoveBlip(self.realeStateNPC.blip)
+    end
+
+    self.realeStateNPC.ped = nil
+    self.realeStateNPC.blip = nil
+    self.realeStateNPC.spawned = false
+end
+
+if Config.HouseBrowserCommand then
+    RegisterCommand("housebrowser", function(source, args, rawCommand)
+        if IsNuiFocused() then
+            return
+        end
+        housebrowser:open()
+    end)
+end
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        local npcConfig = Config.RealeStateNPC
+        if not npcConfig or not npcConfig.enabled or not npcConfig.location then
+            if housebrowser.realeStateNPC.spawned then
+                housebrowser:deleteRealeStateNPC()
             end
-          elseif L11_2 then
-            L15_2 = "purchasable"
-          elseif not L12_2 then
-            L15_2 = "purchasable"
-            goto lbl_94
-            goto lbl_212
-            ::lbl_94::
-            L17_2 = nil
-            if L12_2 then
-              L18_2 = L9_2.ownerName
-              if L18_2 then
-                L18_2 = {}
-                L19_2 = L9_2.ownerName
-                L18_2.name = L19_2
-                L19_2 = L9_2.ownerPhone
-                L18_2.phone = L19_2
-                L17_2 = L18_2
-              end
+            goto loopEnd
+        end
+
+        local spawnDistance, despawnDistance = getPedStreamingDistances("realEstate", 70.0, 85.0)
+        local playerCoords = GetEntityCoords(cache.ped)
+        local npcLocation = vec3(npcConfig.location.x, npcConfig.location.y, npcConfig.location.z)
+        local distance = #(playerCoords - npcLocation)
+
+        if spawnDistance >= distance then
+            if not housebrowser.realeStateNPC.spawned then
+                housebrowser:spawnRealeStateNPC()
             end
-            L18_2 = L8_2.photos
-            if not L18_2 then
-              L18_2 = {}
+        elseif despawnDistance <= distance then
+            if housebrowser.realeStateNPC.spawned then
+                housebrowser:deleteRealeStateNPC()
             end
-            L19_2 = type
-            L20_2 = L8_2.description
-            L19_2 = L19_2(L20_2)
-            if "string" == L19_2 then
-              L19_2 = L8_2.description
-              if "" ~= L19_2 then
-                L19_2 = L8_2.description
-                if L19_2 then
-                  goto lbl_127
+        end
+
+        ::loopEnd::
+    end
+end)
+
+AddEventHandler("onResourceStop", function(resourceName)
+    if resourceName == GetCurrentResourceName() then
+        housebrowser:deleteRealeStateNPC()
+    end
+end)
+
+CreateThread(function()
+    while true do
+        local waitTime = 1000
+
+        if housebrowser.realeStateNPC.spawned then
+            if DoesEntityExist(housebrowser.realeStateNPC.ped) then
+                local playerCoords = GetEntityCoords(cache.ped)
+                local npcCoords = GetEntityCoords(housebrowser.realeStateNPC.ped)
+                local distance = #(playerCoords - npcCoords)
+
+                if distance < 2.0 then
+                    waitTime = 0
+
+                    local interactText = i18n.t("drawtext.reale_state_interact")
+                    if not interactText then
+                        interactText = "[E] - Open House Browser"
+                    end
+
+                    DrawText3D(npcCoords.x, npcCoords.y, npcCoords.z + 0.3, interactText, "reale_state_npc", "E")
+
+                    if IsControlJustPressed(0, Keys.E) then
+                        if IsNuiFocused() then
+                            return
+                        end
+                        housebrowser:open()
+                    end
                 end
-              end
             end
-            L19_2 = i18n
-            L19_2 = L19_2.t
-            L20_2 = "housebrowser.no_description"
-            L19_2 = L19_2(L20_2)
-            ::lbl_127::
-            L20_2 = nil
-            if "player_selling" == L15_2 then
-              L20_2 = L9_2.saleFurnished
-            end
-            L21_2 = L8_2.apartmentCount
-            L21_2 = nil ~= L21_2
-            if L21_2 then
-              L22_2 = L8_2.apartmentCount
-              if L22_2 then
-                goto lbl_145
-              end
-            end
-            L22_2 = nil
-            ::lbl_145::
-            L23_2 = {}
-            L23_2.id = L7_2
-            L24_2 = L8_2.apartmentName
-            if not L24_2 then
-              L25_2 = L7_2
-              L24_2 = L7_2.gsub
-              L26_2 = "_"
-              L27_2 = " "
-              L24_2 = L24_2(L25_2, L26_2, L27_2)
-              L25_2 = L24_2
-              L24_2 = L24_2.gsub
-              L26_2 = "^%l"
-              L27_2 = string
-              L27_2 = L27_2.upper
-              L24_2 = L24_2(L25_2, L26_2, L27_2)
-            end
-            L23_2.name = L24_2
-            L24_2 = L8_2.address
-            if not L24_2 then
-              L24_2 = i18n
-              L24_2 = L24_2.t
-              L25_2 = "housebrowser.unknown_address"
-              L24_2 = L24_2(L25_2)
-            end
-            L23_2.address = L24_2
-            L24_2 = L8_2.price
-            if not L24_2 then
-              L24_2 = 0
-            end
-            L23_2.price = L24_2
-            L23_2.sellType = L15_2
-            L23_2.type = L14_2
-            L23_2.owned = L12_2
-            L24_2 = L8_2.locked
-            if not L24_2 then
-              L24_2 = false
-            end
-            L23_2.locked = L24_2
-            L24_2 = L8_2.garage
-            L24_2 = nil ~= L24_2
-            L23_2.hasGarage = L24_2
-            L23_2.photos = L18_2
-            L23_2.description = L19_2
-            L24_2 = L8_2.tier
-            L23_2.tier = L24_2
-            L24_2 = {}
-            L25_2 = L13_2.x
-            L24_2.x = L25_2
-            L25_2 = L13_2.y
-            L24_2.y = L25_2
-            L25_2 = L13_2.z
-            L24_2.z = L25_2
-            L23_2.coords = L24_2
-            L24_2 = L8_2.blip
-            L23_2.blip = L24_2
-            L23_2.owner = L17_2
-            L23_2.seller = L16_2
-            L23_2.furnished = L20_2
-            L23_2.isApartment = L21_2
-            L23_2.apartmentCount = L22_2
-            L24_2 = #L1_2
-            L24_2 = L24_2 + 1
-            L1_2[L24_2] = L23_2
-          end
         end
-      end
-    end
-    ::lbl_212::
-  end
-  return L1_2
-end
-L0_1.collectHouses = L1_1
-L0_1 = housebrowser
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L1_2 = A0_2.visible
-  if L1_2 then
-    return
-  end
-  L1_2 = IsNuiFocused
-  L1_2 = L1_2()
-  if L1_2 then
-    return
-  end
-  L2_2 = A0_2
-  L1_2 = A0_2.collectHouses
-  L1_2 = L1_2(L2_2)
-  A0_2.houses = L1_2
-  A0_2.visible = true
-  L1_2 = SetNuiFocus
-  L2_2 = true
-  L3_2 = true
-  L1_2(L2_2, L3_2)
-  L1_2 = ToggleHud
-  L2_2 = false
-  L1_2(L2_2)
-  L1_2 = math
-  L1_2 = L1_2.huge
-  L2_2 = 0
-  L3_2 = pairs
-  L4_2 = A0_2.houses
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.price
-    if L1_2 > L9_2 then
-      L1_2 = L8_2.price
-    end
-    L9_2 = L8_2.price
-    if L2_2 < L9_2 then
-      L2_2 = L8_2.price
-    end
-  end
-  L3_2 = math
-  L3_2 = L3_2.huge
-  if L1_2 == L3_2 then
-    L1_2 = 0
-  end
-  if 0 == L2_2 then
-    L2_2 = 10000000
-  end
-  L3_2 = PlayerPedId
-  L3_2 = L3_2()
-  L4_2 = GetEntityCoords
-  L5_2 = L3_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = SendReactMessage
-  L6_2 = "toggle_house_browser"
-  L7_2 = {}
-  L7_2.visible = true
-  L8_2 = A0_2.houses
-  L7_2.houses = L8_2
-  L8_2 = {}
-  L9_2 = L1_2
-  L10_2 = L2_2
-  L8_2[1] = L9_2
-  L8_2[2] = L10_2
-  L7_2.priceRange = L8_2
-  L8_2 = {}
-  L9_2 = L4_2.x
-  L8_2.x = L9_2
-  L9_2 = L4_2.y
-  L8_2.y = L9_2
-  L9_2 = L4_2.z
-  L8_2.z = L9_2
-  L7_2.playerCoords = L8_2
-  L5_2(L6_2, L7_2)
-  L5_2 = Debug
-  L6_2 = "HouseBrowser opened with"
-  L7_2 = A0_2.houses
-  L7_2 = #L7_2
-  L8_2 = "houses"
-  L5_2(L6_2, L7_2, L8_2)
-end
-L0_1.open = L1_1
-L0_1 = housebrowser
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = A0_2.visible
-  if not L1_2 then
-    return
-  end
-  A0_2.visible = false
-  L1_2 = SetNuiFocus
-  L2_2 = false
-  L3_2 = false
-  L1_2(L2_2, L3_2)
-  L1_2 = ToggleHud
-  L2_2 = true
-  L1_2(L2_2)
-  L1_2 = SendReactMessage
-  L2_2 = "toggle_house_browser"
-  L3_2 = {}
-  L3_2.visible = false
-  L1_2(L2_2, L3_2)
-  L1_2 = Debug
-  L2_2 = "HouseBrowser closed"
-  L1_2(L2_2)
-end
-L0_1.close = L1_1
-L0_1 = housebrowser
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = Config
-  L2_2 = L2_2.Houses
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    L3_2 = Notification
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "house_not_found"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    return L3_2(L4_2, L5_2)
-  end
-  L3_2 = L2_2.coords
-  L3_2 = L3_2.enter
-  if L3_2 then
-    L4_2 = L3_2.x
-    if L4_2 then
-      L4_2 = L3_2.y
-      if L4_2 then
-        L4_2 = SetNewWaypoint
-        L5_2 = L3_2.x
-        L6_2 = L3_2.y
-        L4_2(L5_2, L6_2)
-        L4_2 = Notification
-        L5_2 = i18n
-        L5_2 = L5_2.t
-        L6_2 = "housebrowser.waypoint_set"
-        L7_2 = {}
-        L8_2 = L2_2.address
-        L7_2.house = L8_2
-        L5_2 = L5_2(L6_2, L7_2)
-        L6_2 = "success"
-        L4_2(L5_2, L6_2)
-      end
-    end
-  end
-end
-L0_1.setWaypoint = L1_1
-L0_1 = housebrowser
-L1_1 = {}
-L1_1.ped = nil
-L1_1.spawned = false
-L1_1.blip = nil
-L0_1.realeStateNPC = L1_1
-function L0_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L3_2 = Config
-  L3_2 = L3_2.PedStreaming
-  if not L3_2 then
-    L3_2 = {}
-  end
-  L4_2 = L3_2.default
-  if not L4_2 then
-    L4_2 = {}
-  end
-  L5_2 = L3_2[A0_2]
-  if not L5_2 then
-    L5_2 = {}
-  end
-  L6_2 = L5_2.spawnDistance
-  if not L6_2 then
-    L6_2 = L4_2.spawnDistance
-    if not L6_2 then
-      L6_2 = A1_2
-    end
-  end
-  L7_2 = L5_2.despawnDistance
-  if not L7_2 then
-    L7_2 = L4_2.despawnDistance
-    if not L7_2 then
-      L7_2 = A2_2
-    end
-  end
-  if L6_2 >= L7_2 then
-    L7_2 = L6_2 + 5.0
-  end
-  L8_2 = L6_2
-  L9_2 = L7_2
-  return L8_2, L9_2
-end
-L1_1 = housebrowser
-function L2_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L1_2 = A0_2.realeStateNPC
-  L1_2 = L1_2.spawned
-  if L1_2 then
-    L1_2 = DoesEntityExist
-    L2_2 = A0_2.realeStateNPC
-    L2_2 = L2_2.ped
-    L1_2 = L1_2(L2_2)
-    if L1_2 then
-      return
-    end
-  end
-  L1_2 = Config
-  L1_2 = L1_2.RealeStateNPC
-  if L1_2 then
-    L1_2 = Config
-    L1_2 = L1_2.RealeStateNPC
-    L1_2 = L1_2.enabled
-    if L1_2 then
-      goto lbl_22
-    end
-  end
-  do return end
-  ::lbl_22::
-  L1_2 = Config
-  L1_2 = L1_2.RealeStateNPC
-  L2_2 = L1_2.location
-  L3_2 = lib
-  L3_2 = L3_2.requestModel
-  L4_2 = L1_2.pedModel
-  L5_2 = Config
-  L5_2 = L5_2.DefaultRequestModelTimeout
-  L3_2(L4_2, L5_2)
-  L3_2 = CreatePed
-  L4_2 = 28
-  L5_2 = L1_2.pedModel
-  L6_2 = L2_2.x
-  L7_2 = L2_2.y
-  L8_2 = L2_2.z
-  L8_2 = L8_2 - 1.0
-  L9_2 = L2_2.w
-  if not L9_2 then
-    L9_2 = 0.0
-  end
-  L10_2 = false
-  L11_2 = false
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-  L4_2 = SetEntityInvincible
-  L5_2 = L3_2
-  L6_2 = true
-  L4_2(L5_2, L6_2)
-  L4_2 = SetBlockingOfNonTemporaryEvents
-  L5_2 = L3_2
-  L6_2 = true
-  L4_2(L5_2, L6_2)
-  L4_2 = FreezeEntityPosition
-  L5_2 = L3_2
-  L6_2 = true
-  L4_2(L5_2, L6_2)
-  L4_2 = SetEntityCollision
-  L5_2 = L3_2
-  L6_2 = false
-  L7_2 = false
-  L4_2(L5_2, L6_2, L7_2)
-  L4_2 = SetPedRandomComponentVariation
-  L5_2 = L3_2
-  L6_2 = 0
-  L4_2(L5_2, L6_2)
-  L4_2 = SetPedRandomProps
-  L5_2 = L3_2
-  L4_2(L5_2)
-  L4_2 = L1_2.anim
-  if L4_2 then
-    L4_2 = L1_2.anim
-    L4_2 = L4_2.dict
-    if L4_2 then
-      L4_2 = L1_2.anim
-      L4_2 = L4_2.name
-      if L4_2 then
-        L4_2 = lib
-        L4_2 = L4_2.requestAnimDict
-        L5_2 = L1_2.anim
-        L5_2 = L5_2.dict
-        L4_2(L5_2)
-        L4_2 = TaskPlayAnim
-        L5_2 = L3_2
-        L6_2 = L1_2.anim
-        L6_2 = L6_2.dict
-        L7_2 = L1_2.anim
-        L7_2 = L7_2.name
-        L8_2 = 8.0
-        L9_2 = -8.0
-        L10_2 = -1
-        L11_2 = 1
-        L12_2 = 0
-        L13_2 = false
-        L14_2 = false
-        L15_2 = false
-        L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2)
-      end
-    end
-  end
-  L4_2 = A0_2.realeStateNPC
-  L4_2.ped = L3_2
-  L4_2 = A0_2.realeStateNPC
-  L4_2.spawned = true
-  L4_2 = L1_2.blip
-  if L4_2 then
-    L4_2 = L1_2.blip
-    L4_2 = L4_2.enabled
-    if L4_2 then
-      L4_2 = L1_2.blip
-      L5_2 = L4_2.text
-      if not L5_2 then
-        L5_2 = i18n
-        L5_2 = L5_2.t
-        L6_2 = "housebrowser.reale_state"
-        L5_2 = L5_2(L6_2)
-        if not L5_2 then
-          L5_2 = "Real Estate"
-        end
-      end
-      L6_2 = A0_2.realeStateNPC
-      L7_2 = Utils
-      L7_2 = L7_2.CreateBlip
-      L8_2 = {}
-      L8_2.location = L2_2
-      L9_2 = L4_2.sprite
-      if not L9_2 then
-        L9_2 = 374
-      end
-      L8_2.sprite = L9_2
-      L9_2 = L4_2.color
-      if not L9_2 then
-        L9_2 = 3
-      end
-      L8_2.color = L9_2
-      L9_2 = L4_2.scale
-      if not L9_2 then
-        L9_2 = 0.8
-      end
-      L8_2.scale = L9_2
-      L8_2.text = L5_2
-      L8_2.shortRange = true
-      L7_2 = L7_2(L8_2)
-      L6_2.blip = L7_2
-    end
-  end
-  L4_2 = SetModelAsNoLongerNeeded
-  L5_2 = L1_2.pedModel
-  L4_2(L5_2)
-end
-L1_1.spawnRealeStateNPC = L2_1
-L1_1 = housebrowser
-function L2_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = A0_2.realeStateNPC
-  L1_2 = L1_2.ped
-  if L1_2 then
-    L1_2 = DoesEntityExist
-    L2_2 = A0_2.realeStateNPC
-    L2_2 = L2_2.ped
-    L1_2 = L1_2(L2_2)
-    if L1_2 then
-      L1_2 = DeleteEntity
-      L2_2 = A0_2.realeStateNPC
-      L2_2 = L2_2.ped
-      L1_2(L2_2)
-    end
-  end
-  L1_2 = A0_2.realeStateNPC
-  L1_2 = L1_2.blip
-  if L1_2 then
-    L1_2 = Utils
-    L1_2 = L1_2.RemoveBlip
-    L2_2 = A0_2.realeStateNPC
-    L2_2 = L2_2.blip
-    L1_2(L2_2)
-  end
-  L1_2 = A0_2.realeStateNPC
-  L1_2.ped = nil
-  L1_2 = A0_2.realeStateNPC
-  L1_2.blip = nil
-  L1_2 = A0_2.realeStateNPC
-  L1_2.spawned = false
-end
-L1_1.deleteRealeStateNPC = L2_1
-L1_1 = Config
-L1_1 = L1_1.HouseBrowserCommand
-if L1_1 then
-  L1_1 = RegisterCommand
-  L2_1 = "housebrowser"
-  function L3_1(A0_2, A1_2, A2_2)
-    local L3_2, L4_2
-    L3_2 = IsNuiFocused
-    L3_2 = L3_2()
-    if L3_2 then
-      return
-    end
-    L3_2 = housebrowser
-    L4_2 = L3_2
-    L3_2 = L3_2.open
-    L3_2(L4_2)
-  end
-  L1_1(L2_1, L3_1)
-end
-L1_1 = CreateThread
-function L2_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  while true do
-    L0_2 = Wait
-    L1_2 = 1000
-    L0_2(L1_2)
-    L0_2 = Config
-    L0_2 = L0_2.RealeStateNPC
-    if L0_2 then
-      L1_2 = L0_2.enabled
-      if L1_2 then
-        L1_2 = L0_2.location
-        if L1_2 then
-          goto lbl_23
-        end
-      end
-    end
-    L1_2 = housebrowser
-    L1_2 = L1_2.realeStateNPC
-    L1_2 = L1_2.spawned
-    if L1_2 then
-      L1_2 = housebrowser
-      L2_2 = L1_2
-      L1_2 = L1_2.deleteRealeStateNPC
-      L1_2(L2_2)
-      goto lbl_64
-      ::lbl_23::
-      L1_2 = L0_1
-      L2_2 = "realEstate"
-      L3_2 = 70.0
-      L4_2 = 85.0
-      L1_2, L2_2 = L1_2(L2_2, L3_2, L4_2)
-      L3_2 = GetEntityCoords
-      L4_2 = cache
-      L4_2 = L4_2.ped
-      L3_2 = L3_2(L4_2)
-      L4_2 = vec3
-      L5_2 = L0_2.location
-      L5_2 = L5_2.x
-      L6_2 = L0_2.location
-      L6_2 = L6_2.y
-      L7_2 = L0_2.location
-      L7_2 = L7_2.z
-      L4_2 = L4_2(L5_2, L6_2, L7_2)
-      L5_2 = L3_2 - L4_2
-      L5_2 = #L5_2
-      if L1_2 >= L5_2 then
-        L6_2 = housebrowser
-        L6_2 = L6_2.realeStateNPC
-        L6_2 = L6_2.spawned
-        if not L6_2 then
-          L6_2 = housebrowser
-          L7_2 = L6_2
-          L6_2 = L6_2.spawnRealeStateNPC
-          L6_2(L7_2)
-      end
-      elseif L2_2 <= L5_2 then
-        L6_2 = housebrowser
-        L6_2 = L6_2.realeStateNPC
-        L6_2 = L6_2.spawned
-        if L6_2 then
-          L6_2 = housebrowser
-          L7_2 = L6_2
-          L6_2 = L6_2.deleteRealeStateNPC
-          L6_2(L7_2)
-        end
-      end
-    end
-    ::lbl_64::
-  end
-end
-L1_1(L2_1)
-L1_1 = AddEventHandler
-L2_1 = "onResourceStop"
-function L3_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = GetCurrentResourceName
-  L1_2 = L1_2()
-  if A0_2 == L1_2 then
-    L1_2 = housebrowser
-    L2_2 = L1_2
-    L1_2 = L1_2.deleteRealeStateNPC
-    L1_2(L2_2)
-  end
-end
-L1_1(L2_1, L3_1)
-L1_1 = CreateThread
-function L2_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  while true do
-    L0_2 = 1000
-    L1_2 = housebrowser
-    L1_2 = L1_2.realeStateNPC
-    L1_2 = L1_2.spawned
-    if L1_2 then
-      L1_2 = DoesEntityExist
-      L2_2 = housebrowser
-      L2_2 = L2_2.realeStateNPC
-      L2_2 = L2_2.ped
-      L1_2 = L1_2(L2_2)
-      if L1_2 then
-        L1_2 = GetEntityCoords
-        L2_2 = cache
-        L2_2 = L2_2.ped
-        L1_2 = L1_2(L2_2)
-        L2_2 = GetEntityCoords
-        L3_2 = housebrowser
-        L3_2 = L3_2.realeStateNPC
-        L3_2 = L3_2.ped
-        L2_2 = L2_2(L3_2)
-        L3_2 = L1_2 - L2_2
-        L3_2 = #L3_2
-        if L3_2 < 2.0 then
-          L0_2 = 0
-          L4_2 = i18n
-          L4_2 = L4_2.t
-          L5_2 = "drawtext.reale_state_interact"
-          L4_2 = L4_2(L5_2)
-          if not L4_2 then
-            L4_2 = "[E] - Open House Browser"
-          end
-          L5_2 = DrawText3D
-          L6_2 = L2_2.x
-          L7_2 = L2_2.y
-          L8_2 = L2_2.z
-          L8_2 = L8_2 + 0.3
-          L9_2 = L4_2
-          L10_2 = "reale_state_npc"
-          L11_2 = "E"
-          L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-          L5_2 = IsControlJustPressed
-          L6_2 = 0
-          L7_2 = Keys
-          L7_2 = L7_2.E
-          L5_2 = L5_2(L6_2, L7_2)
-          if L5_2 then
-            L5_2 = IsNuiFocused
-            L5_2 = L5_2()
-            if L5_2 then
-              return
-            end
-            L5_2 = housebrowser
-            L6_2 = L5_2
-            L5_2 = L5_2.open
-            L5_2(L6_2)
-          end
-        end
-      end
-    end
-    L1_2 = Wait
-    L2_2 = L0_2
-    L1_2(L2_2)
-  end
-end
-L1_1(L2_1)
 
-
-
-
-
-
+        Wait(waitTime)
+    end
+end)

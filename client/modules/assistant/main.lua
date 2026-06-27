@@ -1,1945 +1,801 @@
+_G.assistant = {}
 
+local voiceConfig = Config.VoiceAssistant
+if not voiceConfig then
+  voiceConfig = {}
+end
 
+local pttActive = false
+local lastCommandTime = 0
+local lastWelcomedHouse = nil
 
+local cancelWaitKeyName = string.upper(voiceConfig.cancelWaitKey or "BACK")
 
+local awaitState = {
+  active = false,
+  context = nil,
+  choices = nil,
+  prompt = nil,
+}
 
+local function notify(message, notifType)
+  Notification(message, notifType or "info")
+end
 
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1, L8_1, L9_1, L10_1, L11_1, L12_1, L13_1, L14_1, L15_1, L16_1, L17_1, L18_1, L19_1, L20_1, L21_1, L22_1, L23_1, L24_1, L25_1, L26_1, L27_1, L28_1, L29_1, L30_1, L31_1, L32_1, L33_1, L34_1, L35_1, L36_1, L37_1, L38_1, L39_1, L40_1, L41_1, L42_1, L43_1, L44_1, L45_1, L46_1, L47_1
-L0_1 = _G
-L1_1 = {}
-L0_1.assistant = L1_1
-L0_1 = Config
-L0_1 = L0_1.VoiceAssistant
-if not L0_1 then
-  L0_1 = {}
+local function isTTSEnabled()
+  local ttsConfig = voiceConfig.tts or {}
+  return voiceConfig.enabled and ttsConfig.enabled
 end
-L1_1 = false
-L2_1 = 0
-L3_1 = nil
-L4_1 = string
-L4_1 = L4_1.upper
-L5_1 = L0_1.cancelWaitKey
-if not L5_1 then
-  L5_1 = "BACK"
-end
-L4_1 = L4_1(L5_1)
-L5_1 = {}
-L5_1.active = false
-L5_1.context = nil
-L5_1.choices = nil
-L5_1.prompt = nil
-function L6_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = Notification
-  L3_2 = A0_2
-  L4_2 = A1_2 or L4_2
-  if not A1_2 then
-    L4_2 = "info"
-  end
-  L2_2(L3_2, L4_2)
-end
-function L7_1()
-  local L0_2, L1_2
-  L0_2 = L0_1.tts
-  if not L0_2 then
-    L0_2 = {}
-  end
-  L1_2 = L0_1.enabled
-  if L1_2 then
-    L1_2 = L0_2.enabled
-  end
-  return L1_2
-end
-function L8_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = Debug
-  L2_2 = "speak"
-  L3_2 = "text"
-  L4_2 = A0_2
-  L1_2(L2_2, L3_2, L4_2)
-  L1_2 = L7_1
-  L1_2 = L1_2()
-  if not L1_2 then
+
+local function speak(text)
+  Debug("speak", "text", text)
+  if not isTTSEnabled() then
     return
   end
-  L1_2 = type
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if "string" ~= L1_2 then
+  if type(text) ~= "string" then
     return
   end
-  L2_2 = A0_2
-  L1_2 = A0_2.match
-  L3_2 = "^%s*(.-)%s*$"
-  L1_2 = L1_2(L2_2, L3_2)
-  if not L1_2 then
-    L1_2 = ""
-  end
-  if "" == L1_2 then
+  local trimmed = text:match("^%s*(.-)%s*$") or ""
+  if trimmed == "" then
     return
   end
-  L2_2 = SendReactMessage
-  L3_2 = "assistant:speak"
-  L4_2 = {}
-  L4_2.text = L1_2
-  L2_2(L3_2, L4_2)
+  SendReactMessage("assistant:speak", { text = trimmed })
 end
-function L9_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2
-  L3_2 = L6_1
-  L4_2 = A0_2
-  L5_2 = A1_2
-  L3_2(L4_2, L5_2)
-  L3_2 = L8_1
-  L4_2 = A2_2 or L4_2
-  if not A2_2 then
-    L4_2 = A0_2
-  end
-  L3_2(L4_2)
+
+local function notifyAndSpeak(message, notifType, speakText)
+  notify(message, notifType)
+  speak(speakText or message)
 end
-function L10_1()
-  local L0_2, L1_2
-  L0_2 = L0_1.assistantName
-  if not L0_2 then
-    L0_2 = "assistant"
-  end
-  return L0_2
+
+local function getAssistantName()
+  return voiceConfig.assistantName or "assistant"
 end
-function L11_1(A0_2)
-  local L1_2, L2_2
-  if not A0_2 then
-    L1_2 = false
-    return L1_2
+
+local function isZoneMessagesEnabled(houseId)
+  if not houseId then
+    return false
   end
-  L1_2 = Config
-  L1_2 = L1_2.Houses
-  if L1_2 then
-    L1_2 = Config
-    L1_2 = L1_2.Houses
-    L1_2 = L1_2[A0_2]
+  local houseConfig = Config.Houses and Config.Houses[houseId]
+  if not houseConfig then
+    return true
   end
-  if not L1_2 then
-    L2_2 = true
-    return L2_2
-  end
-  L2_2 = L1_2.assistantZoneMessagesEnabled
-  L2_2 = false ~= L2_2
-  return L2_2
+  return false ~= houseConfig.assistantZoneMessagesEnabled
 end
-function L12_1(A0_2)
-  local L1_2
-  if not A0_2 then
-    L1_2 = false
-    return L1_2
+
+local function hasHouseKey(houseId)
+  if not houseId then
+    return false
   end
-  L1_2 = CurrentHouse
-  if L1_2 ~= A0_2 then
-    L1_2 = false
-    return L1_2
+  if CurrentHouse ~= houseId then
+    return false
   end
-  L1_2 = CurrentHouseData
-  if L1_2 then
-    L1_2 = CurrentHouseData
-    L1_2 = L1_2.haskey
-    L1_2 = true == L1_2
+  if CurrentHouseData then
+    return true == CurrentHouseData.haskey
   end
-  return L1_2
+  return CurrentHouseData
 end
-function L13_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = GetEntityModel
-  L1_2 = cache
-  L1_2 = L1_2.ped
-  L0_2 = L0_2(L1_2)
-  L1_2 = joaat
-  L2_2 = "mp_f_freemode_01"
-  L1_2 = L1_2(L2_2)
-  L1_2 = L0_2 == L1_2
-  return L1_2
+
+local function isFemaleModel()
+  local model = GetEntityModel(cache.ped)
+  return model == joaat("mp_f_freemode_01")
 end
-function L14_1()
-  local L0_2, L1_2
-  L0_2 = L13_1
-  L0_2 = L0_2()
-  if L0_2 then
-    L0_2 = i18n
-    L0_2 = L0_2.t
-    L1_2 = "assistant_zone_welcome_female"
-    return L0_2(L1_2)
+
+local function getWelcomeMessage()
+  if isFemaleModel() then
+    return i18n.t("assistant_zone_welcome_female")
   end
-  L0_2 = i18n
-  L0_2 = L0_2.t
-  L1_2 = "assistant_zone_welcome_male"
-  return L0_2(L1_2)
+  return i18n.t("assistant_zone_welcome_male")
 end
-function L15_1()
-  local L0_2, L1_2
-  L0_2 = L13_1
-  L0_2 = L0_2()
-  if L0_2 then
-    L0_2 = i18n
-    L0_2 = L0_2.t
-    L1_2 = "assistant_zone_goodbye_female"
-    return L0_2(L1_2)
+
+local function getGoodbyeMessage()
+  if isFemaleModel() then
+    return i18n.t("assistant_zone_goodbye_female")
   end
-  L0_2 = i18n
-  L0_2 = L0_2.t
-  L1_2 = "assistant_zone_goodbye_male"
-  return L0_2(L1_2)
+  return i18n.t("assistant_zone_goodbye_male")
 end
-function L16_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = L0_1.enabled
-  if not L1_2 then
+
+local function onEnterZone(houseId)
+  if not voiceConfig.enabled then
     return
   end
-  if not A0_2 then
+  if not houseId then
     return
   end
-  L1_2 = L12_1
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
+  if not hasHouseKey(houseId) then
     return
   end
-  L1_2 = L11_1
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
+  if not isZoneMessagesEnabled(houseId) then
     return
   end
-  L1_2 = L3_1
-  if L1_2 == A0_2 then
+  if lastWelcomedHouse == houseId then
     return
   end
-  L1_2 = L9_1
-  L2_2 = L14_1
-  L2_2 = L2_2()
-  L3_2 = "info"
-  L1_2(L2_2, L3_2)
-  L3_1 = A0_2
+  notifyAndSpeak(getWelcomeMessage(), "info")
+  lastWelcomedHouse = houseId
 end
-function L17_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = Config
-  L0_2 = L0_2.Houses
-  L1_2 = CurrentHouse
-  L0_2 = L0_2[L1_2]
-  L0_2 = L0_2.upgrades
-  L1_2 = table
-  L1_2 = L1_2.includes
-  L2_2 = L0_2
-  L3_2 = "assistant"
-  return L1_2(L2_2, L3_2)
+
+local function hasAssistantUpgrade()
+  local houseConfig = Config.Houses[CurrentHouse]
+  return table.includes(houseConfig.upgrades, "assistant")
 end
-function L18_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L5_1.active = true
-  L5_1.context = A0_2
-  L5_1.choices = A2_2
-  L3_2 = A1_2 or L3_2
-  if not A1_2 then
-    L3_2 = ""
-  end
-  L5_1.prompt = L3_2
-  L3_2 = SendReactMessage
-  L4_2 = "assistant:awaitResponseStart"
-  L5_2 = {}
-  L6_2 = L5_1.prompt
-  L5_2.prompt = L6_2
-  L6_2 = L4_1
-  L5_2.cancelKey = L6_2
-  L6_2 = L5_1.context
-  L5_2.context = L6_2
-  L6_2 = L5_1.choices
-  L5_2.choices = L6_2
-  L3_2(L4_2, L5_2)
+
+local function startAwaitResponse(context, prompt, choices)
+  awaitState.active = true
+  awaitState.context = context
+  awaitState.choices = choices
+  awaitState.prompt = prompt or ""
+  SendReactMessage("assistant:awaitResponseStart", {
+    prompt = awaitState.prompt,
+    cancelKey = cancelWaitKeyName,
+    context = awaitState.context,
+    choices = awaitState.choices,
+  })
 end
-function L19_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = L5_1.active
-  if not L0_2 then
+
+local function stopAwaitResponse()
+  if not awaitState.active then
     return
   end
-  L5_1.active = false
-  L5_1.context = nil
-  L5_1.choices = nil
-  L5_1.prompt = nil
-  L0_2 = SendReactMessage
-  L1_2 = "assistant:awaitResponseStop"
-  L2_2 = {}
-  L0_2(L1_2, L2_2)
+  awaitState.active = false
+  awaitState.context = nil
+  awaitState.choices = nil
+  awaitState.prompt = nil
+  SendReactMessage("assistant:awaitResponseStop", {})
 end
-function L20_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  if not A0_2 then
-    L1_2 = nil
-    return L1_2
+
+local function findDeliveryByTitle(title)
+  if not title then
+    return nil
   end
-  L1_2 = 1
-  L2_2 = Config
-  L2_2 = L2_2.Deliveries
-  if not L2_2 then
-    L2_2 = {}
-  end
-  L2_2 = #L2_2
-  L3_2 = 1
-  for L4_2 = L1_2, L2_2, L3_2 do
-    L5_2 = Config
-    L5_2 = L5_2.Deliveries
-    L5_2 = L5_2[L4_2]
-    L6_2 = L5_2.title
-    if L6_2 == A0_2 then
-      return L5_2
+  local deliveries = Config.Deliveries or {}
+  for i = 1, #deliveries do
+    local delivery = deliveries[i]
+    if delivery.title == title then
+      return delivery
     end
   end
-  L1_2 = nil
-  return L1_2
+  return nil
 end
-function L21_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  if not A0_2 then
-    L1_2 = nil
-    return L1_2
+
+local function findDancerByTitle(title)
+  if not title then
+    return nil
   end
-  L1_2 = 1
-  L2_2 = Config
-  L2_2 = L2_2.Dancers
-  if not L2_2 then
-    L2_2 = {}
-  end
-  L2_2 = #L2_2
-  L3_2 = 1
-  for L4_2 = L1_2, L2_2, L3_2 do
-    L5_2 = Config
-    L5_2 = L5_2.Dancers
-    L5_2 = L5_2[L4_2]
-    L6_2 = L5_2.title
-    if L6_2 == A0_2 then
-      return L5_2
+  local dancers = Config.Dancers or {}
+  for i = 1, #dancers do
+    local dancer = dancers[i]
+    if dancer.title == title then
+      return dancer
     end
   end
-  L1_2 = nil
-  return L1_2
+  return nil
 end
-function L22_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L0_2 = Config
-  L0_2 = L0_2.Deliveries
-  if not L0_2 then
-    L0_2 = {}
+
+local function getDeliveryTitlesString()
+  local deliveries = Config.Deliveries or {}
+  if #deliveries == 0 then
+    return nil
   end
-  L1_2 = #L0_2
-  if 0 == L1_2 then
-    L1_2 = nil
-    return L1_2
+  local titles = {}
+  for i = 1, #deliveries do
+    titles[#titles + 1] = tostring(deliveries[i].title or "")
   end
-  L1_2 = {}
-  L2_2 = 1
-  L3_2 = #L0_2
-  L4_2 = 1
-  for L5_2 = L2_2, L3_2, L4_2 do
-    L6_2 = #L1_2
-    L6_2 = L6_2 + 1
-    L7_2 = tostring
-    L8_2 = L0_2[L5_2]
-    L8_2 = L8_2.title
-    if not L8_2 then
-      L8_2 = ""
-    end
-    L7_2 = L7_2(L8_2)
-    L1_2[L6_2] = L7_2
-  end
-  L2_2 = table
-  L2_2 = L2_2.concat
-  L3_2 = L1_2
-  L4_2 = ", "
-  return L2_2(L3_2, L4_2)
+  return table.concat(titles, ", ")
 end
-function L23_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L0_2 = Config
-  L0_2 = L0_2.Dancers
-  if not L0_2 then
-    L0_2 = {}
+
+local function getDancerTitlesString()
+  local dancers = Config.Dancers or {}
+  if #dancers == 0 then
+    return nil
   end
-  L1_2 = #L0_2
-  if 0 == L1_2 then
-    L1_2 = nil
-    return L1_2
+  local titles = {}
+  for i = 1, #dancers do
+    titles[#titles + 1] = tostring(dancers[i].title or "")
   end
-  L1_2 = {}
-  L2_2 = 1
-  L3_2 = #L0_2
-  L4_2 = 1
-  for L5_2 = L2_2, L3_2, L4_2 do
-    L6_2 = #L1_2
-    L6_2 = L6_2 + 1
-    L7_2 = tostring
-    L8_2 = L0_2[L5_2]
-    L8_2 = L8_2.title
-    if not L8_2 then
-      L8_2 = ""
-    end
-    L7_2 = L7_2(L8_2)
-    L1_2[L6_2] = L7_2
-  end
-  L2_2 = table
-  L2_2 = L2_2.concat
-  L3_2 = L1_2
-  L4_2 = ", "
-  return L2_2(L3_2, L4_2)
+  return table.concat(titles, ", ")
 end
-function L24_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = {}
-  L2_2 = 1
-  L3_2 = #A0_2
-  L4_2 = 1
-  for L5_2 = L2_2, L3_2, L4_2 do
-    L6_2 = tostring
-    L7_2 = A0_2[L5_2]
-    L7_2 = L7_2.title
-    if not L7_2 then
-      L7_2 = ""
-    end
-    L6_2 = L6_2(L7_2)
-    if "" ~= L6_2 then
-      L7_2 = #L1_2
-      L7_2 = L7_2 + 1
-      L1_2[L7_2] = L6_2
+
+local function extractTitlesFromList(list)
+  local titles = {}
+  for i = 1, #list do
+    local title = tostring(list[i].title or "")
+    if title ~= "" then
+      titles[#titles + 1] = title
     end
   end
-  return L1_2
+  return titles
 end
-function L25_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = CurrentHouse
-  if not L0_2 then
-    L0_2 = L9_1
-    L1_2 = i18n
-    L1_2 = L1_2.t
-    L2_2 = "assistant.not_in_house"
-    L1_2 = L1_2(L2_2)
-    L2_2 = "error"
-    L0_2(L1_2, L2_2)
-    L0_2 = false
-    return L0_2
+
+local function ensureInHouse()
+  if not CurrentHouse then
+    notifyAndSpeak(i18n.t("assistant.not_in_house"), "error")
+    return false
   end
-  L0_2 = true
-  return L0_2
+  return true
 end
-function L26_1()
-  local L0_2, L1_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
-    L0_2 = false
-    return L0_2
+
+local function ensureAssistantUpgrade()
+  if not ensureInHouse() then
+    return false
   end
-  L0_2 = L17_1
-  L0_2 = L0_2()
-  if L0_2 then
-    L0_2 = true
-    return L0_2
+  if hasAssistantUpgrade() then
+    return true
   end
-  L0_2 = Debug
-  L1_2 = "ensureAssistantUpgrade ::: Missing assistant upgrade"
-  L0_2(L1_2)
-  L0_2 = false
-  return L0_2
+  Debug("ensureAssistantUpgrade ::: Missing assistant upgrade")
+  return false
 end
-function L27_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L0_2 = L26_1
-  L0_2 = L0_2()
-  if not L0_2 then
+
+local function promptDeliveryChoice()
+  if not ensureAssistantUpgrade() then
     return
   end
-  L0_2 = Config
-  L0_2 = L0_2.DeliveriesEnabled
-  if not L0_2 then
-    L0_2 = L19_1
-    L0_2()
-    L0_2 = L9_1
-    L1_2 = i18n
-    L1_2 = L1_2.t
-    L2_2 = "assistant.delivery_disabled"
-    L1_2 = L1_2(L2_2)
-    L2_2 = "error"
-    L0_2(L1_2, L2_2)
+  if not Config.DeliveriesEnabled then
+    stopAwaitResponse()
+    notifyAndSpeak(i18n.t("assistant.delivery_disabled"), "error")
     return
   end
-  L0_2 = L22_1
-  L0_2 = L0_2()
-  if not L0_2 then
-    L1_2 = L19_1
-    L1_2()
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.delivery_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  local optionsStr = getDeliveryTitlesString()
+  if not optionsStr then
+    stopAwaitResponse()
+    notifyAndSpeak(i18n.t("assistant.delivery_not_found"), "error")
     return
   end
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.delivery_prompt"
-  L3_2 = {}
-  L3_2.options = L0_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = L18_1
-  L3_2 = "delivery"
-  L4_2 = L1_2
-  L5_2 = L24_1
-  L6_2 = Config
-  L6_2 = L6_2.Deliveries
-  if not L6_2 then
-    L6_2 = {}
-  end
-  L5_2, L6_2 = L5_2(L6_2)
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-  L2_2 = L9_1
-  L3_2 = L1_2
-  L4_2 = "info"
-  L5_2 = L1_2
-  L2_2(L3_2, L4_2, L5_2)
+  local promptText = i18n.t("assistant.delivery_prompt", { options = optionsStr })
+  startAwaitResponse("delivery", promptText, extractTitlesFromList(Config.Deliveries or {}))
+  notifyAndSpeak(promptText, "info", promptText)
 end
-function L28_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L0_2 = L26_1
-  L0_2 = L0_2()
-  if not L0_2 then
+
+local function promptDancerChoice()
+  if not ensureAssistantUpgrade() then
     return
   end
-  L0_2 = Config
-  L0_2 = L0_2.DancersEnabled
-  if not L0_2 then
-    L0_2 = L19_1
-    L0_2()
-    L0_2 = L9_1
-    L1_2 = i18n
-    L1_2 = L1_2.t
-    L2_2 = "assistant.dancer_disabled"
-    L1_2 = L1_2(L2_2)
-    L2_2 = "error"
-    L0_2(L1_2, L2_2)
+  if not Config.DancersEnabled then
+    stopAwaitResponse()
+    notifyAndSpeak(i18n.t("assistant.dancer_disabled"), "error")
     return
   end
-  L0_2 = L23_1
-  L0_2 = L0_2()
-  if not L0_2 then
-    L1_2 = L19_1
-    L1_2()
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.dancer_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  local optionsStr = getDancerTitlesString()
+  if not optionsStr then
+    stopAwaitResponse()
+    notifyAndSpeak(i18n.t("assistant.dancer_not_found"), "error")
     return
   end
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.dancer_prompt"
-  L3_2 = {}
-  L3_2.options = L0_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = L18_1
-  L3_2 = "dancer"
-  L4_2 = L1_2
-  L5_2 = L24_1
-  L6_2 = Config
-  L6_2 = L6_2.Dancers
-  if not L6_2 then
-    L6_2 = {}
-  end
-  L5_2, L6_2 = L5_2(L6_2)
-  L2_2(L3_2, L4_2, L5_2, L6_2)
-  L2_2 = L9_1
-  L3_2 = L1_2
-  L4_2 = "info"
-  L5_2 = L1_2
-  L2_2(L3_2, L4_2, L5_2)
+  local promptText = i18n.t("assistant.dancer_prompt", { options = optionsStr })
+  startAwaitResponse("dancer", promptText, extractTitlesFromList(Config.Dancers or {}))
+  notifyAndSpeak(promptText, "info", promptText)
 end
-function L29_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = tonumber
-  L1_2 = L0_1.cooldownMs
-  L0_2 = L0_2(L1_2)
-  if not L0_2 then
-    L0_2 = 1500
+
+local function checkCooldown()
+  local cooldown = tonumber(voiceConfig.cooldownMs) or 1500
+  local now = GetGameTimer()
+  local elapsed = now - lastCommandTime
+  if cooldown > elapsed then
+    return false
   end
-  L1_2 = GetGameTimer
-  L1_2 = L1_2()
-  L2_2 = L2_1
-  L2_2 = L1_2 - L2_2
-  if L0_2 > L2_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_1 = L1_2
-  L2_2 = true
-  return L2_2
+  lastCommandTime = now
+  return true
 end
-function L30_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = management
-  if L0_2 then
-    L0_2 = management
-    L0_2 = L0_2.visible
-    if L0_2 then
-      L0_2 = management
-      L0_2 = L0_2.updateUI
-      if L0_2 then
-        L0_2 = management
-        L1_2 = L0_2
-        L0_2 = L0_2.updateUI
-        L2_2 = CurrentHouse
-        L0_2(L1_2, L2_2)
-      end
-    end
+
+local function refreshManagementUI()
+  if management and management.visible and management.updateUI then
+    management:updateUI(CurrentHouse)
   end
 end
-function L31_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = L25_1
-  L1_2 = L1_2()
-  if not L1_2 then
+
+local function toggleLights(turnOn)
+  if not ensureInHouse() then
     return
   end
-  L1_2 = CurrentHouseData
-  if L1_2 then
-    L1_2 = CurrentHouseData
-    L1_2 = L1_2.lightsOn
+  local lightsOn = CurrentHouseData and CurrentHouseData.lightsOn
+  if lightsOn == nil then
+    lightsOn = lib.callback.await("housing:getLightsStatus", false, CurrentHouse)
   end
-  if nil == L1_2 then
-    L2_2 = lib
-    L2_2 = L2_2.callback
-    L2_2 = L2_2.await
-    L3_2 = "housing:getLightsStatus"
-    L4_2 = false
-    L5_2 = CurrentHouse
-    L2_2 = L2_2(L3_2, L4_2, L5_2)
-    L1_2 = L2_2
+  if lightsOn then
+    lightsOn = true
+  else
+    lightsOn = false
   end
-  if L1_2 then
-    L2_2 = true
-    if L2_2 then
-      goto lbl_27
-      L1_2 = L2_2 or L1_2
-    end
-  end
-  L1_2 = false
-  ::lbl_27::
-  if L1_2 == A0_2 then
-    L2_2 = L9_1
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    if A0_2 then
-      L4_2 = "assistant.light_already_on"
-      if L4_2 then
-        goto lbl_38
-      end
-    end
-    L4_2 = "assistant.light_already_off"
-    ::lbl_38::
-    L3_2 = L3_2(L4_2)
-    L4_2 = "info"
-    L2_2(L3_2, L4_2)
+  if lightsOn == turnOn then
+    local key = turnOn and "assistant.light_already_on" or "assistant.light_already_off"
+    notifyAndSpeak(i18n.t(key), "info")
     return
   end
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:toggleLights"
-  L4_2 = false
-  L5_2 = CurrentHouse
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  if nil == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.no_permission"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
+  local result = lib.callback.await("housing:toggleLights", false, CurrentHouse)
+  if result == nil then
+    notifyAndSpeak(i18n.t("assistant.no_permission"), "error")
     return
   end
-  L3_2 = CurrentHouseData
-  if L3_2 then
-    L3_2 = CurrentHouseData
-    L3_2.lightsOn = L2_2
+  if CurrentHouseData then
+    CurrentHouseData.lightsOn = result
   end
-  L3_2 = L9_1
-  L4_2 = i18n
-  L4_2 = L4_2.t
-  if L2_2 then
-    L5_2 = "assistant.light_on"
-    if L5_2 then
-      goto lbl_73
-    end
-  end
-  L5_2 = "assistant.light_off"
-  ::lbl_73::
-  L4_2 = L4_2(L5_2)
-  L5_2 = "success"
-  L3_2(L4_2, L5_2)
-  L3_2 = L30_1
-  L3_2()
+  local key = result and "assistant.light_on" or "assistant.light_off"
+  notifyAndSpeak(i18n.t(key), "success")
+  refreshManagementUI()
 end
-function L32_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = L25_1
-  L1_2 = L1_2()
-  if not L1_2 then
+
+local function orderDelivery(deliveryTitle)
+  if not ensureInHouse() then
     return
   end
-  L1_2 = Config
-  L1_2 = L1_2.DeliveriesEnabled
-  if not L1_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.delivery_disabled"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  if not Config.DeliveriesEnabled then
+    notifyAndSpeak(i18n.t("assistant.delivery_disabled"), "error")
     return
   end
-  if not A0_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.delivery_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  if not deliveryTitle then
+    notifyAndSpeak(i18n.t("assistant.delivery_not_found"), "error")
     return
   end
-  L1_2 = L20_1
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
-    L2_2 = L9_1
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "assistant.delivery_not_found"
-    L3_2 = L3_2(L4_2)
-    L4_2 = "error"
-    L2_2(L3_2, L4_2)
+  local delivery = findDeliveryByTitle(deliveryTitle)
+  if not delivery then
+    notifyAndSpeak(i18n.t("assistant.delivery_not_found"), "error")
     return
   end
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:orderDelivery"
-  L4_2 = false
-  L5_2 = CurrentHouse
-  L6_2 = L1_2.title
-  L7_2 = L1_2.price
-  L8_2 = L1_2.items
-  L2_2 = L2_2(L3_2, L4_2, L5_2, L6_2, L7_2, L8_2)
-  if not L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "no_money"
-    L6_2 = {}
-    L7_2 = L1_2.price
-    L6_2.price = L7_2
-    L4_2 = L4_2(L5_2, L6_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
+  local success = lib.callback.await("housing:orderDelivery", false, CurrentHouse, delivery.title, delivery.price, delivery.items)
+  if not success then
+    notifyAndSpeak(i18n.t("no_money", { price = delivery.price }), "error")
     return
   end
-  L3_2 = L9_1
-  L4_2 = i18n
-  L4_2 = L4_2.t
-  L5_2 = "assistant.delivery_ordered"
-  L6_2 = {}
-  L7_2 = L1_2.title
-  L6_2.title = L7_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = "success"
-  L3_2(L4_2, L5_2)
-  L3_2 = L30_1
-  L3_2()
+  notifyAndSpeak(i18n.t("assistant.delivery_ordered", { title = delivery.title }), "success")
+  refreshManagementUI()
 end
-function L33_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = L25_1
-  L1_2 = L1_2()
-  if not L1_2 then
+
+local function orderDancer(dancerTitle)
+  if not ensureInHouse() then
     return
   end
-  L1_2 = Config
-  L1_2 = L1_2.DancersEnabled
-  if not L1_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.dancer_disabled"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  if not Config.DancersEnabled then
+    notifyAndSpeak(i18n.t("assistant.dancer_disabled"), "error")
     return
   end
-  if not A0_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.dancer_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  if not dancerTitle then
+    notifyAndSpeak(i18n.t("assistant.dancer_not_found"), "error")
     return
   end
-  L1_2 = L21_1
-  L2_2 = A0_2
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
-    L2_2 = L9_1
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "assistant.dancer_not_found"
-    L3_2 = L3_2(L4_2)
-    L4_2 = "error"
-    L2_2(L3_2, L4_2)
+  local dancer = findDancerByTitle(dancerTitle)
+  if not dancer then
+    notifyAndSpeak(i18n.t("assistant.dancer_not_found"), "error")
     return
   end
-  L2_2 = lib
-  L2_2 = L2_2.callback
-  L2_2 = L2_2.await
-  L3_2 = "housing:orderDancer"
-  L4_2 = false
-  L5_2 = CurrentHouse
-  L6_2 = L1_2.title
-  L7_2 = L1_2.price
-  L2_2 = L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  if not L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "no_money"
-    L6_2 = {}
-    L7_2 = L1_2.price
-    L6_2.price = L7_2
-    L4_2 = L4_2(L5_2, L6_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
+  local success = lib.callback.await("housing:orderDancer", false, CurrentHouse, dancer.title, dancer.price)
+  if not success then
+    notifyAndSpeak(i18n.t("no_money", { price = dancer.price }), "error")
     return
   end
-  L3_2 = L9_1
-  L4_2 = i18n
-  L4_2 = L4_2.t
-  L5_2 = "assistant.dancer_ordered"
-  L6_2 = {}
-  L7_2 = L1_2.title
-  L6_2.title = L7_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = "success"
-  L3_2(L4_2, L5_2)
-  L3_2 = L30_1
-  L3_2()
+  notifyAndSpeak(i18n.t("assistant.dancer_ordered", { title = dancer.title }), "success")
+  refreshManagementUI()
 end
-function L34_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
+
+local function openQuickMenu()
+  if not ensureInHouse() then
     return
   end
-  L0_2 = management
-  if L0_2 then
-    L0_2 = management
-    L0_2 = L0_2.visible
-    if L0_2 then
-      L0_2 = management
-      L0_2 = L0_2.close
-      if L0_2 then
-        L0_2 = management
-        L1_2 = L0_2
-        L0_2 = L0_2.close
-        L0_2(L1_2)
-        L0_2 = SetNuiFocus
-        L1_2 = false
-        L2_2 = false
-        L0_2(L1_2, L2_2)
-        L0_2 = Wait
-        L1_2 = 100
-        L0_2(L1_2)
-      end
-    end
+  if management and management.visible and management.close then
+    management:close()
+    SetNuiFocus(false, false)
+    Wait(100)
   end
-  L0_2 = quickMenu
-  if L0_2 then
-    L0_2 = quickMenu
-    L0_2 = L0_2.open
-    if L0_2 then
-      goto lbl_47
-    end
+  if not (quickMenu and quickMenu.open) then
+    notifyAndSpeak(i18n.t("assistant.command_not_found", { name = getAssistantName() }), "error")
+    return
   end
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.command_not_found"
-  L3_2 = {}
-  L4_2 = L10_1
-  L4_2 = L4_2()
-  L3_2.name = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = "error"
-  L0_2(L1_2, L2_2)
-  do return end
-  ::lbl_47::
-  L0_2 = quickMenu
-  L1_2 = L0_2
-  L0_2 = L0_2.open
-  L0_2(L1_2)
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.quick_menu_opened"
-  L1_2 = L1_2(L2_2)
-  L2_2 = "success"
-  L0_2(L1_2, L2_2)
+  quickMenu:open()
+  notifyAndSpeak(i18n.t("assistant.quick_menu_opened"), "success")
 end
-function L35_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
+
+local function toggleDoor()
+  if not ensureInHouse() then
     return
   end
-  L0_2 = Config
-  L0_2 = L0_2.Houses
-  if L0_2 then
-    L0_2 = Config
-    L0_2 = L0_2.Houses
-    L1_2 = CurrentHouse
-    L0_2 = L0_2[L1_2]
-  end
-  if L0_2 then
-    L1_2 = L0_2.mlo
-    if not L1_2 then
-      L1_2 = CurrentHouseData
-      if L1_2 then
-        L1_2 = CurrentHouseData
-        L1_2 = L1_2.haskey
-        if L1_2 then
-          goto lbl_34
-        end
-      end
-      L1_2 = L9_1
-      L2_2 = i18n
-      L2_2 = L2_2.t
-      L3_2 = "not_have_keys"
-      L2_2 = L2_2(L3_2)
-      L3_2 = "error"
-      L1_2(L2_2, L3_2)
-      return
-    end
-  end
-  ::lbl_34::
-  L1_2 = TriggerEvent
-  L2_2 = "qb-houses:client:toggleDoorlock"
-  L1_2(L2_2)
-  L1_2 = L9_1
-  L2_2 = i18n
-  L2_2 = L2_2.t
-  L3_2 = "assistant.door_toggle_requested"
-  L2_2 = L2_2(L3_2)
-  L3_2 = "info"
-  L1_2(L2_2, L3_2)
-end
-function L36_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
-    return
-  end
-  L0_2 = CurrentApartment
-  if L0_2 then
-    L0_2 = L9_1
-    L1_2 = i18n
-    L1_2 = L1_2.t
-    L2_2 = "creator.polyzone_nearby"
-    L1_2 = L1_2(L2_2)
-    L2_2 = "error"
-    L0_2(L1_2, L2_2)
-    return
-  end
-  L0_2 = management
-  if L0_2 then
-    L0_2 = management
-    L0_2 = L0_2.visible
-    if L0_2 then
-      L0_2 = management
-      L0_2 = L0_2.close
-      if L0_2 then
-        L0_2 = management
-        L1_2 = L0_2
-        L0_2 = L0_2.close
-        L0_2(L1_2)
-        L0_2 = SetNuiFocus
-        L1_2 = false
-        L2_2 = false
-        L0_2(L1_2, L2_2)
-        L0_2 = Wait
-        L1_2 = 100
-        L0_2(L1_2)
-      end
-    end
-  end
-  L0_2 = TriggerEvent
-  L1_2 = "housing:decorate:open"
-  L0_2(L1_2)
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.decorate_opened"
-  L1_2 = L1_2(L2_2)
-  L2_2 = "success"
-  L0_2(L1_2, L2_2)
-end
-function L37_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = L25_1
-  L2_2 = L2_2()
-  if not L2_2 then
-    return
-  end
-  L2_2 = CurrentApartment
-  if L2_2 then
-    L2_2 = L9_1
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "creator.polyzone_nearby"
-    L3_2 = L3_2(L4_2)
-    L4_2 = "error"
-    L2_2(L3_2, L4_2)
-    return
-  end
-  if "charge" == A0_2 then
-    L2_2 = GetResourceState
-    L3_2 = "qs-smartphone"
-    L2_2 = L2_2(L3_2)
-    if "started" ~= L2_2 then
-      L2_2 = GetResourceState
-      L3_2 = "qs-smartphone-pro"
-      L2_2 = L2_2(L3_2)
-      if "started" ~= L2_2 then
-        L2_2 = L9_1
-        L3_2 = i18n
-        L3_2 = L3_2.t
-        L4_2 = "management.missing_best_phone"
-        L3_2 = L3_2(L4_2)
-        L4_2 = "error"
-        L2_2(L3_2, L4_2)
+  local houseConfig = Config.Houses and Config.Houses[CurrentHouse]
+  if houseConfig then
+    if not houseConfig.mlo then
+      if not (CurrentHouseData and CurrentHouseData.haskey) then
+        notifyAndSpeak(i18n.t("not_have_keys"), "error")
         return
       end
     end
   end
-  L2_2 = type
-  L3_2 = SetLocation
-  L2_2 = L2_2(L3_2)
-  if "function" ~= L2_2 then
-    L2_2 = L9_1
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "assistant.command_not_found"
-    L5_2 = {}
-    L6_2 = L10_1
-    L6_2 = L6_2()
-    L5_2.name = L6_2
-    L3_2 = L3_2(L4_2, L5_2)
-    L4_2 = "error"
-    L2_2(L3_2, L4_2)
+  TriggerEvent("qb-houses:client:toggleDoorlock")
+  notifyAndSpeak(i18n.t("assistant.door_toggle_requested"), "info")
+end
+
+local function openDecorate()
+  if not ensureInHouse() then
     return
   end
-  L2_2 = SetLocation
-  L3_2 = A0_2
-  L2_2(L3_2)
-  L2_2 = L9_1
-  L3_2 = i18n
-  L3_2 = L3_2.t
-  L4_2 = A1_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = "success"
-  L2_2(L3_2, L4_2)
+  if CurrentApartment then
+    notifyAndSpeak(i18n.t("creator.polyzone_nearby"), "error")
+    return
+  end
+  if management and management.visible and management.close then
+    management:close()
+    SetNuiFocus(false, false)
+    Wait(100)
+  end
+  TriggerEvent("housing:decorate:open")
+  notifyAndSpeak(i18n.t("assistant.decorate_opened"), "success")
 end
-function L38_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L0_2 = cleanerRobot
-  if L0_2 then
-    L0_2 = type
-    L1_2 = cleanerRobot
-    L1_2 = L1_2.getAll
-    L0_2 = L0_2(L1_2)
-    if "function" == L0_2 then
-      goto lbl_13
-    end
+
+local function setLocationMode(location, successKey)
+  if not ensureInHouse() then
+    return
   end
-  L0_2 = {}
-  do return L0_2 end
-  ::lbl_13::
-  L0_2 = {}
-  L1_2 = cleanerRobot
-  L2_2 = L1_2
-  L1_2 = L1_2.getAll
-  L1_2 = L1_2(L2_2)
-  if not L1_2 then
-    L1_2 = {}
+  if CurrentApartment then
+    notifyAndSpeak(i18n.t("creator.polyzone_nearby"), "error")
+    return
   end
-  L2_2 = pairs
-  L3_2 = L1_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    if L7_2 then
-      L8_2 = L7_2.house
-      L9_2 = CurrentHouse
-      if L8_2 == L9_2 then
-        L8_2 = #L0_2
-        L8_2 = L8_2 + 1
-        L9_2 = {}
-        L9_2.id = L6_2
-        L10_2 = L7_2.state
-        L9_2.state = L10_2
-        L0_2[L8_2] = L9_2
+  if location == "charge" then
+    local state = GetResourceState("qs-smartphone")
+    if state ~= "started" then
+      state = GetResourceState("qs-smartphone-pro")
+      if state ~= "started" then
+        notifyAndSpeak(i18n.t("management.missing_best_phone"), "error")
+        return
       end
     end
   end
-  return L0_2
+  if type(SetLocation) ~= "function" then
+    notifyAndSpeak(i18n.t("assistant.command_not_found", { name = getAssistantName() }), "error")
+    return
+  end
+  SetLocation(location)
+  notifyAndSpeak(i18n.t(successKey), "success")
 end
-function L39_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
-    return
+
+local function getCleanerRobotsInHouse()
+  if not (cleanerRobot and type(cleanerRobot.getAll) == "function") then
+    return {}
   end
-  L0_2 = cleanerRobot
-  if L0_2 then
-    L0_2 = type
-    L1_2 = cleanerRobot
-    L1_2 = L1_2.startCleaning
-    L0_2 = L0_2(L1_2)
-    if "function" == L0_2 then
-      goto lbl_28
+  local results = {}
+  local allRobots = cleanerRobot:getAll() or {}
+  for id, robot in pairs(allRobots) do
+    if robot and robot.house == CurrentHouse then
+      results[#results + 1] = { id = id, state = robot.state }
     end
   end
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.command_not_found"
-  L3_2 = {}
-  L4_2 = L10_1
-  L4_2 = L4_2()
-  L3_2.name = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = "error"
-  L0_2(L1_2, L2_2)
-  do return end
-  ::lbl_28::
-  L0_2 = CurrentHouseData
-  if L0_2 then
-    L0_2 = CurrentHouseData
-    L0_2 = L0_2.haskey
-    if L0_2 then
-      goto lbl_43
-    end
-  end
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "not_have_keys"
-  L1_2 = L1_2(L2_2)
-  L2_2 = "error"
-  L0_2(L1_2, L2_2)
-  do return end
-  ::lbl_43::
-  L0_2 = L38_1
-  L0_2 = L0_2()
-  L1_2 = #L0_2
-  if 0 == L1_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.cleaner_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  return results
+end
+
+local function startCleaner()
+  if not ensureInHouse() then
     return
   end
-  L1_2 = nil
-  L2_2 = false
-  L3_2 = false
-  L4_2 = 1
-  L5_2 = #L0_2
-  L6_2 = 1
-  for L7_2 = L4_2, L5_2, L6_2 do
-    L8_2 = L0_2[L7_2]
-    L8_2 = L8_2.state
-    if "docked" == L8_2 or "idle" == L8_2 then
-      if not L1_2 then
-        L9_2 = L0_2[L7_2]
-        L1_2 = L9_2.id
+  if not (cleanerRobot and type(cleanerRobot.startCleaning) == "function") then
+    notifyAndSpeak(i18n.t("assistant.command_not_found", { name = getAssistantName() }), "error")
+    return
+  end
+  if not (CurrentHouseData and CurrentHouseData.haskey) then
+    notifyAndSpeak(i18n.t("not_have_keys"), "error")
+    return
+  end
+  local robots = getCleanerRobotsInHouse()
+  if #robots == 0 then
+    notifyAndSpeak(i18n.t("assistant.cleaner_not_found"), "error")
+    return
+  end
+  local availableId = nil
+  local anyCleaning = false
+  local anyReturning = false
+  for i = 1, #robots do
+    local state = robots[i].state
+    if state == "docked" or state == "idle" then
+      if not availableId then
+        availableId = robots[i].id
       end
-    elseif "cleaning" == L8_2 then
-      L2_2 = true
-    elseif "returning" == L8_2 then
-      L3_2 = true
+    elseif state == "cleaning" then
+      anyCleaning = true
+    elseif state == "returning" then
+      anyReturning = true
     end
   end
-  if not L1_2 then
-    if L2_2 then
-      L4_2 = L9_1
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "assistant.cleaner_already_cleaning"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "info"
-      L4_2(L5_2, L6_2)
+  if not availableId then
+    if anyCleaning then
+      notifyAndSpeak(i18n.t("assistant.cleaner_already_cleaning"), "info")
       return
     end
-    if L3_2 then
-      L4_2 = L9_1
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "assistant.cleaner_already_returning"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "info"
-      L4_2(L5_2, L6_2)
+    if anyReturning then
+      notifyAndSpeak(i18n.t("assistant.cleaner_already_returning"), "info")
       return
     end
-    L4_2 = L9_1
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "assistant.cleaner_not_ready"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    L4_2(L5_2, L6_2)
+    notifyAndSpeak(i18n.t("assistant.cleaner_not_ready"), "error")
     return
   end
-  L4_2 = cleanerRobot
-  L5_2 = L4_2
-  L4_2 = L4_2.startCleaning
-  L6_2 = L1_2
-  L4_2(L5_2, L6_2)
-  L4_2 = cleanerRobot
-  L5_2 = L4_2
-  L4_2 = L4_2.getState
-  L6_2 = L1_2
-  L4_2 = L4_2(L5_2, L6_2)
-  if "cleaning" == L4_2 then
-    L5_2 = L9_1
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "assistant.cleaner_started"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "success"
-    L5_2(L6_2, L7_2)
+  cleanerRobot:startCleaning(availableId)
+  local newState = cleanerRobot:getState(availableId)
+  if newState == "cleaning" then
+    notifyAndSpeak(i18n.t("assistant.cleaner_started"), "success")
   else
-    L5_2 = L9_1
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "assistant.cleaner_start_failed"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L5_2(L6_2, L7_2)
+    notifyAndSpeak(i18n.t("assistant.cleaner_start_failed"), "error")
   end
 end
-function L40_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = L25_1
-  L0_2 = L0_2()
-  if not L0_2 then
+
+local function stopCleaner()
+  if not ensureInHouse() then
     return
   end
-  L0_2 = cleanerRobot
-  if L0_2 then
-    L0_2 = type
-    L1_2 = cleanerRobot
-    L1_2 = L1_2.stopCleaning
-    L0_2 = L0_2(L1_2)
-    if "function" == L0_2 then
-      goto lbl_28
-    end
-  end
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "assistant.command_not_found"
-  L3_2 = {}
-  L4_2 = L10_1
-  L4_2 = L4_2()
-  L3_2.name = L4_2
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = "error"
-  L0_2(L1_2, L2_2)
-  do return end
-  ::lbl_28::
-  L0_2 = CurrentHouseData
-  if L0_2 then
-    L0_2 = CurrentHouseData
-    L0_2 = L0_2.haskey
-    if L0_2 then
-      goto lbl_43
-    end
-  end
-  L0_2 = L9_1
-  L1_2 = i18n
-  L1_2 = L1_2.t
-  L2_2 = "not_have_keys"
-  L1_2 = L1_2(L2_2)
-  L2_2 = "error"
-  L0_2(L1_2, L2_2)
-  do return end
-  ::lbl_43::
-  L0_2 = L38_1
-  L0_2 = L0_2()
-  L1_2 = #L0_2
-  if 0 == L1_2 then
-    L1_2 = L9_1
-    L2_2 = i18n
-    L2_2 = L2_2.t
-    L3_2 = "assistant.cleaner_not_found"
-    L2_2 = L2_2(L3_2)
-    L3_2 = "error"
-    L1_2(L2_2, L3_2)
+  if not (cleanerRobot and type(cleanerRobot.stopCleaning) == "function") then
+    notifyAndSpeak(i18n.t("assistant.command_not_found", { name = getAssistantName() }), "error")
     return
   end
-  L1_2 = nil
-  L2_2 = false
-  L3_2 = false
-  L4_2 = 1
-  L5_2 = #L0_2
-  L6_2 = 1
-  for L7_2 = L4_2, L5_2, L6_2 do
-    L8_2 = L0_2[L7_2]
-    L8_2 = L8_2.state
-    if "cleaning" == L8_2 and not L1_2 then
-      L9_2 = L0_2[L7_2]
-      L1_2 = L9_2.id
-    elseif "returning" == L8_2 then
-      L2_2 = true
-    elseif "docked" == L8_2 or "idle" == L8_2 then
-      L3_2 = true
+  if not (CurrentHouseData and CurrentHouseData.haskey) then
+    notifyAndSpeak(i18n.t("not_have_keys"), "error")
+    return
+  end
+  local robots = getCleanerRobotsInHouse()
+  if #robots == 0 then
+    notifyAndSpeak(i18n.t("assistant.cleaner_not_found"), "error")
+    return
+  end
+  local cleaningId = nil
+  local anyReturning = false
+  local anyStopped = false
+  for i = 1, #robots do
+    local state = robots[i].state
+    if state == "cleaning" and not cleaningId then
+      cleaningId = robots[i].id
+    elseif state == "returning" then
+      anyReturning = true
+    elseif state == "docked" or state == "idle" then
+      anyStopped = true
     end
   end
-  if not L1_2 then
-    if L2_2 then
-      L4_2 = L9_1
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "assistant.cleaner_already_returning"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "info"
-      L4_2(L5_2, L6_2)
+  if not cleaningId then
+    if anyReturning then
+      notifyAndSpeak(i18n.t("assistant.cleaner_already_returning"), "info")
       return
     end
-    if L3_2 then
-      L4_2 = L9_1
-      L5_2 = i18n
-      L5_2 = L5_2.t
-      L6_2 = "assistant.cleaner_already_stopped"
-      L5_2 = L5_2(L6_2)
-      L6_2 = "info"
-      L4_2(L5_2, L6_2)
+    if anyStopped then
+      notifyAndSpeak(i18n.t("assistant.cleaner_already_stopped"), "info")
       return
     end
-    L4_2 = L9_1
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "assistant.cleaner_not_ready"
-    L5_2 = L5_2(L6_2)
-    L6_2 = "error"
-    L4_2(L5_2, L6_2)
+    notifyAndSpeak(i18n.t("assistant.cleaner_not_ready"), "error")
     return
   end
-  L4_2 = cleanerRobot
-  L5_2 = L4_2
-  L4_2 = L4_2.stopCleaning
-  L6_2 = L1_2
-  L4_2(L5_2, L6_2)
-  L4_2 = cleanerRobot
-  L5_2 = L4_2
-  L4_2 = L4_2.getState
-  L6_2 = L1_2
-  L4_2 = L4_2(L5_2, L6_2)
-  if "returning" == L4_2 then
-    L5_2 = L9_1
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "assistant.cleaner_stopped"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "success"
-    L5_2(L6_2, L7_2)
+  cleanerRobot:stopCleaning(cleaningId)
+  local newState = cleanerRobot:getState(cleaningId)
+  if newState == "returning" then
+    notifyAndSpeak(i18n.t("assistant.cleaner_stopped"), "success")
   else
-    L5_2 = L9_1
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "assistant.cleaner_stop_failed"
-    L6_2 = L6_2(L7_2)
-    L7_2 = "error"
-    L5_2(L6_2, L7_2)
+    notifyAndSpeak(i18n.t("assistant.cleaner_stop_failed"), "error")
   end
 end
-function L41_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = L26_1
-  L2_2 = L2_2()
-  if not L2_2 then
-    L2_2 = L19_1
-    L2_2()
-    L2_2 = true
-    return L2_2
+
+local function handleIntent(intent, entities)
+  if not ensureAssistantUpgrade() then
+    stopAwaitResponse()
+    return true
   end
-  L2_2 = L29_1
-  L2_2 = L2_2()
-  if not L2_2 then
-    L2_2 = true
-    return L2_2
+  if not checkCooldown() then
+    return true
   end
-  L2_2 = type
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if "string" ~= L2_2 or "" == A0_2 then
-    L2_2 = false
-    return L2_2
+  if type(intent) ~= "string" or intent == "" then
+    return false
   end
-  L2_2 = type
-  L3_2 = A1_2
-  L2_2 = L2_2(L3_2)
-  L2_2 = A1_2 or L2_2
-  if "table" ~= L2_2 or not A1_2 then
-    L2_2 = {}
+  local params = entities
+  if type(entities) ~= "table" or not entities then
+    params = {}
   end
-  L3_2 = L2_2.deliveryTitle
-  L4_2 = L2_2.dancerTitle
-  if "lightOn" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L31_1
-    L6_2 = true
-    L5_2(L6_2)
-    L5_2 = true
-    return L5_2
-  elseif "lightOff" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L31_1
-    L6_2 = false
-    L5_2(L6_2)
-    L5_2 = true
-    return L5_2
-  elseif "orderDelivery" == A0_2 then
-    if not L3_2 then
-      L5_2 = L27_1
-      L5_2()
-      L5_2 = true
-      return L5_2
+  local deliveryTitle = params.deliveryTitle
+  local dancerTitle = params.dancerTitle
+
+  if intent == "lightOn" then
+    stopAwaitResponse()
+    toggleLights(true)
+    return true
+  elseif intent == "lightOff" then
+    stopAwaitResponse()
+    toggleLights(false)
+    return true
+  elseif intent == "orderDelivery" then
+    if not deliveryTitle then
+      promptDeliveryChoice()
+      return true
     end
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L32_1
-    L6_2 = L3_2
-    L5_2(L6_2)
-    L5_2 = true
-    return L5_2
-  elseif "deliveryInquiry" == A0_2 then
-    L5_2 = L27_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "orderDancer" == A0_2 then
-    if not L4_2 then
-      L5_2 = L28_1
-      L5_2()
-      L5_2 = true
-      return L5_2
+    stopAwaitResponse()
+    orderDelivery(deliveryTitle)
+    return true
+  elseif intent == "deliveryInquiry" then
+    promptDeliveryChoice()
+    return true
+  elseif intent == "orderDancer" then
+    if not dancerTitle then
+      promptDancerChoice()
+      return true
     end
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L33_1
-    L6_2 = L4_2
-    L5_2(L6_2)
-    L5_2 = true
-    return L5_2
-  elseif "dancerInquiry" == A0_2 then
-    L5_2 = L28_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "cleanerStart" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L39_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "cleanerStop" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L40_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "toggleDoor" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L35_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "openQuickMenu" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L34_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "openDecorate" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L36_1
-    L5_2()
-    L5_2 = true
-    return L5_2
-  elseif "locateWardrobe" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L37_1
-    L6_2 = "wardrobe"
-    L7_2 = "assistant.wardrobe_location_mode"
-    L5_2(L6_2, L7_2)
-    L5_2 = true
-    return L5_2
-  elseif "locateStorage" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L37_1
-    L6_2 = "stash"
-    L7_2 = "assistant.storage_location_mode"
-    L5_2(L6_2, L7_2)
-    L5_2 = true
-    return L5_2
-  elseif "locateCharge" == A0_2 then
-    L5_2 = L19_1
-    L5_2()
-    L5_2 = L37_1
-    L6_2 = "charge"
-    L7_2 = "assistant.charge_location_mode"
-    L5_2(L6_2, L7_2)
-    L5_2 = true
-    return L5_2
+    stopAwaitResponse()
+    orderDancer(dancerTitle)
+    return true
+  elseif intent == "dancerInquiry" then
+    promptDancerChoice()
+    return true
+  elseif intent == "cleanerStart" then
+    stopAwaitResponse()
+    startCleaner()
+    return true
+  elseif intent == "cleanerStop" then
+    stopAwaitResponse()
+    stopCleaner()
+    return true
+  elseif intent == "toggleDoor" then
+    stopAwaitResponse()
+    toggleDoor()
+    return true
+  elseif intent == "openQuickMenu" then
+    stopAwaitResponse()
+    openQuickMenu()
+    return true
+  elseif intent == "openDecorate" then
+    stopAwaitResponse()
+    openDecorate()
+    return true
+  elseif intent == "locateWardrobe" then
+    stopAwaitResponse()
+    setLocationMode("wardrobe", "assistant.wardrobe_location_mode")
+    return true
+  elseif intent == "locateStorage" then
+    stopAwaitResponse()
+    setLocationMode("stash", "assistant.storage_location_mode")
+    return true
+  elseif intent == "locateCharge" then
+    stopAwaitResponse()
+    setLocationMode("charge", "assistant.charge_location_mode")
+    return true
   end
-  L5_2 = false
-  return L5_2
+
+  return false
 end
-L42_1 = RegisterNUICallback
-L43_1 = "assistant:intent"
-function L44_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = L0_1.enabled
-  if not L2_2 then
-    L2_2 = A1_2
-    L3_2 = {}
-    L3_2.handled = false
-    L2_2(L3_2)
+
+RegisterNUICallback("assistant:intent", function(data, cb)
+  if not voiceConfig.enabled then
+    cb({ handled = false })
     return
   end
-  if A0_2 then
-    L2_2 = A0_2.intent
-    if L2_2 then
-      goto lbl_16
-    end
+  local intent = data and data.intent or nil
+  local entities = data and data.entities or {}
+  local handled = handleIntent(intent, entities)
+  cb({ handled = handled })
+end)
+
+RegisterNUICallback("assistant:error", function(data, cb)
+  if not voiceConfig.enabled then
+    return cb("ok")
   end
-  L2_2 = nil
-  ::lbl_16::
-  if A0_2 then
-    L3_2 = A0_2.entities
-    if L3_2 then
-      goto lbl_23
-    end
-  end
-  L3_2 = {}
-  ::lbl_23::
-  L4_2 = L41_1
-  L5_2 = L2_2
-  L6_2 = L3_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = A1_2
-  L6_2 = {}
-  L6_2.handled = L4_2
-  L5_2(L6_2)
-end
-L42_1(L43_1, L44_1)
-L42_1 = RegisterNUICallback
-L43_1 = "assistant:error"
-function L44_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = L0_1.enabled
-  if not L2_2 then
-    L2_2 = A1_2
-    L3_2 = "ok"
-    return L2_2(L3_2)
-  end
-  if A0_2 then
-    L2_2 = A0_2.type
-    if L2_2 then
-      goto lbl_14
-    end
-  end
-  L2_2 = "unknown"
-  ::lbl_14::
-  if "not-supported" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.not_supported"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "not-allowed" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.mic_denied"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "no-speech" == L2_2 then
-    L3_2 = A1_2
-    L4_2 = "ok"
-    L3_2(L4_2)
+  local errorType = (data and data.type) or "unknown"
+
+  if errorType == "not-supported" then
+    notifyAndSpeak(i18n.t("assistant.not_supported"), "error")
+  elseif errorType == "not-allowed" then
+    notifyAndSpeak(i18n.t("assistant.mic_denied"), "error")
+  elseif errorType == "no-speech" then
+    cb("ok")
     return
-  elseif "audio-capture" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.audio_capture_failed"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "start-failed" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.not_supported"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "stt-config" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.stt_config_missing"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "stt-timeout" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.stt_timeout"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "stt-network" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.stt_network_error"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "stt-http" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.stt_http_error"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "stt-too-long" == L2_2 then
-    L3_2 = L9_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.too_long"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "intent-unhandled" == L2_2 then
-    L3_2 = type
-    L4_2 = A0_2
-    L3_2 = L3_2(L4_2)
-    if "table" == L3_2 then
-      L3_2 = type
-      L4_2 = A0_2.message
-      L3_2 = L3_2(L4_2)
-      if "string" == L3_2 then
-        L3_2 = A0_2.message
-        if L3_2 then
-          goto lbl_130
-        end
-      end
+  elseif errorType == "audio-capture" then
+    notifyAndSpeak(i18n.t("assistant.audio_capture_failed"), "error")
+  elseif errorType == "start-failed" then
+    notifyAndSpeak(i18n.t("assistant.not_supported"), "error")
+  elseif errorType == "stt-config" then
+    notifyAndSpeak(i18n.t("assistant.stt_config_missing"), "error")
+  elseif errorType == "stt-timeout" then
+    notifyAndSpeak(i18n.t("assistant.stt_timeout"), "error")
+  elseif errorType == "stt-network" then
+    notifyAndSpeak(i18n.t("assistant.stt_network_error"), "error")
+  elseif errorType == "stt-http" then
+    notifyAndSpeak(i18n.t("assistant.stt_http_error"), "error")
+  elseif errorType == "stt-too-long" then
+    notifyAndSpeak(i18n.t("assistant.too_long"), "error")
+  elseif errorType == "intent-unhandled" then
+    local message
+    if type(data) == "table" and type(data.message) == "string" and data.message then
+      message = data.message
+    else
+      message = i18n.t("assistant.ambiguous_command")
     end
-    L3_2 = i18n
-    L3_2 = L3_2.t
-    L4_2 = "assistant.ambiguous_command"
-    L3_2 = L3_2(L4_2)
-    ::lbl_130::
-    L4_2 = L9_1
-    L5_2 = L3_2
-    L6_2 = "info"
-    L7_2 = L3_2
-    L4_2(L5_2, L6_2, L7_2)
-  elseif "tts-config" == L2_2 then
-    L3_2 = L6_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.tts_config_missing"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "tts-timeout" == L2_2 then
-    L3_2 = L6_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.tts_timeout"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "tts-network" == L2_2 then
-    L3_2 = L6_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.tts_network_error"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "tts-http" == L2_2 then
-    L3_2 = L6_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.tts_http_error"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
-  elseif "tts-playback" == L2_2 then
-    L3_2 = L6_1
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "assistant.tts_playback_failed"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "error"
-    L3_2(L4_2, L5_2)
+    notifyAndSpeak(message, "info", message)
+  elseif errorType == "tts-config" then
+    notify(i18n.t("assistant.tts_config_missing"), "error")
+  elseif errorType == "tts-timeout" then
+    notify(i18n.t("assistant.tts_timeout"), "error")
+  elseif errorType == "tts-network" then
+    notify(i18n.t("assistant.tts_network_error"), "error")
+  elseif errorType == "tts-http" then
+    notify(i18n.t("assistant.tts_http_error"), "error")
+  elseif errorType == "tts-playback" then
+    notify(i18n.t("assistant.tts_playback_failed"), "error")
   end
-  L3_2 = A1_2
-  L4_2 = "ok"
-  L3_2(L4_2)
-end
-L42_1(L43_1, L44_1)
-L42_1 = Keys
-L43_1 = L0_1.pushToTalkKey
-L42_1 = L42_1[L43_1]
-L43_1 = Keys
-L44_1 = L0_1.cancelWaitKey
-L43_1 = L43_1[L44_1]
-L44_1 = false
-L45_1 = assistant
-function L46_1()
-  local L0_2, L1_2
-  L0_2 = L44_1
-  if L0_2 then
+
+  cb("ok")
+end)
+
+local pushToTalkControl = Keys[voiceConfig.pushToTalkKey]
+local cancelWaitControl = Keys[voiceConfig.cancelWaitKey]
+local tickRunning = false
+
+assistant.tick = function()
+  if tickRunning then
     return
   end
-  L0_2 = true
-  L44_1 = L0_2
-  L0_2 = L0_1.enabled
-  if not L0_2 then
+  tickRunning = true
+
+  if not voiceConfig.enabled then
     return
   end
-  L0_2 = CreateThread
-  function L1_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3
+
+  CreateThread(function()
     while true do
-      L0_3 = CurrentHouse
-      if not L0_3 then
+      if not CurrentHouse then
         break
       end
-      L0_3 = Wait
-      L1_3 = 0
-      L0_3(L1_3)
-      L0_3 = IsPauseMenuActive
-      L0_3 = L0_3()
-      if not L0_3 then
-        L0_3 = IsNuiFocused
-        L0_3 = L0_3()
-        if not L0_3 then
-          goto lbl_26
+      Wait(0)
+
+      if IsPauseMenuActive() or IsNuiFocused() then
+        if pttActive then
+          pttActive = false
+          SendReactMessage("assistant:pttStop", {})
         end
-      end
-      L0_3 = L1_1
-      if L0_3 then
-        L0_3 = false
-        L1_1 = L0_3
-        L0_3 = SendReactMessage
-        L1_3 = "assistant:pttStop"
-        L2_3 = {}
-        L0_3(L1_3, L2_3)
-        goto lbl_91
-        ::lbl_26::
-        L0_3 = IsControlJustPressed
-        L1_3 = 0
-        L2_3 = L42_1
-        L0_3 = L0_3(L1_3, L2_3)
-        if L0_3 then
-          L0_3 = L1_1
-          if not L0_3 then
-            L0_3 = L26_1
-            L0_3 = L0_3()
-            if not L0_3 then
+      else
+        if IsControlJustPressed(0, pushToTalkControl) then
+          if not pttActive then
+            if not ensureAssistantUpgrade() then
+              -- do nothing
             else
-              L0_3 = true
-              L1_1 = L0_3
-              L0_3 = tostring
-              L1_3 = L0_1.language
-              if not L1_3 then
-                L1_3 = Config
-                L1_3 = L1_3.Locale
-                if not L1_3 then
-                  L1_3 = "en-US"
-                end
-              end
-              L0_3 = L0_3(L1_3)
-              L1_3 = SendReactMessage
-              L2_3 = "assistant:pttStart"
-              L3_3 = {}
-              L4_3 = L10_1
-              L4_3 = L4_3()
-              L3_3.assistantName = L4_3
-              L3_3.language = L0_3
-              L1_3(L2_3, L3_3)
-              L0_3 = IsControlJustReleased
-              L1_3 = 0
-              L2_3 = L42_1
-              L0_3 = L0_3(L1_3, L2_3)
-              if L0_3 then
-                L0_3 = L1_1
-                if L0_3 then
-                  L0_3 = false
-                  L1_1 = L0_3
-                  L0_3 = SendReactMessage
-                  L1_3 = "assistant:pttStop"
-                  L2_3 = {}
-                  L0_3(L1_3, L2_3)
-                end
-              end
-              L0_3 = L5_1.active
-              if L0_3 then
-                L0_3 = L43_1
-                if L0_3 then
-                  L0_3 = IsControlJustPressed
-                  L1_3 = 0
-                  L2_3 = L43_1
-                  L0_3 = L0_3(L1_3, L2_3)
-                  if L0_3 then
-                    L0_3 = L19_1
-                    L0_3()
-                  end
-                end
-              end
+              pttActive = true
+              local language = tostring(voiceConfig.language or Config.Locale or "en-US")
+              SendReactMessage("assistant:pttStart", {
+                assistantName = getAssistantName(),
+                language = language,
+              })
             end
           end
         end
-      end
-      ::lbl_91::
-    end
-    L0_3 = false
-    L44_1 = L0_3
-  end
-  L0_2(L1_2)
-end
-L45_1.tick = L46_1
-L45_1 = AddEventHandler
-L46_1 = "housing:onEnterHouse"
-function L47_1()
-  local L0_2, L1_2
-  L0_2 = assistant
-  L0_2 = L0_2.tick
-  L0_2()
-end
-L45_1(L46_1, L47_1)
-L45_1 = AddEventHandler
-L46_1 = "housing:handleEnterZone"
-function L47_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = L16_1
-  L2_2 = A0_2
-  L1_2(L2_2)
-end
-L45_1(L46_1, L47_1)
-L45_1 = AddEventHandler
-L46_1 = "housing:handleExitZone"
-function L47_1(A0_2)
-  local L1_2, L2_2, L3_2
-  if not A0_2 then
-    L1_2 = nil
-    L3_1 = L1_2
-    return
-  end
-  L1_2 = L3_1
-  if L1_2 == A0_2 then
-    L1_2 = L0_1.enabled
-    if L1_2 then
-      L1_2 = L11_1
-      L2_2 = A0_2
-      L1_2 = L1_2(L2_2)
-      if L1_2 then
-        L1_2 = L9_1
-        L2_2 = L15_1
-        L2_2 = L2_2()
-        L3_2 = "info"
-        L1_2(L2_2, L3_2)
+
+        if IsControlJustReleased(0, pushToTalkControl) then
+          if pttActive then
+            pttActive = false
+            SendReactMessage("assistant:pttStop", {})
+          end
+        end
+
+        if awaitState.active and cancelWaitControl then
+          if IsControlJustPressed(0, cancelWaitControl) then
+            stopAwaitResponse()
+          end
+        end
       end
     end
-    L1_2 = nil
-    L3_1 = L1_2
-  end
+    tickRunning = false
+  end)
 end
-L45_1(L46_1, L47_1)
-L45_1 = AddEventHandler
-L46_1 = "onResourceStop"
-function L47_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = GetCurrentResourceName
-  L1_2 = L1_2()
-  if A0_2 ~= L1_2 then
+
+AddEventHandler("housing:onEnterHouse", function()
+  assistant.tick()
+end)
+
+AddEventHandler("housing:handleEnterZone", function(houseId)
+  onEnterZone(houseId)
+end)
+
+AddEventHandler("housing:handleExitZone", function(houseId)
+  if not houseId then
+    lastWelcomedHouse = nil
     return
   end
-  L1_2 = L19_1
-  L1_2()
-  L1_2 = nil
-  L3_1 = L1_2
-  L1_2 = L1_1
-  if L1_2 then
-    L1_2 = SendReactMessage
-    L2_2 = "assistant:pttStop"
-    L3_2 = {}
-    L1_2(L2_2, L3_2)
+  if lastWelcomedHouse == houseId then
+    if voiceConfig.enabled then
+      if isZoneMessagesEnabled(houseId) then
+        notifyAndSpeak(getGoodbyeMessage(), "info")
+      end
+    end
+    lastWelcomedHouse = nil
   end
-end
-L45_1(L46_1, L47_1)
+end)
 
-
-
-
-
-
+AddEventHandler("onResourceStop", function(resourceName)
+  if resourceName ~= GetCurrentResourceName() then
+    return
+  end
+  stopAwaitResponse()
+  lastWelcomedHouse = nil
+  if pttActive then
+    SendReactMessage("assistant:pttStop", {})
+  end
+end)

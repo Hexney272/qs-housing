@@ -1,3151 +1,1045 @@
 
+Utils = {}
+Utils.RenderList = {}
+Utils.Characters = {}
+Utils.Numbers = {}
+
+for i = 48, 57 do
+  table.insert(Utils.Numbers, string.char(i))
+end
+
+for i = 65, 90 do
+  table.insert(Utils.Characters, string.char(i))
+end
+
+for i = 97, 122 do
+  table.insert(Utils.Characters, string.char(i))
+end
+
+function Utils.GenerateRandomUid(charCount, numCount)
+  math.randomseed(GetGameTimer())
+  local result = ""
+  for i = 1, charCount do
+    result = result .. Utils.Characters[math.random(#Utils.Characters)]
+  end
+  for i = 1, numCount do
+    result = result .. Utils.Numbers[math.random(#Utils.Numbers)]
+  end
+  return result
+end
+
+function Utils.GenerateUniqueId(existingIds, charCount, numCount)
+  local uid = Utils.GenerateRandomUid(charCount, numCount)
+  while existingIds[uid] do
+    uid = Utils.GenerateRandomUid(charCount, numCount)
+  end
+  return uid
+end
 
 
+function Utils.GetForwardVector(rotation)
+  local rot = rotation * math.pi / 180.0
+  local cosX = math.abs(math.cos(rot.x))
+  return vec3(-math.sin(rot.z) * cosX, math.cos(rot.z) * cosX, math.sin(rot.x))
+end
+
+function Utils.SplitString(str, separator)
+  local sep = separator or ":"
+  local result = {}
+  local pattern = string.format("([^%s]+)", sep)
+  str:gsub(pattern, function(match)
+    result[#result + 1] = match
+  end)
+  return result
+end
+
+function Utils.BreakString(str, maxLength)
+  if not str then
+    return ""
+  end
+  if maxLength >= #str then
+    return str
+  end
+  local trimmed = string.sub(str, 1, maxLength)
+  local spacePos = string.find(trimmed, " ", #trimmed - 5)
+  if spacePos then
+    trimmed = string.sub(trimmed, 1, spacePos - 1)
+  end
+  return trimmed .. "..."
+end
 
 
-
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1
-L0_1 = {}
-Utils = L0_1
-L0_1 = Utils
-L1_1 = {}
-L0_1.RenderList = L1_1
-L0_1 = Utils
-L1_1 = {}
-L0_1.Characters = L1_1
-L0_1 = Utils
-L1_1 = {}
-L0_1.Numbers = L1_1
-L0_1 = 48
-L1_1 = 57
-L2_1 = 1
-for L3_1 = L0_1, L1_1, L2_1 do
-  L4_1 = table
-  L4_1 = L4_1.insert
-  L5_1 = Utils
-  L5_1 = L5_1.Numbers
-  L6_1 = string
-  L6_1 = L6_1.char
-  L7_1 = L3_1
-  L6_1 = L6_1(L7_1)
-  L4_1(L5_1, L6_1)
-end
-L0_1 = 65
-L1_1 = 90
-L2_1 = 1
-for L3_1 = L0_1, L1_1, L2_1 do
-  L4_1 = table
-  L4_1 = L4_1.insert
-  L5_1 = Utils
-  L5_1 = L5_1.Characters
-  L6_1 = string
-  L6_1 = L6_1.char
-  L7_1 = L3_1
-  L6_1 = L6_1(L7_1)
-  L4_1(L5_1, L6_1)
-end
-L0_1 = 97
-L1_1 = 122
-L2_1 = 1
-for L3_1 = L0_1, L1_1, L2_1 do
-  L4_1 = table
-  L4_1 = L4_1.insert
-  L5_1 = Utils
-  L5_1 = L5_1.Characters
-  L6_1 = string
-  L6_1 = L6_1.char
-  L7_1 = L3_1
-  L6_1 = L6_1(L7_1)
-  L4_1(L5_1, L6_1)
-end
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L2_2 = math
-  L2_2 = L2_2.randomseed
-  L3_2 = GetGameTimer
-  L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2 = L3_2()
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2)
-  L2_2 = ""
-  L3_2 = 1
-  L4_2 = A0_2
-  L5_2 = 1
-  for L6_2 = L3_2, L4_2, L5_2 do
-    L7_2 = L2_2
-    L8_2 = Utils
-    L8_2 = L8_2.Characters
-    L9_2 = math
-    L9_2 = L9_2.random
-    L10_2 = Utils
-    L10_2 = L10_2.Characters
-    L10_2 = #L10_2
-    L9_2 = L9_2(L10_2)
-    L8_2 = L8_2[L9_2]
-    L7_2 = L7_2 .. L8_2
-    L2_2 = L7_2
-  end
-  L3_2 = 1
-  L4_2 = A1_2
-  L5_2 = 1
-  for L6_2 = L3_2, L4_2, L5_2 do
-    L7_2 = L2_2
-    L8_2 = Utils
-    L8_2 = L8_2.Numbers
-    L9_2 = math
-    L9_2 = L9_2.random
-    L10_2 = Utils
-    L10_2 = L10_2.Numbers
-    L10_2 = #L10_2
-    L9_2 = L9_2(L10_2)
-    L8_2 = L8_2[L9_2]
-    L7_2 = L7_2 .. L8_2
-    L2_2 = L7_2
-  end
-  return L2_2
-end
-L0_1.GenerateRandomUid = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2
-  L3_2 = Utils
-  L3_2 = L3_2.GenerateRandomUid
-  L4_2 = A1_2
-  L5_2 = A2_2
-  L3_2 = L3_2(L4_2, L5_2)
-  while true do
-    L4_2 = A0_2[L3_2]
-    if not L4_2 then
-      break
-    end
-    L4_2 = Utils
-    L4_2 = L4_2.GenerateRandomUid
-    L5_2 = A1_2
-    L6_2 = A2_2
-    L4_2 = L4_2(L5_2, L6_2)
-    L3_2 = L4_2
-  end
-  return L3_2
-end
-L0_1.GenerateUniqueId = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = math
-  L1_2 = L1_2.pi
-  L1_2 = A0_2 * L1_2
-  A0_2 = L1_2 / 180.0
-  L1_2 = math
-  L1_2 = L1_2.abs
-  L2_2 = math
-  L2_2 = L2_2.cos
-  L3_2 = A0_2.x
-  L2_2, L3_2, L4_2, L5_2, L6_2 = L2_2(L3_2)
-  L1_2 = L1_2(L2_2, L3_2, L4_2, L5_2, L6_2)
-  L2_2 = vec3
-  L3_2 = math
-  L3_2 = L3_2.sin
-  L4_2 = A0_2.z
-  L3_2 = L3_2(L4_2)
-  L3_2 = -L3_2
-  L3_2 = L3_2 * L1_2
-  L4_2 = math
-  L4_2 = L4_2.cos
-  L5_2 = A0_2.z
-  L4_2 = L4_2(L5_2)
-  L4_2 = L4_2 * L1_2
-  L5_2 = math
-  L5_2 = L5_2.sin
-  L6_2 = A0_2.x
-  L5_2, L6_2 = L5_2(L6_2)
-  return L2_2(L3_2, L4_2, L5_2, L6_2)
-end
-L0_1.GetForwardVector = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = A1_2 or nil
-  if not A1_2 then
-    L2_2 = ":"
-  end
-  L3_2 = {}
-  L4_2 = string
-  L4_2 = L4_2.format
-  L5_2 = "([^%s]+)"
-  L6_2 = L2_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.gsub
-  L7_2 = L4_2
-  function L8_2(A0_3)
-    local L1_3, L2_3
-    L1_3 = L3_2
-    L1_3 = #L1_3
-    L2_3 = L1_3 + 1
-    L1_3 = L3_2
-    L1_3[L2_3] = A0_3
-  end
-  L5_2(L6_2, L7_2, L8_2)
-  return L3_2
-end
-L0_1.SplitString = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  if not A0_2 then
-    L2_2 = ""
-    return L2_2
-  end
-  L2_2 = #A0_2
-  if A1_2 >= L2_2 then
-    return A0_2
-  end
-  L2_2 = string
-  L2_2 = L2_2.sub
-  L3_2 = A0_2
-  L4_2 = 1
-  L5_2 = A1_2
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  L3_2 = string
-  L3_2 = L3_2.find
-  L4_2 = L2_2
-  L5_2 = " "
-  L6_2 = #L2_2
-  L6_2 = L6_2 - 5
-  L3_2 = L3_2(L4_2, L5_2, L6_2)
-  if L3_2 then
-    L4_2 = string
-    L4_2 = L4_2.sub
-    L5_2 = L2_2
-    L6_2 = 1
-    L7_2 = L3_2 - 1
-    L4_2 = L4_2(L5_2, L6_2, L7_2)
-    L2_2 = L4_2
-  end
-  L4_2 = L2_2
-  L5_2 = "..."
-  L4_2 = L4_2 .. L5_2
-  return L4_2
-end
-L0_1.BreakString = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  function L1_2(A0_3)
-    local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-    L1_3 = {}
-    L2_3 = pairs
-    L3_3 = A0_3
-    L2_3, L3_3, L4_3, L5_3 = L2_3(L3_3)
-    for L6_3, L7_3 in L2_3, L3_3, L4_3, L5_3 do
-      L8_3 = type
-      L9_3 = L7_3
-      L8_3 = L8_3(L9_3)
-      if "vector4" == L8_3 then
-        L8_3 = {}
-        L9_3 = L7_3.x
-        L8_3.x = L9_3
-        L9_3 = L7_3.y
-        L8_3.y = L9_3
-        L9_3 = L7_3.z
-        L8_3.z = L9_3
-        L9_3 = L7_3.w
-        L8_3.w = L9_3
-        L1_3[L6_3] = L8_3
+function Utils.JsonEncode(data)
+  local function convertForEncode(tbl)
+    local result = {}
+    for key, value in pairs(tbl) do
+      local valueType = type(value)
+      if "vector4" == valueType then
+        result[key] = { x = value.x, y = value.y, z = value.z, w = value.w }
+      elseif "vector3" == valueType then
+        result[key] = { x = value.x, y = value.y, z = value.z }
+      elseif "vector2" == valueType then
+        result[key] = { x = value.x, y = value.y }
+      elseif "table" == valueType then
+        result[key] = __utilsJsonEncodeInternalDecode(value)
       else
-        L8_3 = type
-        L9_3 = L7_3
-        L8_3 = L8_3(L9_3)
-        if "vector3" == L8_3 then
-          L8_3 = {}
-          L9_3 = L7_3.x
-          L8_3.x = L9_3
-          L9_3 = L7_3.y
-          L8_3.y = L9_3
-          L9_3 = L7_3.z
-          L8_3.z = L9_3
-          L1_3[L6_3] = L8_3
+        result[key] = value
+      end
+    end
+    return result
+  end
+  __utilsJsonEncodeInternalDecode = convertForEncode
+  return json.encode(convertForEncode(data))
+end
+
+
+function Utils.JsonDecode(jsonStr)
+  local function convertForDecode(tbl)
+    local result = {}
+    for key, value in pairs(tbl) do
+      if type(value) == "table" then
+        if value.x and value.y and value.z and value.w then
+          if Utils.TableCount(value) == 4 then
+            result[key] = vector4(value.x, value.y, value.z, value.w)
+          end
+        elseif value.x and value.x and value.z then
+          if Utils.TableCount(value) == 3 then
+            result[key] = vector3(value.x, value.y, value.z)
+          end
+        elseif value.x and value.y then
+          if Utils.TableCount(value) == 2 then
+            result[key] = vector2(value.x, value.y)
+          end
         else
-          L8_3 = type
-          L9_3 = L7_3
-          L8_3 = L8_3(L9_3)
-          if "vector2" == L8_3 then
-            L8_3 = {}
-            L9_3 = L7_3.x
-            L8_3.x = L9_3
-            L9_3 = L7_3.y
-            L8_3.y = L9_3
-            L1_3[L6_3] = L8_3
-          else
-            L8_3 = type
-            L9_3 = L7_3
-            L8_3 = L8_3(L9_3)
-            if "table" == L8_3 then
-              L8_3 = __utilsJsonEncodeInternalDecode
-              L9_3 = L7_3
-              L8_3 = L8_3(L9_3)
-              L1_3[L6_3] = L8_3
-            else
-              L1_3[L6_3] = L7_3
-            end
-          end
+          result[key] = __utilsJsonDecodeInternalDecode(value)
         end
+      else
+        result[key] = value
       end
     end
-    return L1_3
+    return result
   end
-  __utilsJsonEncodeInternalDecode = L1_2
-  L1_2 = json
-  L1_2 = L1_2.encode
-  L2_2 = __utilsJsonEncodeInternalDecode
-  L3_2 = A0_2
-  L2_2, L3_2 = L2_2(L3_2)
-  return L1_2(L2_2, L3_2)
+  __utilsJsonDecodeInternalDecode = convertForDecode
+  return convertForDecode(json.decode(jsonStr))
 end
-L0_1.JsonEncode = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  function L1_2(A0_3)
-    local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3
-    L1_3 = {}
-    L2_3 = pairs
-    L3_3 = A0_3
-    L2_3, L3_3, L4_3, L5_3 = L2_3(L3_3)
-    for L6_3, L7_3 in L2_3, L3_3, L4_3, L5_3 do
-      L8_3 = type
-      L9_3 = L7_3
-      L8_3 = L8_3(L9_3)
-      if "table" == L8_3 then
-        L8_3 = L7_3.x
-        if L8_3 then
-          L8_3 = L7_3.y
-          if L8_3 then
-            L8_3 = L7_3.z
-            if L8_3 then
-              L8_3 = L7_3.w
-              if L8_3 then
-                L8_3 = Utils
-                L8_3 = L8_3.TableCount
-                L9_3 = L7_3
-                L8_3 = L8_3(L9_3)
-                if 4 == L8_3 then
-                  L8_3 = vector4
-                  L9_3 = L7_3.x
-                  L10_3 = L7_3.y
-                  L11_3 = L7_3.z
-                  L12_3 = L7_3.w
-                  L8_3 = L8_3(L9_3, L10_3, L11_3, L12_3)
-                  L1_3[L6_3] = L8_3
-              end
-            end
-          end
-        end
-        else
-          L8_3 = L7_3.x
-          if L8_3 then
-            L8_3 = L7_3.x
-            if L8_3 then
-              L8_3 = L7_3.z
-              if L8_3 then
-                L8_3 = Utils
-                L8_3 = L8_3.TableCount
-                L9_3 = L7_3
-                L8_3 = L8_3(L9_3)
-                if 3 == L8_3 then
-                  L8_3 = vector3
-                  L9_3 = L7_3.x
-                  L10_3 = L7_3.y
-                  L11_3 = L7_3.z
-                  L8_3 = L8_3(L9_3, L10_3, L11_3)
-                  L1_3[L6_3] = L8_3
-              end
-            end
-          end
+
+
+function Utils.TableCopy(tbl)
+  local copy = {}
+  for key, value in pairs(tbl) do
+    if type(value) == "table" then
+      copy[key] = Utils.TableCopy(value)
+    else
+      copy[key] = value
+    end
+  end
+  return copy
+end
+
+function Utils.TableCount(tbl)
+  local count = 0
+  for _, _ in pairs(tbl) do
+    count = count + 1
+  end
+  return count
+end
+
+
+function Utils.PrintT(tbl)
+  local visited = {}
+  local function printRecursive(obj, indent)
+    local objStr = tostring(obj)
+    if visited[objStr] then
+      print(indent .. "*" .. tostring(obj))
+    else
+      visited[objStr] = true
+      if type(obj) == "table" then
+        for key, value in pairs(obj) do
+          if type(value) == "table" then
+            print(indent .. "[" .. key .. "] => " .. tostring(obj) .. " {")
+            printRecursive(value, indent .. string.rep(" ", string.len(key) + 8))
+            print(indent .. string.rep(" ", string.len(key) + 6) .. "}")
           else
-            L8_3 = L7_3.x
-            if L8_3 then
-              L8_3 = L7_3.y
-              if L8_3 then
-                L8_3 = Utils
-                L8_3 = L8_3.TableCount
-                L9_3 = L7_3
-                L8_3 = L8_3(L9_3)
-                if 2 == L8_3 then
-                  L8_3 = vector2
-                  L9_3 = L7_3.x
-                  L10_3 = L7_3.y
-                  L8_3 = L8_3(L9_3, L10_3)
-                  L1_3[L6_3] = L8_3
-              end
-            end
-            else
-              L8_3 = __utilsJsonDecodeInternalDecode
-              L9_3 = L7_3
-              L8_3 = L8_3(L9_3)
-              L1_3[L6_3] = L8_3
-            end
+            print(indent .. "[" .. key .. "] => " .. tostring(value))
           end
         end
       else
-        L1_3[L6_3] = L7_3
-      end
-    end
-    return L1_3
-  end
-  __utilsJsonDecodeInternalDecode = L1_2
-  L1_2 = __utilsJsonDecodeInternalDecode
-  L2_2 = json
-  L2_2 = L2_2.decode
-  L3_2 = A0_2
-  L2_2, L3_2 = L2_2(L3_2)
-  return L1_2(L2_2, L3_2)
-end
-L0_1.JsonDecode = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = {}
-  L2_2 = pairs
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = type
-    L9_2 = L7_2
-    L8_2 = L8_2(L9_2)
-    if "table" == L8_2 then
-      L8_2 = Utils
-      L8_2 = L8_2.TableCopy
-      L9_2 = L7_2
-      L8_2 = L8_2(L9_2)
-      L1_2[L6_2] = L8_2
-    else
-      L1_2[L6_2] = L7_2
-    end
-  end
-  return L1_2
-end
-L0_1.TableCopy = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = 0
-  L2_2 = pairs
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L1_2 = L1_2 + 1
-  end
-  return L1_2
-end
-L0_1.TableCount = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = {}
-  function L2_2(A0_3, A1_3)
-    local L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3, L13_3, L14_3
-    L2_3 = tostring
-    L3_3 = A0_3
-    L2_3 = L2_3(L3_3)
-    L3_3 = L1_2
-    L2_3 = L3_3[L2_3]
-    if L2_3 then
-      L2_3 = print
-      L3_3 = A1_3
-      L4_3 = "*"
-      L5_3 = tostring
-      L6_3 = A0_3
-      L5_3 = L5_3(L6_3)
-      L3_3 = L3_3 .. L4_3 .. L5_3
-      L2_3(L3_3)
-    else
-      L2_3 = tostring
-      L3_3 = A0_3
-      L2_3 = L2_3(L3_3)
-      L3_3 = L1_2
-      L3_3[L2_3] = true
-      L2_3 = type
-      L3_3 = A0_3
-      L2_3 = L2_3(L3_3)
-      if "table" == L2_3 then
-        L2_3 = pairs
-        L3_3 = A0_3
-        L2_3, L3_3, L4_3, L5_3 = L2_3(L3_3)
-        for L6_3, L7_3 in L2_3, L3_3, L4_3, L5_3 do
-          L8_3 = type
-          L9_3 = L7_3
-          L8_3 = L8_3(L9_3)
-          if "table" == L8_3 then
-            L8_3 = print
-            L9_3 = A1_3
-            L10_3 = "["
-            L11_3 = L6_3
-            L12_3 = "] => "
-            L13_3 = tostring
-            L14_3 = A0_3
-            L13_3 = L13_3(L14_3)
-            L14_3 = " {"
-            L9_3 = L9_3 .. L10_3 .. L11_3 .. L12_3 .. L13_3 .. L14_3
-            L8_3(L9_3)
-            L8_3 = L2_2
-            L9_3 = L7_3
-            L10_3 = A1_3
-            L11_3 = string
-            L11_3 = L11_3.rep
-            L12_3 = " "
-            L13_3 = string
-            L13_3 = L13_3.len
-            L14_3 = L6_3
-            L13_3 = L13_3(L14_3)
-            L13_3 = L13_3 + 8
-            L11_3 = L11_3(L12_3, L13_3)
-            L10_3 = L10_3 .. L11_3
-            L8_3(L9_3, L10_3)
-            L8_3 = print
-            L9_3 = A1_3
-            L10_3 = string
-            L10_3 = L10_3.rep
-            L11_3 = " "
-            L12_3 = string
-            L12_3 = L12_3.len
-            L13_3 = L6_3
-            L12_3 = L12_3(L13_3)
-            L12_3 = L12_3 + 6
-            L10_3 = L10_3(L11_3, L12_3)
-            L11_3 = "}"
-            L9_3 = L9_3 .. L10_3 .. L11_3
-            L8_3(L9_3)
-          else
-            L8_3 = print
-            L9_3 = A1_3
-            L10_3 = "["
-            L11_3 = L6_3
-            L12_3 = "] => "
-            L13_3 = tostring
-            L14_3 = L7_3
-            L13_3 = L13_3(L14_3)
-            L9_3 = L9_3 .. L10_3 .. L11_3 .. L12_3 .. L13_3
-            L8_3(L9_3)
-          end
-        end
-      else
-        L2_3 = print
-        L3_3 = A1_3
-        L4_3 = tostring
-        L5_3 = A0_3
-        L4_3 = L4_3(L5_3)
-        L3_3 = L3_3 .. L4_3
-        L2_3(L3_3)
+        print(indent .. tostring(obj))
       end
     end
   end
-  L3_2 = L2_2
-  L4_2 = A0_2
-  L5_2 = "  "
-  L3_2(L4_2, L5_2)
+  printRecursive(tbl, "  ")
 end
-L0_1.PrintT = L1_1
-L0_1 = Utils
-function L1_1(...)
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = print
-  L1_2 = string
-  L1_2 = L1_2.format
-  L2_2 = "[%s]"
-  L3_2 = Protected
-  L3_2 = L3_2.ResourceName
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2, L3_2 = ...
-  L0_2(L1_2, L2_2, L3_2)
+
+function Utils.Log(...)
+  print(string.format("[%s]", Protected.ResourceName), ...)
 end
-L0_1.Log = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2
-  L1_2 = AddBlipForCoord
-  L2_2 = A0_2.location
-  L2_2 = L2_2.x
-  L3_2 = A0_2.location
-  L3_2 = L3_2.y
-  L4_2 = A0_2.location
-  L4_2 = L4_2.z
-  L1_2 = L1_2(L2_2, L3_2, L4_2)
-  L2_2 = false
-  L3_2 = A0_2.shortRange
-  if L3_2 then
-    L2_2 = A0_2.shortRange
+
+
+function Utils.CreateBlip(opts)
+  local blip = AddBlipForCoord(opts.location.x, opts.location.y, opts.location.z)
+  local shortRange = false
+  if opts.shortRange then
+    shortRange = opts.shortRange
   end
-  L3_2 = SetBlipSprite
-  L4_2 = L1_2
-  L5_2 = A0_2.sprite
-  if not L5_2 then
-    L5_2 = 1
-  end
-  L3_2(L4_2, L5_2)
-  L3_2 = SetBlipColour
-  L4_2 = L1_2
-  L5_2 = A0_2.color
-  if not L5_2 then
-    L5_2 = 4
-  end
-  L3_2(L4_2, L5_2)
-  L3_2 = SetBlipScale
-  L4_2 = L1_2
-  L5_2 = A0_2.scale
-  if not L5_2 then
-    L5_2 = 1.0
-  end
-  L3_2(L4_2, L5_2)
-  L3_2 = SetBlipDisplay
-  L4_2 = L1_2
-  L5_2 = A0_2.display
-  if not L5_2 then
-    L5_2 = 4
-  end
-  L3_2(L4_2, L5_2)
-  L3_2 = SetBlipAsShortRange
-  L4_2 = L1_2
-  L5_2 = L2_2
-  L3_2(L4_2, L5_2)
-  L3_2 = SetBlipHighDetail
-  L4_2 = L1_2
-  L5_2 = A0_2.highDetail
-  if not L5_2 then
-    L5_2 = true
-  end
-  L3_2(L4_2, L5_2)
-  L3_2 = BeginTextCommandSetBlipName
-  L4_2 = "STRING"
-  L3_2(L4_2)
-  L3_2 = AddTextComponentString
-  L4_2 = A0_2.text
-  L3_2(L4_2)
-  L3_2 = EndTextCommandSetBlipName
-  L4_2 = L1_2
-  L3_2(L4_2)
-  return L1_2
+  SetBlipSprite(blip, opts.sprite or 1)
+  SetBlipColour(blip, opts.color or 4)
+  SetBlipScale(blip, opts.scale or 1.0)
+  SetBlipDisplay(blip, opts.display or 4)
+  SetBlipAsShortRange(blip, shortRange)
+  SetBlipHighDetail(blip, opts.highDetail or true)
+  BeginTextCommandSetBlipName("STRING")
+  AddTextComponentString(opts.text)
+  EndTextCommandSetBlipName(blip)
+  return blip
 end
-L0_1.CreateBlip = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = RemoveBlip
-  L2_2 = A0_2
-  L1_2(L2_2)
+
+function Utils.RemoveBlip(blip)
+  RemoveBlip(blip)
 end
-L0_1.RemoveBlip = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  if not A0_2 or A1_2 then
+
+function Utils.AddMarkerToRenderList(name, opts)
+  if not name or opts then
     return
   end
-  L2_2 = {}
-  L2_2.name = A0_2
-  L2_2.type = "marker"
-  L2_2.opts = A1_2
-  L3_2 = table
-  L3_2 = L3_2.insert
-  L4_2 = Utils
-  L4_2 = L4_2.RenderList
-  L5_2 = L2_2
-  L3_2(L4_2, L5_2)
-  return L2_2
+  local entry = {}
+  entry.name = name
+  entry.type = "marker"
+  entry.opts = opts
+  table.insert(Utils.RenderList, entry)
+  return entry
 end
-L0_1.AddMarkerToRenderList = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = ipairs
-  L2_2 = Utils
-  L2_2 = L2_2.RenderList
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    if L6_2 == A0_2 then
-      L7_2 = table
-      L7_2 = L7_2.remove
-      L8_2 = Utils
-      L8_2 = L8_2.RenderList
-      L9_2 = L5_2
-      L7_2(L8_2, L9_2)
+
+
+function Utils.RemoveMarkerFromRenderList(entry)
+  for i, item in ipairs(Utils.RenderList) do
+    if item == entry then
+      table.remove(Utils.RenderList, i)
       return
     end
   end
 end
-L0_1.RemoveMarkerFromRenderList = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  if not A0_2 or not A1_2 then
+
+function Utils.AddDrawTextToRenderList(name, opts)
+  if not name or not opts then
     return
   end
-  L2_2 = {}
-  L2_2.name = A0_2
-  L2_2.type = "drawText"
-  L2_2.opts = A1_2
-  L3_2 = table
-  L3_2 = L3_2.insert
-  L4_2 = Utils
-  L4_2 = L4_2.RenderList
-  L5_2 = L2_2
-  L3_2(L4_2, L5_2)
-  return L2_2
+  local entry = {}
+  entry.name = name
+  entry.type = "drawText"
+  entry.opts = opts
+  table.insert(Utils.RenderList, entry)
+  return entry
 end
-L0_1.AddDrawTextToRenderList = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = ipairs
-  L2_2 = Utils
-  L2_2 = L2_2.RenderList
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    if L6_2 == A0_2 then
-      L7_2 = table
-      L7_2 = L7_2.remove
-      L8_2 = Utils
-      L8_2 = L8_2.RenderList
-      L9_2 = L5_2
-      L7_2(L8_2, L9_2)
+
+function Utils.RemoveDrawTextFromRenderList(entry)
+  for i, item in ipairs(Utils.RenderList) do
+    if item == entry then
+      table.remove(Utils.RenderList, i)
       return
     end
   end
 end
-L0_1.RemoveDrawTextFromRenderList = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  A1_2 = A1_2 / 57.2958
-  L2_2 = math
-  L2_2 = L2_2.cos
-  L3_2 = A1_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = math
-  L3_2 = L3_2.sin
-  L4_2 = A1_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = type
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  if "vector4" == L4_2 then
-    L4_2 = vector4
-    L5_2 = A0_2.x
-    L5_2 = L2_2 * L5_2
-    L6_2 = A0_2.y
-    L6_2 = L3_2 * L6_2
-    L5_2 = L5_2 - L6_2
-    L6_2 = A0_2.x
-    L6_2 = L3_2 * L6_2
-    L7_2 = A0_2.y
-    L7_2 = L2_2 * L7_2
-    L6_2 = L6_2 + L7_2
-    L7_2 = A0_2.z
-    L8_2 = A0_2.w
-    return L4_2(L5_2, L6_2, L7_2, L8_2)
-  else
-    L4_2 = type
-    L5_2 = A0_2
-    L4_2 = L4_2(L5_2)
-    if "vector3" == L4_2 then
-      L4_2 = vector3
-      L5_2 = A0_2.x
-      L5_2 = L2_2 * L5_2
-      L6_2 = A0_2.y
-      L6_2 = L3_2 * L6_2
-      L5_2 = L5_2 - L6_2
-      L6_2 = A0_2.x
-      L6_2 = L3_2 * L6_2
-      L7_2 = A0_2.y
-      L7_2 = L2_2 * L7_2
-      L6_2 = L6_2 + L7_2
-      L7_2 = A0_2.z
-      return L4_2(L5_2, L6_2, L7_2)
+
+
+function Utils.RotateVectorFlat(vec, angleDeg)
+  angleDeg = angleDeg / 57.2958
+  local cosA = math.cos(angleDeg)
+  local sinA = math.sin(angleDeg)
+  local vecType = type(vec)
+  if "vector4" == vecType then
+    return vector4(cosA * vec.x - sinA * vec.y, sinA * vec.x + cosA * vec.y, vec.z, vec.w)
+  elseif "vector3" == vecType then
+    return vector3(cosA * vec.x - sinA * vec.y, sinA * vec.x + cosA * vec.y, vec.z)
+  elseif "vector2" == vecType then
+    return vector2(cosA * vec.x - sinA * vec.y, sinA * vec.x + cosA * vec.y)
+  end
+end
+
+function Utils.CreateCamera(camType, pos, rot, setActive, pointAtEntity, transitionTime)
+  local cam = CreateCamWithParams(camType, pos.x, pos.y, pos.z, 0, 0, 0, 50.0)
+  SetCamCoord(cam, pos.x, pos.y, pos.z)
+  SetCamRot(cam, rot.x, rot.y, rot.z, 2)
+  if setActive then
+    SetCamActive(cam, true)
+    RenderScriptCams(true, true, transitionTime or 0, true, true)
+  end
+  if pointAtEntity then
+    PointCamAtEntity(cam, pointAtEntity)
+  end
+  return cam
+end
+
+
+function Utils.DrawMarker(opts)
+  if not opts.location or not opts.location.x or not opts.location.y or not opts.location.z then
+    return
+  end
+  DrawMarker(
+    opts.type or 0,
+    opts.location.x,
+    opts.location.y,
+    opts.location.z,
+    (opts.direction and opts.direction.x) or 1.0,
+    (opts.direction and opts.direction.y) or 0.0,
+    (opts.direction and opts.direction.z) or 0.0,
+    (opts.rotation and opts.rotation.x) or 1.0,
+    (opts.rotation and opts.rotation.y) or 0.0,
+    (opts.rotation and opts.rotation.z) or 0.0,
+    (opts.scale and opts.scale.x) or 1.0,
+    (opts.scale and opts.scale.y) or 1.0,
+    (opts.scale and opts.scale.z) or 1.0,
+    opts.red or 255,
+    opts.green or 255,
+    opts.blue or 255,
+    opts.alpha or 255,
+    opts.bobUpAndDown or false,
+    (nil == opts.faceCamera) or opts.faceCamera,
+    opts.p19 or 2,
+    opts.rotate or false
+  )
+end
+
+
+function Utils.ShowNotification(text)
+  SetNotificationTextEntry("STRING")
+  AddTextComponentSubstringPlayerName(text)
+  DrawNotification(false, true)
+end
+
+function Utils.ShowHelpNotification(text)
+  AddTextEntry("housingHelp", text)
+  DisplayHelpTextThisFrame("housingHelp", false)
+end
+
+function Utils.DrawText3D(opts)
+  local worldPos = vector3(opts.location.x, opts.location.y, opts.location.z)
+  local onScreen, screenX, screenY = World3dToScreen2d(worldPos.x, worldPos.y, worldPos.z)
+  local camCoords = GetGameplayCamCoords()
+  local dist = GetDistanceBetweenCoords(camCoords, worldPos.x, worldPos.y, worldPos.z, true)
+  local sizeVal = opts.size or 1
+  local scale = sizeVal / dist * 2
+  local fov = GetGameplayCamFov()
+  scale = scale * (1 / fov * 100)
+  if onScreen then
+    SetTextScale(0.0 * scale, 0.55 * scale)
+    SetTextFont(opts.font or 1)
+    SetTextColour(opts.red or 255, opts.green or 255, opts.blue or 255, opts.alpha or 255)
+    SetTextDropshadow(0, 0, 0, 0, 255)
+    SetTextDropShadow()
+    SetTextOutline()
+    SetTextEntry("STRING")
+    SetTextCentre(1)
+    AddTextComponentString(opts.text)
+    DrawText(screenX, screenY)
+  end
+end
+
+
+if IsDuplicityVersion() then
+  function Utils.TriggerClientEvent(eventName, targetPlayer, ...)
+    local fullEventName = string.format("%s:%s", Protected.ResourceName, eventName)
+    TriggerClientEvent(fullEventName, targetPlayer, ...)
+    if Config.Debug then
+      Utils.Log(string.format("Triggering client event: %s (%i).", fullEventName, targetPlayer))
+    end
+  end
+
+  function Utils.GetDatabaseName()
+    local connStr = GetConvar("mysql_connection_string", "Empty")
+    if not connStr or "Empty" == connStr then
+      return false
     else
-      L4_2 = type
-      L5_2 = A0_2
-      L4_2 = L4_2(L5_2)
-      if "vector2" == L4_2 then
-        L4_2 = vector2
-        L5_2 = A0_2.x
-        L5_2 = L2_2 * L5_2
-        L6_2 = A0_2.y
-        L6_2 = L3_2 * L6_2
-        L5_2 = L5_2 - L6_2
-        L6_2 = A0_2.x
-        L6_2 = L3_2 * L6_2
-        L7_2 = A0_2.y
-        L7_2 = L2_2 * L7_2
-        L6_2 = L6_2 + L7_2
-        return L4_2(L5_2, L6_2)
-      end
-    end
-  end
-end
-L0_1.RotateVectorFlat = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2, A3_2, A4_2, A5_2)
-  local L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L6_2 = CreateCamWithParams
-  L7_2 = A0_2
-  L8_2 = A1_2.x
-  L9_2 = A1_2.y
-  L10_2 = A1_2.z
-  L11_2 = 0
-  L12_2 = 0
-  L13_2 = 0
-  L14_2 = 50.0
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L7_2 = SetCamCoord
-  L8_2 = L6_2
-  L9_2 = A1_2.x
-  L10_2 = A1_2.y
-  L11_2 = A1_2.z
-  L7_2(L8_2, L9_2, L10_2, L11_2)
-  L7_2 = SetCamRot
-  L8_2 = L6_2
-  L9_2 = A2_2.x
-  L10_2 = A2_2.y
-  L11_2 = A2_2.z
-  L12_2 = 2
-  L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
-  if A3_2 then
-    L7_2 = SetCamActive
-    L8_2 = L6_2
-    L9_2 = true
-    L7_2(L8_2, L9_2)
-    L7_2 = RenderScriptCams
-    L8_2 = true
-    L9_2 = true
-    L10_2 = A5_2 or L10_2
-    if not A5_2 then
-      L10_2 = 0
-    end
-    L11_2 = true
-    L12_2 = true
-    L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
-  end
-  if A4_2 then
-    L7_2 = PointCamAtEntity
-    L8_2 = L6_2
-    L9_2 = A4_2
-    L7_2(L8_2, L9_2)
-  end
-  return L6_2
-end
-L0_1.CreateCamera = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2
-  L1_2 = A0_2.location
-  if L1_2 then
-    L1_2 = A0_2.location
-    L1_2 = L1_2.x
-    if L1_2 then
-      L1_2 = A0_2.location
-      L1_2 = L1_2.y
-      if L1_2 then
-        L1_2 = A0_2.location
-        L1_2 = L1_2.z
-        if L1_2 then
-          goto lbl_17
-        end
-      end
-    end
-  end
-  do return end
-  ::lbl_17::
-  L1_2 = DrawMarker
-  L2_2 = A0_2.type
-  if not L2_2 then
-    L2_2 = 0
-  end
-  L3_2 = A0_2.location
-  L3_2 = L3_2.x
-  L4_2 = A0_2.location
-  L4_2 = L4_2.y
-  L5_2 = A0_2.location
-  L5_2 = L5_2.z
-  L6_2 = A0_2.direction
-  if L6_2 then
-    L6_2 = A0_2.direction
-    L6_2 = L6_2.x
-    if L6_2 then
-      goto lbl_36
-    end
-  end
-  L6_2 = 1.0
-  ::lbl_36::
-  L7_2 = A0_2.direction
-  if L7_2 then
-    L7_2 = A0_2.direction
-    L7_2 = L7_2.y
-    if L7_2 then
-      goto lbl_44
-    end
-  end
-  L7_2 = 0.0
-  ::lbl_44::
-  L8_2 = A0_2.direction
-  if L8_2 then
-    L8_2 = A0_2.direction
-    L8_2 = L8_2.z
-    if L8_2 then
-      goto lbl_52
-    end
-  end
-  L8_2 = 0.0
-  ::lbl_52::
-  L9_2 = A0_2.rotation
-  if L9_2 then
-    L9_2 = A0_2.rotation
-    L9_2 = L9_2.x
-    if L9_2 then
-      goto lbl_60
-    end
-  end
-  L9_2 = 1.0
-  ::lbl_60::
-  L10_2 = A0_2.rotation
-  if L10_2 then
-    L10_2 = A0_2.rotation
-    L10_2 = L10_2.y
-    if L10_2 then
-      goto lbl_68
-    end
-  end
-  L10_2 = 0.0
-  ::lbl_68::
-  L11_2 = A0_2.rotation
-  if L11_2 then
-    L11_2 = A0_2.rotation
-    L11_2 = L11_2.z
-    if L11_2 then
-      goto lbl_76
-    end
-  end
-  L11_2 = 0.0
-  ::lbl_76::
-  L12_2 = A0_2.scale
-  if L12_2 then
-    L12_2 = A0_2.scale
-    L12_2 = L12_2.x
-    if L12_2 then
-      goto lbl_84
-    end
-  end
-  L12_2 = 1.0
-  ::lbl_84::
-  L13_2 = A0_2.scale
-  if L13_2 then
-    L13_2 = A0_2.scale
-    L13_2 = L13_2.y
-    if L13_2 then
-      goto lbl_92
-    end
-  end
-  L13_2 = 1.0
-  ::lbl_92::
-  L14_2 = A0_2.scale
-  if L14_2 then
-    L14_2 = A0_2.scale
-    L14_2 = L14_2.z
-    if L14_2 then
-      goto lbl_100
-    end
-  end
-  L14_2 = 1.0
-  ::lbl_100::
-  L15_2 = A0_2.red
-  if not L15_2 then
-    L15_2 = 255
-  end
-  L16_2 = A0_2.green
-  if not L16_2 then
-    L16_2 = 255
-  end
-  L17_2 = A0_2.blue
-  if not L17_2 then
-    L17_2 = 255
-  end
-  L18_2 = A0_2.alpha
-  if not L18_2 then
-    L18_2 = 255
-  end
-  L19_2 = A0_2.bobUpAndDown
-  if not L19_2 then
-    L19_2 = false
-  end
-  L20_2 = A0_2.faceCamera
-  L20_2 = nil == L20_2 or L20_2
-  L21_2 = A0_2.p19
-  if not L21_2 then
-    L21_2 = 2
-  end
-  L22_2 = A0_2.rotate
-  if not L22_2 then
-    L22_2 = false
-  end
-  L1_2(L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2)
-end
-L0_1.DrawMarker = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = SetNotificationTextEntry
-  L2_2 = "STRING"
-  L1_2(L2_2)
-  L1_2 = AddTextComponentSubstringPlayerName
-  L2_2 = A0_2
-  L1_2(L2_2)
-  L1_2 = DrawNotification
-  L2_2 = false
-  L3_2 = true
-  L1_2(L2_2, L3_2)
-end
-L0_1.ShowNotification = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = AddTextEntry
-  L2_2 = "housingHelp"
-  L3_2 = A0_2
-  L1_2(L2_2, L3_2)
-  L1_2 = DisplayHelpTextThisFrame
-  L2_2 = "housingHelp"
-  L3_2 = false
-  L1_2(L2_2, L3_2)
-end
-L0_1.ShowHelpNotification = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2
-  L1_2 = vector3
-  L2_2 = A0_2.location
-  L2_2 = L2_2.x
-  L3_2 = A0_2.location
-  L3_2 = L3_2.y
-  L4_2 = A0_2.location
-  L4_2 = L4_2.z
-  L1_2 = L1_2(L2_2, L3_2, L4_2)
-  L2_2 = World3dToScreen2d
-  L3_2 = L1_2.x
-  L4_2 = L1_2.y
-  L5_2 = L1_2.z
-  L2_2, L3_2, L4_2 = L2_2(L3_2, L4_2, L5_2)
-  L5_2 = GetGameplayCamCoords
-  L5_2 = L5_2()
-  L6_2 = GetDistanceBetweenCoords
-  L7_2 = L5_2
-  L8_2 = L1_2.x
-  L9_2 = L1_2.y
-  L10_2 = L1_2.z
-  L11_2 = true
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
-  L7_2 = size
-  L8_2 = A0_2.size
-  if not L8_2 then
-    L8_2 = 1
-  end
-  L9_2 = L8_2 / L6_2
-  L9_2 = L9_2 * 2
-  L10_2 = GetGameplayCamFov
-  L10_2 = L10_2()
-  L11_2 = 1
-  L10_2 = L11_2 / L10_2
-  L10_2 = L10_2 * 100
-  L9_2 = L9_2 * L10_2
-  if L2_2 then
-    L11_2 = SetTextScale
-    L12_2 = 0.0 * L9_2
-    L13_2 = 0.55 * L9_2
-    L11_2(L12_2, L13_2)
-    L11_2 = SetTextFont
-    L12_2 = A0_2.font
-    if not L12_2 then
-      L12_2 = 1
-    end
-    L11_2(L12_2)
-    L11_2 = SetTextColour
-    L12_2 = A0_2.red
-    if not L12_2 then
-      L12_2 = 255
-    end
-    L13_2 = A0_2.green
-    if not L13_2 then
-      L13_2 = 255
-    end
-    L14_2 = A0_2.blue
-    if not L14_2 then
-      L14_2 = 255
-    end
-    L15_2 = A0_2.alpha
-    if not L15_2 then
-      L15_2 = 255
-    end
-    L11_2(L12_2, L13_2, L14_2, L15_2)
-    L11_2 = SetTextDropshadow
-    L12_2 = 0
-    L13_2 = 0
-    L14_2 = 0
-    L15_2 = 0
-    L16_2 = 255
-    L11_2(L12_2, L13_2, L14_2, L15_2, L16_2)
-    L11_2 = SetTextDropShadow
-    L11_2()
-    L11_2 = SetTextOutline
-    L11_2()
-    L11_2 = SetTextEntry
-    L12_2 = "STRING"
-    L11_2(L12_2)
-    L11_2 = SetTextCentre
-    L12_2 = 1
-    L11_2(L12_2)
-    L11_2 = AddTextComponentString
-    L12_2 = A0_2.text
-    L11_2(L12_2)
-    L11_2 = DrawText
-    L12_2 = L3_2
-    L13_2 = L4_2
-    L11_2(L12_2, L13_2)
-  end
-end
-L0_1.DrawText3D = L1_1
-L0_1 = IsDuplicityVersion
-L0_1 = L0_1()
-if L0_1 then
-  L0_1 = Utils
-  function L1_1(A0_2, A1_2, ...)
-    local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-    L2_2 = string
-    L2_2 = L2_2.format
-    L3_2 = "%s:%s"
-    L4_2 = Protected
-    L4_2 = L4_2.ResourceName
-    L5_2 = A0_2
-    L2_2 = L2_2(L3_2, L4_2, L5_2)
-    L3_2 = TriggerClientEvent
-    L4_2 = L2_2
-    L5_2 = A1_2
-    L6_2, L7_2 = ...
-    L3_2(L4_2, L5_2, L6_2, L7_2)
-    L3_2 = Config
-    L3_2 = L3_2.Debug
-    if L3_2 then
-      L3_2 = Utils
-      L3_2 = L3_2.Log
-      L4_2 = string
-      L4_2 = L4_2.format
-      L5_2 = "Triggering client event: %s (%i)."
-      L6_2 = L2_2
-      L7_2 = A1_2
-      L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2, L6_2, L7_2)
-      L3_2(L4_2, L5_2, L6_2, L7_2)
-    end
-  end
-  L0_1.TriggerClientEvent = L1_1
-  L0_1 = Utils
-  function L1_1()
-    local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-    L0_2 = GetConvar
-    L1_2 = "mysql_connection_string"
-    L2_2 = "Empty"
-    L0_2 = L0_2(L1_2, L2_2)
-    if not L0_2 or "Empty" == L0_2 then
-      L1_2 = false
-      return L1_2
-    else
-      L1_2 = string
-      L1_2 = L1_2.find
-      L2_2 = L0_2
-      L3_2 = "database="
-      L1_2, L2_2 = L1_2(L2_2, L3_2)
-      if not L1_2 or not L2_2 then
-        L3_2 = string
-        L3_2 = L3_2.find
-        L4_2 = L0_2
-        L5_2 = "mysql://"
-        L3_2, L4_2 = L3_2(L4_2, L5_2)
-        if not L3_2 or not L4_2 then
-          L5_2 = false
-          return L5_2
+      local dbStart, dbEnd = string.find(connStr, "database=")
+      if not dbStart or not dbEnd then
+        local protoStart, protoEnd = string.find(connStr, "mysql://")
+        if not protoStart or not protoEnd then
+          return false
         else
-          L5_2 = string
-          L5_2 = L5_2.find
-          L6_2 = L0_2
-          L7_2 = "@"
-          L8_2 = L4_2
-          L5_2, L6_2 = L5_2(L6_2, L7_2, L8_2)
-          L7_2 = string
-          L7_2 = L7_2.find
-          L8_2 = L0_2
-          L9_2 = "/"
-          L10_2 = L6_2 + 1
-          L7_2, L8_2 = L7_2(L8_2, L9_2, L10_2)
-          L9_2 = string
-          L9_2 = L9_2.find
-          L10_2 = L0_2
-          L11_2 = "?"
-          L9_2, L10_2 = L9_2(L10_2, L11_2)
-          if L10_2 then
-            L11_2 = L10_2 - 1
-            if L11_2 then
-              goto lbl_59
-            end
+          local _, atEnd = string.find(connStr, "@", protoEnd)
+          local _, slashEnd = string.find(connStr, "/", atEnd + 1)
+          local _, qEnd = string.find(connStr, "?")
+          local nameEnd
+          if qEnd then
+            nameEnd = qEnd - 1
+          else
+            nameEnd = connStr:len()
           end
-          L12_2 = L0_2
-          L11_2 = L0_2.len
-          L11_2 = L11_2(L12_2)
-          ::lbl_59::
-          L12_2 = string
-          L12_2 = L12_2.sub
-          L13_2 = L0_2
-          L14_2 = L8_2 + 1
-          L15_2 = L11_2
-          L12_2 = L12_2(L13_2, L14_2, L15_2)
-          return L12_2
+          return string.sub(connStr, slashEnd + 1, nameEnd)
         end
       else
-        L3_2 = string
-        L3_2 = L3_2.find
-        L4_2 = L0_2
-        L5_2 = ";"
-        L6_2 = L2_2
-        L3_2, L4_2 = L3_2(L4_2, L5_2, L6_2)
-        L5_2 = string
-        L5_2 = L5_2.sub
-        L6_2 = L0_2
-        L7_2 = L2_2 + 1
-        if L4_2 then
-          L8_2 = L4_2 - 1
-          if L8_2 then
-            goto lbl_87
-          end
+        local _, semiEnd = string.find(connStr, ";", dbEnd)
+        local nameEnd
+        if semiEnd then
+          nameEnd = semiEnd - 1
+        else
+          nameEnd = connStr:len()
         end
-        L9_2 = L0_2
-        L8_2 = L0_2.len
-        L8_2 = L8_2(L9_2)
-        ::lbl_87::
-        L5_2 = L5_2(L6_2, L7_2, L8_2)
-        return L5_2
+        return string.sub(connStr, dbEnd + 1, nameEnd)
       end
     end
   end
-  L0_1.GetDatabaseName = L1_1
+
+
 else
-  L0_1 = Utils
-  function L1_1(A0_2, ...)
-    local L1_2, L2_2, L3_2, L4_2, L5_2
-    L1_2 = string
-    L1_2 = L1_2.format
-    L2_2 = "%s:%s"
-    L3_2 = Protected
-    L3_2 = L3_2.ResourceName
-    L4_2 = A0_2
-    L1_2 = L1_2(L2_2, L3_2, L4_2)
-    L2_2 = TriggerServerEvent
-    L3_2 = L1_2
-    L4_2, L5_2 = ...
-    L2_2(L3_2, L4_2, L5_2)
-    L2_2 = Config
-    L2_2 = L2_2.Debug
-    if L2_2 then
-      L2_2 = Utils
-      L2_2 = L2_2.Log
-      L3_2 = string
-      L3_2 = L3_2.format
-      L4_2 = "Triggering server event: %s."
-      L5_2 = L1_2
-      L3_2, L4_2, L5_2 = L3_2(L4_2, L5_2)
-      L2_2(L3_2, L4_2, L5_2)
+  function Utils.TriggerServerEvent(eventName, ...)
+    local fullEventName = string.format("%s:%s", Protected.ResourceName, eventName)
+    TriggerServerEvent(fullEventName, ...)
+    if Config.Debug then
+      Utils.Log(string.format("Triggering server event: %s.", fullEventName))
     end
   end
-  L0_1.TriggerServerEvent = L1_1
 end
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = string
-  L2_2 = L2_2.format
-  L3_2 = "%s:%s"
-  L4_2 = Protected
-  L4_2 = L4_2.ResourceName
-  L5_2 = A0_2
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  L3_2 = RegisterNetEvent
-  L4_2 = L2_2
-  L3_2(L4_2)
-  L3_2 = Config
-  L3_2 = L3_2.Debug
-  if L3_2 then
-    L3_2 = Utils
-    L3_2 = L3_2.Log
-    L4_2 = string
-    L4_2 = L4_2.format
-    L5_2 = "Net event %s registered."
-    L6_2 = L2_2
-    L4_2, L5_2, L6_2 = L4_2(L5_2, L6_2)
-    L3_2(L4_2, L5_2, L6_2)
-    L3_2 = AddEventHandler
-    L4_2 = L2_2
-    function L5_2(...)
-      local L0_3, L1_3, L2_3, L3_3
-      L0_3 = Utils
-      L0_3 = L0_3.Log
-      L1_3 = string
-      L1_3 = L1_3.format
-      L2_3 = "Net event %s triggered."
-      L3_3 = L2_2
-      L1_3, L2_3, L3_3 = L1_3(L2_3, L3_3)
-      L0_3(L1_3, L2_3, L3_3)
-      L0_3 = A1_2
-      L1_3, L2_3, L3_3 = ...
-      L0_3(L1_3, L2_3, L3_3)
-    end
-    L3_2(L4_2, L5_2)
+
+function Utils.RegisterNetEvent(eventName, handler)
+  local fullEventName = string.format("%s:%s", Protected.ResourceName, eventName)
+  RegisterNetEvent(fullEventName)
+  if Config.Debug then
+    Utils.Log(string.format("Net event %s registered.", fullEventName))
+    AddEventHandler(fullEventName, function(...)
+      Utils.Log(string.format("Net event %s triggered.", fullEventName))
+      handler(...)
+    end)
   else
-    L3_2 = AddEventHandler
-    L4_2 = L2_2
-    L5_2 = A1_2
-    L3_2(L4_2, L5_2)
+    AddEventHandler(fullEventName, handler)
   end
 end
-L0_1.RegisterNetEvent = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = string
-  L2_2 = L2_2.format
-  L3_2 = "%s:%s"
-  L4_2 = Protected
-  L4_2 = L4_2.ResourceName
-  L5_2 = A0_2
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  L3_2 = AddEventHandler
-  L4_2 = L2_2
-  L5_2 = A1_2
-  L3_2(L4_2, L5_2)
+
+function Utils.RegisterEvent(eventName, handler)
+  local fullEventName = string.format("%s:%s", Protected.ResourceName, eventName)
+  AddEventHandler(fullEventName, handler)
 end
-L0_1.RegisterEvent = L1_1
-L0_1 = Utils
-function L1_1(...)
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L0_2 = select
-  L1_2 = "#"
-  L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = ...
-  L0_2 = L0_2(L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-  L1_2 = 1
-  L2_2 = L0_2
-  L3_2 = 1
-  for L4_2 = L1_2, L2_2, L3_2 do
-    L5_2 = select
-    L6_2 = L4_2
-    L7_2, L8_2, L9_2 = ...
-    L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-    L6_2 = DisableControlAction
-    L7_2 = 0
-    L8_2 = L5_2
-    L9_2 = true
-    L6_2(L7_2, L8_2, L9_2)
+
+
+function Utils.DisableControlActions(...)
+  local count = select("#", ...)
+  for i = 1, count do
+    local control = select(i, ...)
+    DisableControlAction(0, control, true)
   end
 end
-L0_1.DisableControlActions = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2, A3_2, A4_2)
-  local L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L5_2 = Utils
-  L5_2 = L5_2.GetEntityBoundingBox
-  L6_2 = A0_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = Utils
-  L6_2 = L6_2.DrawBoundingBox
-  L7_2 = L5_2
-  L8_2 = A1_2
-  L9_2 = A2_2
-  L10_2 = A3_2
-  L11_2 = A4_2
-  L6_2(L7_2, L8_2, L9_2, L10_2, L11_2)
+
+function Utils.DrawEntityBoundingBox(entity, r, g, b, a)
+  local bbox = Utils.GetEntityBoundingBox(entity)
+  Utils.DrawBoundingBox(bbox, r, g, b, a)
 end
-L0_1.DrawEntityBoundingBox = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = GetModelDimensions
-  L2_2 = GetEntityModel
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = L2_2(L3_2)
-  L1_2, L2_2 = L1_2(L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-  L3_2 = 0.001
-  L4_2 = {}
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[1] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[2] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[3] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[4] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L2_2.z
-  L9_2 = L9_2 + L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[5] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L2_2.z
-  L9_2 = L9_2 + L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[6] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L2_2.z
-  L9_2 = L9_2 + L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[7] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L2_2.z
-  L9_2 = L9_2 + L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[8] = L5_2
-  return L4_2
+
+function Utils.GetEntityBoundingBox(entity)
+  local minDim, maxDim = GetModelDimensions(GetEntityModel(entity))
+  local pad = 0.001
+  local corners = {}
+  corners[1] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, minDim.y - pad, minDim.z - pad)
+  corners[2] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, minDim.y - pad, minDim.z - pad)
+  corners[3] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, maxDim.y + pad, minDim.z - pad)
+  corners[4] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, maxDim.y + pad, minDim.z - pad)
+  corners[5] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, minDim.y - pad, maxDim.z + pad)
+  corners[6] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, minDim.y - pad, maxDim.z + pad)
+  corners[7] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, maxDim.y + pad, maxDim.z + pad)
+  corners[8] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, maxDim.y + pad, maxDim.z + pad)
+  return corners
 end
-L0_1.GetEntityBoundingBox = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L1_2 = GetModelDimensions
-  L2_2 = GetEntityModel
-  L3_2 = A0_2
-  L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2 = L2_2(L3_2)
-  L1_2, L2_2 = L1_2(L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-  L3_2 = 0.001
-  L4_2 = {}
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[1] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L1_2.y
-  L8_2 = L8_2 - L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[2] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L2_2.x
-  L7_2 = L7_2 + L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[3] = L5_2
-  L5_2 = GetOffsetFromEntityInWorldCoords
-  L6_2 = A0_2
-  L7_2 = L1_2.x
-  L7_2 = L7_2 - L3_2
-  L8_2 = L2_2.y
-  L8_2 = L8_2 + L3_2
-  L9_2 = L1_2.z
-  L9_2 = L9_2 - L3_2
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  L4_2[4] = L5_2
-  return L4_2
+
+
+function Utils.Get2DEntityBoundingBox(entity)
+  local minDim, maxDim = GetModelDimensions(GetEntityModel(entity))
+  local pad = 0.001
+  local corners = {}
+  corners[1] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, minDim.y - pad, minDim.z - pad)
+  corners[2] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, minDim.y - pad, minDim.z - pad)
+  corners[3] = GetOffsetFromEntityInWorldCoords(entity, maxDim.x + pad, maxDim.y + pad, minDim.z - pad)
+  corners[4] = GetOffsetFromEntityInWorldCoords(entity, minDim.x - pad, maxDim.y + pad, minDim.z - pad)
+  return corners
 end
-L0_1.Get2DEntityBoundingBox = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2, A3_2, A4_2)
-  local L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L5_2 = Utils
-  L5_2 = L5_2.GetBoundingBoxPolyMatrix
-  L6_2 = A0_2
-  L5_2 = L5_2(L6_2)
-  L6_2 = Utils
-  L6_2 = L6_2.GetBoundingBoxEdgeMatrix
-  L7_2 = A0_2
-  L6_2 = L6_2(L7_2)
-  L7_2 = Utils
-  L7_2 = L7_2.DrawPolyMatrix
-  L8_2 = L5_2
-  L9_2 = A1_2
-  L10_2 = A2_2
-  L11_2 = A3_2
-  L12_2 = A4_2
-  L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
-  L7_2 = Utils
-  L7_2 = L7_2.DrawEdgeMatrix
-  L8_2 = L6_2
-  L9_2 = 255
-  L10_2 = 255
-  L11_2 = 255
-  L12_2 = 255
-  L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
+
+function Utils.DrawBoundingBox(corners, r, g, b, a)
+  local polyMatrix = Utils.GetBoundingBoxPolyMatrix(corners)
+  local edgeMatrix = Utils.GetBoundingBoxEdgeMatrix(corners)
+  Utils.DrawPolyMatrix(polyMatrix, r, g, b, a)
+  Utils.DrawEdgeMatrix(edgeMatrix, 255, 255, 255, 255)
 end
-L0_1.DrawBoundingBox = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = {}
-  L2_2 = {}
-  L3_2 = A0_2[3]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[2]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[1]
-  L2_2[3] = L3_2
-  L1_2[1] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[4]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[3]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[1]
-  L2_2[3] = L3_2
-  L1_2[2] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[5]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[6]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[3] = L3_2
-  L1_2[3] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[5]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[8]
-  L2_2[3] = L3_2
-  L1_2[4] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[3]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[4]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[3] = L3_2
-  L1_2[5] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[8]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[4]
-  L2_2[3] = L3_2
-  L1_2[6] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[1]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[2]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[5]
-  L2_2[3] = L3_2
-  L1_2[7] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[6]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[5]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[2]
-  L2_2[3] = L3_2
-  L1_2[8] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[2]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[3]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[6]
-  L2_2[3] = L3_2
-  L1_2[9] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[3]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[6]
-  L2_2[3] = L3_2
-  L1_2[10] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[5]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[8]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[4]
-  L2_2[3] = L3_2
-  L1_2[11] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[5]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[4]
-  L2_2[2] = L3_2
-  L3_2 = A0_2[1]
-  L2_2[3] = L3_2
-  L1_2[12] = L2_2
-  return L1_2
+
+function Utils.GetBoundingBoxPolyMatrix(corners)
+  local polys = {}
+  polys[1] = { corners[3], corners[2], corners[1] }
+  polys[2] = { corners[4], corners[3], corners[1] }
+  polys[3] = { corners[5], corners[6], corners[7] }
+  polys[4] = { corners[5], corners[7], corners[8] }
+  polys[5] = { corners[3], corners[4], corners[7] }
+  polys[6] = { corners[8], corners[7], corners[4] }
+  polys[7] = { corners[1], corners[2], corners[5] }
+  polys[8] = { corners[6], corners[5], corners[2] }
+  polys[9] = { corners[2], corners[3], corners[6] }
+  polys[10] = { corners[3], corners[7], corners[6] }
+  polys[11] = { corners[5], corners[8], corners[4] }
+  polys[12] = { corners[5], corners[4], corners[1] }
+  return polys
 end
-L0_1.GetBoundingBoxPolyMatrix = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = {}
-  L2_2 = {}
-  L3_2 = A0_2[1]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[2]
-  L2_2[2] = L3_2
-  L1_2[1] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[2]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[3]
-  L2_2[2] = L3_2
-  L1_2[2] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[3]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[4]
-  L2_2[2] = L3_2
-  L1_2[3] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[4]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[1]
-  L2_2[2] = L3_2
-  L1_2[4] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[5]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[6]
-  L2_2[2] = L3_2
-  L1_2[5] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[6]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[2] = L3_2
-  L1_2[6] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[7]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[8]
-  L2_2[2] = L3_2
-  L1_2[7] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[8]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[5]
-  L2_2[2] = L3_2
-  L1_2[8] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[1]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[5]
-  L2_2[2] = L3_2
-  L1_2[9] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[2]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[6]
-  L2_2[2] = L3_2
-  L1_2[10] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[3]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[7]
-  L2_2[2] = L3_2
-  L1_2[11] = L2_2
-  L2_2 = {}
-  L3_2 = A0_2[4]
-  L2_2[1] = L3_2
-  L3_2 = A0_2[8]
-  L2_2[2] = L3_2
-  L1_2[12] = L2_2
-  return L1_2
+
+
+function Utils.GetBoundingBoxEdgeMatrix(corners)
+  local edges = {}
+  edges[1] = { corners[1], corners[2] }
+  edges[2] = { corners[2], corners[3] }
+  edges[3] = { corners[3], corners[4] }
+  edges[4] = { corners[4], corners[1] }
+  edges[5] = { corners[5], corners[6] }
+  edges[6] = { corners[6], corners[7] }
+  edges[7] = { corners[7], corners[8] }
+  edges[8] = { corners[8], corners[5] }
+  edges[9] = { corners[1], corners[5] }
+  edges[10] = { corners[2], corners[6] }
+  edges[11] = { corners[3], corners[7] }
+  edges[12] = { corners[4], corners[8] }
+  return edges
 end
-L0_1.GetBoundingBoxEdgeMatrix = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2, A3_2, A4_2)
-  local L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2
-  L5_2 = 1
-  L6_2 = #A0_2
-  L7_2 = 1
-  for L8_2 = L5_2, L6_2, L7_2 do
-    L9_2 = A0_2[L8_2]
-    L10_2 = DrawPoly
-    L11_2 = L9_2[1]
-    L11_2 = L11_2.x
-    L12_2 = L9_2[1]
-    L12_2 = L12_2.y
-    L13_2 = L9_2[1]
-    L13_2 = L13_2.z
-    L14_2 = L9_2[2]
-    L14_2 = L14_2.x
-    L15_2 = L9_2[2]
-    L15_2 = L15_2.y
-    L16_2 = L9_2[2]
-    L16_2 = L16_2.z
-    L17_2 = L9_2[3]
-    L17_2 = L17_2.x
-    L18_2 = L9_2[3]
-    L18_2 = L18_2.y
-    L19_2 = L9_2[3]
-    L19_2 = L19_2.z
-    L20_2 = A1_2
-    L21_2 = A2_2
-    L22_2 = A3_2
-    L23_2 = A4_2
-    L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2)
+
+function Utils.DrawPolyMatrix(polys, r, g, b, a)
+  for i = 1, #polys do
+    local tri = polys[i]
+    DrawPoly(
+      tri[1].x, tri[1].y, tri[1].z,
+      tri[2].x, tri[2].y, tri[2].z,
+      tri[3].x, tri[3].y, tri[3].z,
+      r, g, b, a
+    )
   end
 end
-L0_1.DrawPolyMatrix = L1_1
-L0_1 = Utils
-function L1_1(A0_2, A1_2, A2_2, A3_2, A4_2)
-  local L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2
-  L5_2 = 1
-  L6_2 = #A0_2
-  L7_2 = 1
-  for L8_2 = L5_2, L6_2, L7_2 do
-    L9_2 = A0_2[L8_2]
-    L10_2 = DrawLine
-    L11_2 = L9_2[1]
-    L11_2 = L11_2.x
-    L12_2 = L9_2[1]
-    L12_2 = L12_2.y
-    L13_2 = L9_2[1]
-    L13_2 = L13_2.z
-    L14_2 = L9_2[2]
-    L14_2 = L14_2.x
-    L15_2 = L9_2[2]
-    L15_2 = L15_2.y
-    L16_2 = L9_2[2]
-    L16_2 = L16_2.z
-    L17_2 = A1_2
-    L18_2 = A2_2
-    L19_2 = A3_2
-    L20_2 = A4_2
-    L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
+
+function Utils.DrawEdgeMatrix(edges, r, g, b, a)
+  for i = 1, #edges do
+    local edge = edges[i]
+    DrawLine(
+      edge[1].x, edge[1].y, edge[1].z,
+      edge[2].x, edge[2].y, edge[2].z,
+      r, g, b, a
+    )
   end
 end
-L0_1.DrawEdgeMatrix = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = DrawScaleformMovieFullscreen
-  L2_2 = A0_2
-  L3_2 = 255
-  L4_2 = 255
-  L5_2 = 255
-  L6_2 = 255
-  L1_2(L2_2, L3_2, L4_2, L5_2, L6_2)
+
+
+function Utils.DrawScaleform(scaleform)
+  DrawScaleformMovieFullscreen(scaleform, 255, 255, 255, 255)
 end
-L0_1.DrawScaleform = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2
-  L1_2 = DisableControlAction
-  L2_2 = 0
-  L3_2 = A0_2
-  L4_2 = true
-  L1_2(L2_2, L3_2, L4_2)
+
+function Utils.DisableControlAction(control)
+  DisableControlAction(0, control, true)
 end
-L0_1.DisableControlAction = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L1_2 = Scaleforms
-  L1_2 = L1_2.LoadMovie
-  L2_2 = "INSTRUCTIONAL_BUTTONS"
-  L1_2 = L1_2(L2_2)
-  L2_2 = Scaleforms
-  L2_2 = L2_2.PopVoid
-  L3_2 = L1_2
-  L4_2 = "CLEAR_ALL"
-  L2_2(L3_2, L4_2)
-  L2_2 = Scaleforms
-  L2_2 = L2_2.PopInt
-  L3_2 = L1_2
-  L4_2 = "SET_CLEAR_SPACE"
-  L5_2 = 200
-  L2_2(L3_2, L4_2, L5_2)
-  L2_2 = 1
-  L3_2 = #A0_2
-  L4_2 = 1
-  for L5_2 = L2_2, L3_2, L4_2 do
-    L6_2 = PushScaleformMovieFunction
-    L7_2 = L1_2
-    L8_2 = "SET_DATA_SLOT"
-    L6_2(L7_2, L8_2)
-    L6_2 = PushScaleformMovieFunctionParameterInt
-    L7_2 = L5_2 - 1
-    L6_2(L7_2)
-    L6_2 = 1
-    L7_2 = A0_2[L5_2]
-    L7_2 = L7_2.codes
-    L7_2 = #L7_2
-    L8_2 = 1
-    for L9_2 = L6_2, L7_2, L8_2 do
-      L10_2 = _ENV
-      L11_2 = "ScaleformMovieMethodAddParamPlayerNameString"
-      L10_2 = L10_2[L11_2]
-      L11_2 = GetControlInstructionalButton
-      L12_2 = 0
-      L13_2 = A0_2[L5_2]
-      L13_2 = L13_2.codes
-      L13_2 = L13_2[L9_2]
-      L14_2 = true
-      L11_2, L12_2, L13_2, L14_2 = L11_2(L12_2, L13_2, L14_2)
-      L10_2(L11_2, L12_2, L13_2, L14_2)
+
+function Utils.CreateInstructional(controls)
+  local scaleform = Scaleforms.LoadMovie("INSTRUCTIONAL_BUTTONS")
+  Scaleforms.PopVoid(scaleform, "CLEAR_ALL")
+  Scaleforms.PopInt(scaleform, "SET_CLEAR_SPACE", 200)
+  for i = 1, #controls do
+    PushScaleformMovieFunction(scaleform, "SET_DATA_SLOT")
+    PushScaleformMovieFunctionParameterInt(i - 1)
+    for j = 1, #controls[i].codes do
+      _ENV["ScaleformMovieMethodAddParamPlayerNameString"](
+        GetControlInstructionalButton(0, controls[i].codes[j], true)
+      )
     end
-    L6_2 = BeginTextCommandScaleformString
-    L7_2 = "STRING"
-    L6_2(L7_2)
-    L6_2 = AddTextComponentScaleform
-    L7_2 = A0_2[L5_2]
-    L7_2 = L7_2.label
-    L6_2(L7_2)
-    L6_2 = EndTextCommandScaleformString
-    L6_2()
-    L6_2 = PopScaleformMovieFunctionVoid
-    L6_2()
+    BeginTextCommandScaleformString("STRING")
+    AddTextComponentScaleform(controls[i].label)
+    EndTextCommandScaleformString()
+    PopScaleformMovieFunctionVoid()
   end
-  L2_2 = Scaleforms
-  L2_2 = L2_2.PopVoid
-  L3_2 = L1_2
-  L4_2 = "DRAW_INSTRUCTIONAL_BUTTONS"
-  L2_2(L3_2, L4_2)
-  return L1_2
+  Scaleforms.PopVoid(scaleform, "DRAW_INSTRUCTIONAL_BUTTONS")
+  return scaleform
 end
-L0_1.CreateInstructional = L1_1
-L0_1 = Utils
-function L1_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L1_2 = {}
-  L2_2 = #A0_2
-  L3_2 = 1
-  L4_2 = L2_2
-  L5_2 = 1
-  for L6_2 = L3_2, L4_2, L5_2 do
-    L7_2 = A0_2[L6_2]
-    L8_2 = nil
-    L9_2 = type
-    L10_2 = L7_2
-    L9_2 = L9_2(L10_2)
-    if "table" == L9_2 then
-      L9_2 = ActionControls
-      L10_2 = L7_2.key
-      L8_2 = L9_2[L10_2]
-      if not L8_2 then
-        L9_2 = Error
-        L10_2 = "Utils.GetControls ::: "
-        L11_2 = L7_2.key
-        L12_2 = " not found"
-        L10_2 = L10_2 .. L11_2 .. L12_2
-        L9_2(L10_2)
+
+
+function Utils.GetControls(controlList)
+  local result = {}
+  local count = #controlList
+  for i = 1, count do
+    local item = controlList[i]
+    local control = nil
+    if type(item) == "table" then
+      control = ActionControls[item.key]
+      if not control then
+        Error("Utils.GetControls ::: " .. item.key .. " not found")
         return
       end
-      L9_2 = L7_2.label
-      L8_2.label = L9_2
+      control.label = item.label
     else
-      L9_2 = ActionControls
-      L8_2 = L9_2[L7_2]
+      control = ActionControls[item]
     end
-    L9_2 = #L1_2
-    L9_2 = L9_2 + 1
-    L1_2[L9_2] = L8_2
+    result[#result + 1] = control
   end
-  return L1_2
+  return result
 end
-L0_1.GetControls = L1_1
-L0_1 = false
-L1_1 = false
-L2_1 = Utils
-function L3_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2
-  if not A1_2 then
-    L2_2 = {}
-    A1_2 = L2_2
+
+local camPositionChanged = false
+local camRotationChanged = false
+
+function Utils.HandleFlyCam(cam, opts)
+  if not opts then
+    opts = {}
   end
-  L2_2 = A1_2.boundPos
-  L3_2 = A1_2.boundDist
-  L4_2 = A1_2.mouse
-  if nil == L4_2 then
-    L4_2 = true
-    if L4_2 then
-      goto lbl_15
+  local boundPos = opts.boundPos
+  local boundDist = opts.boundDist
+  if nil == opts.mouse then
+    opts.mouse = true
+  end
+  if nil == opts.keyboard then
+    opts.keyboard = true
+  end
+
+
+  local camPos = GetCamCoord(cam)
+  local camRot = GetCamRot(cam, 2)
+  local controls = ActionControls
+  local camOpts = CameraOptions
+  local mouseX = GetDisabledControlNormal(0, 1)
+  local mouseY = GetDisabledControlNormal(0, 2)
+  local rightVec, upVec, forwardVec, _ = GetCamMatrix(cam)
+  local worldUp = vector3(0.0, 0.0, 1.0)
+  local flatRight = norm(vector3(rightVec.x, rightVec.y, 0.0))
+  local flatForward = norm(vector3(upVec.x, upVec.y, 0.0))
+  local dt = GetFrameTime()
+
+  if opts.keyboard then
+    if IsDisabledControlPressed(0, controls.up.codes[2]) then
+      camPos = camPos + worldUp * (camOpts.climbSpeed * dt)
+      camPositionChanged = true
+    elseif IsDisabledControlPressed(0, controls.up.codes[1]) then
+      camPos = camPos - worldUp * (camOpts.climbSpeed * dt)
+      camPositionChanged = true
+    end
+    if IsDisabledControlPressed(0, controls.forward.codes[2]) then
+      camPos = camPos + flatForward * (camOpts.moveSpeed * dt)
+      camPositionChanged = true
+    elseif IsDisabledControlPressed(0, controls.forward.codes[1]) then
+      camPos = camPos - flatForward * (camOpts.moveSpeed * dt)
+      camPositionChanged = true
+    end
+    if IsDisabledControlPressed(0, controls.right.codes[1]) then
+      camPos = camPos + flatRight * (camOpts.moveSpeed * dt)
+      camPositionChanged = true
+    elseif IsDisabledControlPressed(0, controls.right.codes[2]) then
+      camPos = camPos - flatRight * (camOpts.moveSpeed * dt)
+      camPositionChanged = true
     end
   end
-  L4_2 = A1_2.mouse
-  ::lbl_15::
-  A1_2.mouse = L4_2
-  L4_2 = A1_2.keyboard
-  if nil == L4_2 then
-    L4_2 = true
-    if L4_2 then
-      goto lbl_23
+
+
+  if opts.mouse then
+    if 0.0 ~= mouseY then
+      local newRotX = math.max(-80.0, math.min(80.0, camRot.x - mouseY * camOpts.lookSpeedX * dt))
+      camRot = vector3(newRotX, camRot.y, camRot.z)
+      camRotationChanged = true
+    end
+    if 0.0 ~= mouseX then
+      camRot = vector3(camRot.x, camRot.y, camRot.z - mouseX * camOpts.lookSpeedY * dt)
+      camRotationChanged = true
     end
   end
-  L4_2 = A1_2.keyboard
-  ::lbl_23::
-  A1_2.keyboard = L4_2
-  L4_2 = GetCamCoord
-  L5_2 = A0_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = GetCamRot
-  L6_2 = A0_2
-  L7_2 = 2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = ActionControls
-  L7_2 = CameraOptions
-  L8_2 = GetDisabledControlNormal
-  L9_2 = 0
-  L10_2 = 1
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = GetDisabledControlNormal
-  L10_2 = 0
-  L11_2 = 2
-  L9_2 = L9_2(L10_2, L11_2)
-  L10_2 = GetCamMatrix
-  L11_2 = A0_2
-  L10_2, L11_2, L12_2, L13_2 = L10_2(L11_2)
-  L14_2 = vector3
-  L15_2 = 0.0
-  L16_2 = 0.0
-  L17_2 = 1.0
-  L14_2 = L14_2(L15_2, L16_2, L17_2)
-  L15_2 = norm
-  L16_2 = vector3
-  L17_2 = L10_2.x
-  L18_2 = L10_2.y
-  L19_2 = 0.0
-  L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2 = L16_2(L17_2, L18_2, L19_2)
-  L15_2 = L15_2(L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2)
-  L16_2 = norm
-  L17_2 = vector3
-  L18_2 = L11_2.x
-  L19_2 = L11_2.y
-  L20_2 = 0.0
-  L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2 = L17_2(L18_2, L19_2, L20_2)
-  L16_2 = L16_2(L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2)
-  L17_2 = GetFrameTime
-  L17_2 = L17_2()
-  L18_2 = A1_2.keyboard
-  if L18_2 then
-    L18_2 = IsDisabledControlPressed
-    L19_2 = 0
-    L20_2 = L6_2.up
-    L20_2 = L20_2.codes
-    L20_2 = L20_2[2]
-    L18_2 = L18_2(L19_2, L20_2)
-    if L18_2 then
-      L18_2 = L7_2.climbSpeed
-      L18_2 = L18_2 * L17_2
-      L18_2 = L14_2 * L18_2
-      L4_2 = L4_2 + L18_2
-      L18_2 = true
-      L0_1 = L18_2
-    else
-      L18_2 = IsDisabledControlPressed
-      L19_2 = 0
-      L20_2 = L6_2.up
-      L20_2 = L20_2.codes
-      L20_2 = L20_2[1]
-      L18_2 = L18_2(L19_2, L20_2)
-      if L18_2 then
-        L18_2 = L7_2.climbSpeed
-        L18_2 = L18_2 * L17_2
-        L18_2 = L14_2 * L18_2
-        L4_2 = L4_2 - L18_2
-        L18_2 = true
-        L0_1 = L18_2
+
+  if camPositionChanged then
+    SetCamCoord(cam, camPos)
+  end
+  if camRotationChanged then
+    SetCamRot(cam, camRot, 2)
+  end
+
+  if boundPos and boundDist then
+    local distFromBound = #(camPos - boundPos)
+    if boundDist < distFromBound then
+      local dir = norm(camPos - boundPos)
+      camPos = boundPos + dir * boundDist
+      SetCamCoord(cam, camPos)
+    end
+  end
+
+  if opts.updatePlayerCoords then
+    SetEntityCoords(cache.ped, camPos.x, camPos.y, camPos.z, false, false, false, false)
+    SetEntityHeading(cache.ped, camRot.z)
+  end
+
+  return camPos, camRot
+end
+
+
+function Utils.DestroyFlyCam(cam, transitionTime)
+  if not transitionTime then
+    transitionTime = 0
+  end
+  SetCamActive(cam, false)
+  RenderScriptCams(false, true, transitionTime, true, true)
+  DestroyCam(cam, false)
+  SetFocusEntity(cache.ped)
+end
+
+function Utils.ScreenToWorld()
+  local camRot = GetGameplayCamRot(0)
+  local camCoord = GetGameplayCamCoord()
+  local cursorX = GetControlNormal(0, 239)
+  local cursorY = GetControlNormal(0, 240)
+  local cursor = vector2(cursorX, cursorY)
+  local worldPos, direction = Utils.ScreenRelToWorld(camCoord, camRot, cursor)
+  local destination = camCoord + direction * 50.0
+  local ray = StartShapeTestRay(worldPos.x, worldPos.y, worldPos.z, destination.x, destination.y, destination.z, -1, 0, 4)
+  local _, hit, hitCoords, _, hitEntity = GetShapeTestResult(ray)
+  return hit, hitCoords, hitEntity
+end
+
+
+function Utils.ScreenRelToWorld(camPos, camRot, screenCoord)
+  local direction = Utils.RotationToDirection(camRot)
+  local rotUp = vector3(camRot.x + 1.0, camRot.y, camRot.z)
+  local rotDown = vector3(camRot.x - 1.0, camRot.y, camRot.z)
+  local rotLeft = vector3(camRot.x, camRot.y, camRot.z - 1.0)
+  local rotRight = vector3(camRot.x, camRot.y, camRot.z + 1.0)
+
+  local dirUp = Utils.RotationToDirection(rotRight)
+  local dirDown = Utils.RotationToDirection(rotLeft)
+  local verticalDelta = dirUp - dirDown
+
+  local dirRight = Utils.RotationToDirection(rotUp)
+  local dirLeft = Utils.RotationToDirection(rotDown)
+  local horizontalDelta = dirRight - dirLeft
+
+  local roll = -camRot.y * math.pi / 180.0
+  local vertRotated = verticalDelta * math.cos(roll) - horizontalDelta * math.sin(roll)
+  local horizRotated = verticalDelta * math.sin(roll) + horizontalDelta * math.cos(roll)
+
+  local worldPoint = camPos + direction * 1.0
+  local offsetPoint = worldPoint + vertRotated + horizRotated
+
+  local screenOffset = Utils.World3DToScreen2D(offsetPoint)
+  local screenCenter = Utils.World3DToScreen2D(worldPoint)
+
+  local scaleX = (screenCoord.x - screenCenter.x) / (screenOffset.x - screenCenter.x)
+  local scaleY = (screenCoord.y - screenCenter.y) / (screenOffset.y - screenCenter.y)
+
+  local worldResult = worldPoint + vertRotated * scaleX + horizRotated * scaleY
+  local dirResult = direction + vertRotated * scaleX + horizRotated * scaleY
+
+  return worldResult, dirResult
+end
+
+
+function Utils.RotationToDirection(rotation)
+  local radX = rotation.x * math.pi / 180.0
+  local radZ = rotation.z * math.pi / 180.0
+  local cosX = math.abs(math.cos(radX))
+  return vector3(-math.sin(radZ) * cosX, math.cos(radZ) * cosX, math.sin(radX))
+end
+
+function Utils.World3DToScreen2D(worldCoord)
+  local _, screenX, screenY = GetScreenCoordFromWorldCoord(worldCoord.x, worldCoord.y, worldCoord.z)
+  return vector2(screenX, screenY)
+end
+
+function Utils.CreateObject(model, position)
+  if type(model) == "string" then
+    model = joaat(model) or model
+  end
+  lib.requestModel(model, Config.DefaultRequestModelTimeout)
+  RequestModel(model)
+  while not HasModelLoaded(model) do
+    Wait(0)
+  end
+  local obj = CreateObject(model, position.x, position.y, position.z, false, false, false)
+  SetModelAsNoLongerNeeded(model)
+  return obj
+end
+
+
+local function iterateEntities(findFirst, findNext, endFind)
+  local results = {}
+  local handle, entity = findFirst()
+  while entity do
+    results[#results + 1] = entity
+    entity = findNext(handle)
+  end
+  endFind(handle)
+  return results
+end
+
+function Utils.GetAllPeds()
+  return iterateEntities(FindFirstPed, FindNextPed, EndFindPed)
+end
+
+function Utils.GetAllObjects()
+  return iterateEntities(FindFirstObject, FindNextObject, EndFindObject)
+end
+
+function Utils.GetAllVehicles()
+  return iterateEntities(FindFirstVehicle, FindNextVehicle, EndFindVehicle)
+end
+
+function Utils.FindNthInString(str, pattern, n)
+  local startPos = nil
+  local endPos = nil
+  for i = 1, n do
+    startPos, endPos = str:find(pattern, endPos and (endPos + 1) or 0)
+  end
+  return startPos, endPos
+end
+
+
+function RotationToDirection(rotation)
+  local radZ = math.rad(rotation.z)
+  local radX = math.rad(rotation.x)
+  local cosX = math.abs(math.cos(radX))
+  return vector3(-math.sin(radZ) * cosX, math.cos(radZ) * cosX, math.sin(radX))
+end
+
+function Utils.GetCamera()
+  local cam = {}
+  cam.coords = GetFinalRenderedCamCoord()
+  cam.rotation = GetFinalRenderedCamRot(2)
+  return cam
+end
+
+function ScreenRelToWorld(camPos, camRot, screenCoord)
+  local dist = 1000.0
+  local direction = RotationToDirection(camRot)
+  local rotUp = camRot + vector3(dist, 0, 0)
+  local rotDown = camRot + vector3(-dist, 0, 0)
+  local rotLeft = camRot + vector3(0, 0, -dist)
+  local rotRight = camRot + vector3(0, 0, dist)
+
+  local dirUp = RotationToDirection(rotRight)
+  local dirDown = RotationToDirection(rotLeft)
+  local verticalDelta = dirUp - dirDown
+
+  local dirRight = RotationToDirection(rotUp)
+  local dirLeft = RotationToDirection(rotDown)
+  local horizontalDelta = dirRight - dirLeft
+
+  local roll = math.rad(camRot.y)
+  roll = -roll
+  local vertRotated = verticalDelta * math.cos(roll) - horizontalDelta * math.sin(roll)
+  local horizRotated = verticalDelta * math.sin(roll) + horizontalDelta * math.cos(roll)
+
+  local worldPoint = camPos + direction * dist
+  local offsetPoint = worldPoint + vertRotated + horizRotated
+
+
+  local _, offX, offY = GetScreenCoordFromWorldCoord(offsetPoint.x, offsetPoint.y, offsetPoint.z)
+  local screenOff = {}
+  screenOff.X = offX
+  screenOff.Y = offY
+  if not (screenOff and offX) or not offY then
+    return camPos + direction * dist
+  end
+
+  local centerPoint = camPos + direction * dist
+  local _, cenX, cenY = GetScreenCoordFromWorldCoord(centerPoint.x, centerPoint.y, centerPoint.z)
+  local screenCen = {}
+  screenCen.X = cenX
+  screenCen.Y = cenY
+  if not (screenCen and cenX) or not cenY then
+    return camPos + direction * dist
+  end
+
+  local epsilon = 1.0E-5
+  if epsilon > math.abs(screenOff.X - screenCen.X) or epsilon > math.abs(screenOff.Y - screenCen.Y) then
+    return camPos + direction * dist
+  end
+
+  local scaleX = (screenCoord.x - screenCen.X) / (screenOff.X - screenCen.X)
+  local scaleY = (screenCoord.y - screenCen.Y) / (screenOff.Y - screenCen.Y)
+
+  return camPos + direction * dist + vertRotated * scaleX + horizRotated * scaleY
+end
+
+function LocationInWorld(targetPos, cam, flags)
+  local camCoord = GetCamCoord(cam)
+  local ped = cache.ped
+  local ray = StartShapeTestRay(camCoord.x, camCoord.y, camCoord.z, targetPos.x, targetPos.y, targetPos.z, flags, ped, 0)
+  local _, hit, hitCoords, _, hitEntity = GetShapeTestResult(ray)
+  currentCoords = hitCoords
+  return hit, hitCoords, hitEntity
+end
+
+
+function Utils.getCursorHitCoords(ignorePed)
+  local cursorX = GetDisabledControlNormal(0, 239)
+  local cursorY = GetDisabledControlNormal(0, 240)
+  local worldOrigin, worldDir = GetWorldCoordFromScreenCoord(cursorX, cursorY)
+  local startPos = worldOrigin
+  local endPos = worldOrigin + worldDir * 120
+  local ray = StartShapeTestSweptSphere(
+    startPos.x, startPos.y, startPos.z,
+    endPos.x, endPos.y, endPos.z,
+    0.01, 17, ignorePed or cache.ped, 4
+  )
+  local status, hit, hitCoords, _, hitEntity = GetShapeTestResult(ray)
+  if not status then
+    return nil, nil
+  end
+  return hitCoords, hitEntity
+end
+
+function string.includes(str, pattern)
+  if type(pattern) == "string" then
+    return str == pattern
+  elseif type(pattern) == "table" then
+    for _, v in ipairs(pattern) do
+      if str == v then
+        return true
       end
     end
-    L18_2 = IsDisabledControlPressed
-    L19_2 = 0
-    L20_2 = L6_2.forward
-    L20_2 = L20_2.codes
-    L20_2 = L20_2[2]
-    L18_2 = L18_2(L19_2, L20_2)
-    if L18_2 then
-      L18_2 = L7_2.moveSpeed
-      L18_2 = L18_2 * L17_2
-      L18_2 = L16_2 * L18_2
-      L4_2 = L4_2 + L18_2
-      L18_2 = true
-      L0_1 = L18_2
-    else
-      L18_2 = IsDisabledControlPressed
-      L19_2 = 0
-      L20_2 = L6_2.forward
-      L20_2 = L20_2.codes
-      L20_2 = L20_2[1]
-      L18_2 = L18_2(L19_2, L20_2)
-      if L18_2 then
-        L18_2 = L7_2.moveSpeed
-        L18_2 = L18_2 * L17_2
-        L18_2 = L16_2 * L18_2
-        L4_2 = L4_2 - L18_2
-        L18_2 = true
-        L0_1 = L18_2
-      end
-    end
-    L18_2 = IsDisabledControlPressed
-    L19_2 = 0
-    L20_2 = L6_2.right
-    L20_2 = L20_2.codes
-    L20_2 = L20_2[1]
-    L18_2 = L18_2(L19_2, L20_2)
-    if L18_2 then
-      L18_2 = L7_2.moveSpeed
-      L18_2 = L18_2 * L17_2
-      L18_2 = L15_2 * L18_2
-      L4_2 = L4_2 + L18_2
-      L18_2 = true
-      L0_1 = L18_2
-    else
-      L18_2 = IsDisabledControlPressed
-      L19_2 = 0
-      L20_2 = L6_2.right
-      L20_2 = L20_2.codes
-      L20_2 = L20_2[2]
-      L18_2 = L18_2(L19_2, L20_2)
-      if L18_2 then
-        L18_2 = L7_2.moveSpeed
-        L18_2 = L18_2 * L17_2
-        L18_2 = L15_2 * L18_2
-        L4_2 = L4_2 - L18_2
-        L18_2 = true
-        L0_1 = L18_2
-      end
-    end
-  end
-  L18_2 = A1_2.mouse
-  if L18_2 then
-    if 0.0 ~= L9_2 then
-      L18_2 = math
-      L18_2 = L18_2.max
-      L19_2 = -80.0
-      L20_2 = math
-      L20_2 = L20_2.min
-      L21_2 = 80.0
-      L22_2 = L5_2.x
-      L23_2 = L7_2.lookSpeedX
-      L23_2 = L9_2 * L23_2
-      L23_2 = L23_2 * L17_2
-      L22_2 = L22_2 - L23_2
-      L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2 = L20_2(L21_2, L22_2)
-      L18_2 = L18_2(L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2)
-      L19_2 = vector3
-      L20_2 = L18_2
-      L21_2 = L5_2.y
-      L22_2 = L5_2.z
-      L19_2 = L19_2(L20_2, L21_2, L22_2)
-      L5_2 = L19_2
-      L19_2 = true
-      L1_1 = L19_2
-    end
-    if 0.0 ~= L8_2 then
-      L18_2 = vector3
-      L19_2 = L5_2.x
-      L20_2 = L5_2.y
-      L21_2 = L5_2.z
-      L22_2 = L7_2.lookSpeedY
-      L22_2 = L8_2 * L22_2
-      L22_2 = L22_2 * L17_2
-      L21_2 = L21_2 - L22_2
-      L18_2 = L18_2(L19_2, L20_2, L21_2)
-      L5_2 = L18_2
-      L18_2 = true
-      L1_1 = L18_2
-    end
-  end
-  L18_2 = L0_1
-  if L18_2 then
-    L18_2 = SetCamCoord
-    L19_2 = A0_2
-    L20_2 = L4_2
-    L18_2(L19_2, L20_2)
-  end
-  L18_2 = L1_1
-  if L18_2 then
-    L18_2 = SetCamRot
-    L19_2 = A0_2
-    L20_2 = L5_2
-    L21_2 = 2
-    L18_2(L19_2, L20_2, L21_2)
-  end
-  if L2_2 and L3_2 then
-    L18_2 = L4_2 - L2_2
-    L18_2 = #L18_2
-    if L3_2 < L18_2 then
-      L19_2 = norm
-      L20_2 = L4_2 - L2_2
-      L19_2 = L19_2(L20_2)
-      L20_2 = L19_2 * L3_2
-      L4_2 = L2_2 + L20_2
-      L20_2 = SetCamCoord
-      L21_2 = A0_2
-      L22_2 = L4_2
-      L20_2(L21_2, L22_2)
-    end
-  end
-  L18_2 = A1_2.updatePlayerCoords
-  if L18_2 then
-    L18_2 = SetEntityCoords
-    L19_2 = cache
-    L19_2 = L19_2.ped
-    L20_2 = L4_2.x
-    L21_2 = L4_2.y
-    L22_2 = L4_2.z
-    L23_2 = false
-    L24_2 = false
-    L25_2 = false
-    L26_2 = false
-    L18_2(L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2)
-    L18_2 = SetEntityHeading
-    L19_2 = cache
-    L19_2 = L19_2.ped
-    L20_2 = L5_2.z
-    L18_2(L19_2, L20_2)
-  end
-  L18_2 = L4_2
-  L19_2 = L5_2
-  return L18_2, L19_2
-end
-L2_1.HandleFlyCam = L3_1
-L2_1 = Utils
-function L3_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  if not A1_2 then
-    A1_2 = 0
-  end
-  L2_2 = SetCamActive
-  L3_2 = A0_2
-  L4_2 = false
-  L2_2(L3_2, L4_2)
-  L2_2 = RenderScriptCams
-  L3_2 = false
-  L4_2 = true
-  L5_2 = A1_2
-  L6_2 = true
-  L7_2 = true
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L2_2 = DestroyCam
-  L3_2 = A0_2
-  L4_2 = false
-  L2_2(L3_2, L4_2)
-  L2_2 = SetFocusEntity
-  L3_2 = cache
-  L3_2 = L3_2.ped
-  L2_2(L3_2)
-end
-L2_1.DestroyFlyCam = L3_1
-L2_1 = Utils
-function L3_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L0_2 = GetGameplayCamRot
-  L1_2 = 0
-  L0_2 = L0_2(L1_2)
-  L1_2 = GetGameplayCamCoord
-  L1_2 = L1_2()
-  L2_2 = GetControlNormal
-  L3_2 = 0
-  L4_2 = 239
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = GetControlNormal
-  L4_2 = 0
-  L5_2 = 240
-  L3_2 = L3_2(L4_2, L5_2)
-  L4_2 = vector2
-  L5_2 = L2_2
-  L6_2 = L3_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L5_2 = Utils
-  L5_2 = L5_2.ScreenRelToWorld
-  L6_2 = L1_2
-  L7_2 = L0_2
-  L8_2 = L4_2
-  L5_2, L6_2 = L5_2(L6_2, L7_2, L8_2)
-  L7_2 = L6_2 * 50.0
-  L7_2 = L1_2 + L7_2
-  L8_2 = StartShapeTestRay
-  L9_2 = L5_2.x
-  L10_2 = L5_2.y
-  L11_2 = L5_2.z
-  L12_2 = L7_2.x
-  L13_2 = L7_2.y
-  L14_2 = L7_2.z
-  L15_2 = -1
-  L16_2 = 0
-  L17_2 = 4
-  L8_2 = L8_2(L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-  L9_2 = GetShapeTestResult
-  L10_2 = L8_2
-  L9_2, L10_2, L11_2, L12_2, L13_2 = L9_2(L10_2)
-  L14_2 = L10_2
-  L15_2 = L11_2
-  L16_2 = L13_2
-  return L14_2, L15_2, L16_2
-end
-L2_1.ScreenToWorld = L3_1
-L2_1 = Utils
-function L3_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2
-  L3_2 = Utils
-  L3_2 = L3_2.RotationToDirection
-  L4_2 = A1_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = vector3
-  L5_2 = A1_2.x
-  L5_2 = L5_2 + 1.0
-  L6_2 = A1_2.y
-  L7_2 = A1_2.z
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  L5_2 = vector3
-  L6_2 = A1_2.x
-  L6_2 = L6_2 - 1.0
-  L7_2 = A1_2.y
-  L8_2 = A1_2.z
-  L5_2 = L5_2(L6_2, L7_2, L8_2)
-  L6_2 = vector3
-  L7_2 = A1_2.x
-  L8_2 = A1_2.y
-  L9_2 = A1_2.z
-  L9_2 = L9_2 - 1.0
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L7_2 = vector3
-  L8_2 = A1_2.x
-  L9_2 = A1_2.y
-  L10_2 = A1_2.z
-  L10_2 = L10_2 + 1.0
-  L7_2 = L7_2(L8_2, L9_2, L10_2)
-  L8_2 = Utils
-  L8_2 = L8_2.RotationToDirection
-  L9_2 = L7_2
-  L8_2 = L8_2(L9_2)
-  L9_2 = Utils
-  L9_2 = L9_2.RotationToDirection
-  L10_2 = L6_2
-  L9_2 = L9_2(L10_2)
-  L8_2 = L8_2 - L9_2
-  L9_2 = Utils
-  L9_2 = L9_2.RotationToDirection
-  L10_2 = L4_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = Utils
-  L10_2 = L10_2.RotationToDirection
-  L11_2 = L5_2
-  L10_2 = L10_2(L11_2)
-  L9_2 = L9_2 - L10_2
-  L10_2 = A1_2.y
-  L11_2 = math
-  L11_2 = L11_2.pi
-  L10_2 = L10_2 * L11_2
-  L10_2 = L10_2 / 180.0
-  L10_2 = -L10_2
-  L11_2 = math
-  L11_2 = L11_2.cos
-  L12_2 = L10_2
-  L11_2 = L11_2(L12_2)
-  L11_2 = L8_2 * L11_2
-  L12_2 = math
-  L12_2 = L12_2.sin
-  L13_2 = L10_2
-  L12_2 = L12_2(L13_2)
-  L12_2 = L9_2 * L12_2
-  L11_2 = L11_2 - L12_2
-  L12_2 = math
-  L12_2 = L12_2.sin
-  L13_2 = L10_2
-  L12_2 = L12_2(L13_2)
-  L12_2 = L8_2 * L12_2
-  L13_2 = math
-  L13_2 = L13_2.cos
-  L14_2 = L10_2
-  L13_2 = L13_2(L14_2)
-  L13_2 = L9_2 * L13_2
-  L12_2 = L12_2 + L13_2
-  L13_2 = L3_2 * 1.0
-  L13_2 = A0_2 + L13_2
-  L14_2 = L13_2 + L11_2
-  L14_2 = L14_2 + L12_2
-  L15_2 = Utils
-  L15_2 = L15_2.World3DToScreen2D
-  L16_2 = L14_2
-  L15_2 = L15_2(L16_2)
-  L16_2 = Utils
-  L16_2 = L16_2.World3DToScreen2D
-  L17_2 = L13_2
-  L16_2 = L16_2(L17_2)
-  L17_2 = A2_2.x
-  L18_2 = L16_2.x
-  L17_2 = L17_2 - L18_2
-  L18_2 = L15_2.x
-  L19_2 = L16_2.x
-  L18_2 = L18_2 - L19_2
-  L17_2 = L17_2 / L18_2
-  L18_2 = A2_2.y
-  L19_2 = L16_2.y
-  L18_2 = L18_2 - L19_2
-  L19_2 = L15_2.y
-  L20_2 = L16_2.y
-  L19_2 = L19_2 - L20_2
-  L18_2 = L18_2 / L19_2
-  L19_2 = L11_2 * L17_2
-  L19_2 = L13_2 + L19_2
-  L20_2 = L12_2 * L18_2
-  L19_2 = L19_2 + L20_2
-  L20_2 = L11_2 * L17_2
-  L20_2 = L3_2 + L20_2
-  L21_2 = L12_2 * L18_2
-  L20_2 = L20_2 + L21_2
-  L21_2 = L19_2
-  L22_2 = L20_2
-  return L21_2, L22_2
-end
-L2_1.ScreenRelToWorld = L3_1
-L2_1 = Utils
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = A0_2.x
-  L2_2 = math
-  L2_2 = L2_2.pi
-  L1_2 = L1_2 * L2_2
-  L1_2 = L1_2 / 180.0
-  L2_2 = A0_2.z
-  L3_2 = math
-  L3_2 = L3_2.pi
-  L2_2 = L2_2 * L3_2
-  L2_2 = L2_2 / 180.0
-  L3_2 = math
-  L3_2 = L3_2.abs
-  L4_2 = math
-  L4_2 = L4_2.cos
-  L5_2 = L1_2
-  L4_2, L5_2, L6_2, L7_2, L8_2 = L4_2(L5_2)
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-  L4_2 = vector3
-  L5_2 = math
-  L5_2 = L5_2.sin
-  L6_2 = L2_2
-  L5_2 = L5_2(L6_2)
-  L5_2 = -L5_2
-  L5_2 = L5_2 * L3_2
-  L6_2 = math
-  L6_2 = L6_2.cos
-  L7_2 = L2_2
-  L6_2 = L6_2(L7_2)
-  L6_2 = L6_2 * L3_2
-  L7_2 = math
-  L7_2 = L7_2.sin
-  L8_2 = L1_2
-  L7_2, L8_2 = L7_2(L8_2)
-  return L4_2(L5_2, L6_2, L7_2, L8_2)
-end
-L2_1.RotationToDirection = L3_1
-L2_1 = Utils
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2
-  L1_2 = GetScreenCoordFromWorldCoord
-  L2_2 = A0_2.x
-  L3_2 = A0_2.y
-  L4_2 = A0_2.z
-  L1_2, L2_2, L3_2 = L1_2(L2_2, L3_2, L4_2)
-  L4_2 = vector2
-  L5_2 = L2_2
-  L6_2 = L3_2
-  return L4_2(L5_2, L6_2)
-end
-L2_1.World3DToScreen2D = L3_1
-L2_1 = Utils
-function L3_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L2_2 = type
-  L3_2 = A0_2
-  L2_2 = L2_2(L3_2)
-  if "string" == L2_2 then
-    L2_2 = joaat
-    L3_2 = A0_2
-    L2_2 = L2_2(L3_2)
-    A0_2 = L2_2 or A0_2
-    if not L2_2 then
-    end
-  end
-  L2_2 = lib
-  L2_2 = L2_2.requestModel
-  L3_2 = A0_2
-  L4_2 = Config
-  L4_2 = L4_2.DefaultRequestModelTimeout
-  L2_2(L3_2, L4_2)
-  L2_2 = RequestModel
-  L3_2 = model
-  L2_2(L3_2)
-  while true do
-    L2_2 = HasModelLoaded
-    L3_2 = model
-    L2_2 = L2_2(L3_2)
-    if L2_2 then
-      break
-    end
-    L2_2 = Wait
-    L3_2 = 0
-    L2_2(L3_2)
-  end
-  L2_2 = CreateObject
-  L3_2 = model
-  L4_2 = A1_2.x
-  L5_2 = A1_2.y
-  L6_2 = A1_2.z
-  L7_2 = false
-  L8_2 = false
-  L9_2 = false
-  L2_2 = L2_2(L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2)
-  L3_2 = SetModelAsNoLongerNeeded
-  L4_2 = model
-  L3_2(L4_2)
-  return L2_2
-end
-L2_1.CreateObject = L3_1
-function L2_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  L3_2 = {}
-  L4_2 = A0_2
-  L4_2, L5_2 = L4_2()
-  while L5_2 do
-    L6_2 = #L3_2
-    L6_2 = L6_2 + 1
-    L3_2[L6_2] = L5_2
-    L6_2 = A1_2
-    L7_2 = L4_2
-    L6_2 = L6_2(L7_2)
-    L5_2 = L6_2
-  end
-  L6_2 = A2_2
-  L7_2 = L4_2
-  L6_2(L7_2)
-  return L3_2
-end
-L3_1 = Utils
-function L4_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = L2_1
-  L1_2 = FindFirstPed
-  L2_2 = FindNextPed
-  L3_2 = EndFindPed
-  return L0_2(L1_2, L2_2, L3_2)
-end
-L3_1.GetAllPeds = L4_1
-L3_1 = Utils
-function L4_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = L2_1
-  L1_2 = FindFirstObject
-  L2_2 = FindNextObject
-  L3_2 = EndFindObject
-  return L0_2(L1_2, L2_2, L3_2)
-end
-L3_1.GetAllObjects = L4_1
-L3_1 = Utils
-function L4_1()
-  local L0_2, L1_2, L2_2, L3_2
-  L0_2 = L2_1
-  L1_2 = FindFirstVehicle
-  L2_2 = FindNextVehicle
-  L3_2 = EndFindVehicle
-  return L0_2(L1_2, L2_2, L3_2)
-end
-L3_1.GetAllVehicles = L4_1
-L3_1 = Utils
-function L4_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  function L3_2(A0_3, A1_3, A2_3)
-    local L3_3, L4_3, L5_3, L6_3
-    L4_3 = A0_3
-    L3_3 = A0_3.find
-    L5_3 = A1_3
-    L6_3 = A2_3
-    return L3_3(L4_3, L5_3, L6_3)
-  end
-  find = L3_2
-  L3_2 = nil
-  L4_2 = nil
-  L5_2 = 1
-  L6_2 = A2_2
-  L7_2 = 1
-  for L8_2 = L5_2, L6_2, L7_2 do
-    L9_2 = find
-    L10_2 = A0_2
-    L11_2 = A1_2
-    if L4_2 then
-      L12_2 = L4_2 + 1
-      if L12_2 then
-        goto lbl_18
-      end
-    end
-    L12_2 = 0
-    ::lbl_18::
-    L9_2, L10_2 = L9_2(L10_2, L11_2, L12_2)
-    L4_2 = L10_2
-    L3_2 = L9_2
-  end
-  L5_2 = L3_2
-  L6_2 = L4_2
-  return L5_2, L6_2
-end
-L3_1.FindNthInString = L4_1
-function L3_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = math
-  L1_2 = L1_2.rad
-  L2_2 = A0_2.z
-  L1_2 = L1_2(L2_2)
-  L2_2 = math
-  L2_2 = L2_2.rad
-  L3_2 = A0_2.x
-  L2_2 = L2_2(L3_2)
-  L3_2 = math
-  L3_2 = L3_2.abs
-  L4_2 = math
-  L4_2 = L4_2.cos
-  L5_2 = L2_2
-  L4_2, L5_2, L6_2, L7_2, L8_2 = L4_2(L5_2)
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-  L4_2 = vector3
-  L5_2 = math
-  L5_2 = L5_2.sin
-  L6_2 = L1_2
-  L5_2 = L5_2(L6_2)
-  L5_2 = -L5_2
-  L5_2 = L5_2 * L3_2
-  L6_2 = math
-  L6_2 = L6_2.cos
-  L7_2 = L1_2
-  L6_2 = L6_2(L7_2)
-  L6_2 = L6_2 * L3_2
-  L7_2 = math
-  L7_2 = L7_2.sin
-  L8_2 = L2_2
-  L7_2, L8_2 = L7_2(L8_2)
-  L4_2 = L4_2(L5_2, L6_2, L7_2, L8_2)
-  return L4_2
-end
-RotationToDirection = L3_1
-L3_1 = Utils
-function L4_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = {}
-  L1_2 = GetFinalRenderedCamCoord
-  L1_2 = L1_2()
-  L0_2.coords = L1_2
-  L1_2 = GetFinalRenderedCamRot
-  L2_2 = 2
-  L1_2 = L1_2(L2_2)
-  L0_2.rotation = L1_2
-  return L0_2
-end
-L3_1.GetCamera = L4_1
-function L3_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2, L24_2, L25_2, L26_2, L27_2, L28_2, L29_2
-  L3_2 = 1000.0
-  L4_2 = RotationToDirection
-  L5_2 = A1_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = vector3
-  L6_2 = L3_2
-  L7_2 = 0
-  L8_2 = 0
-  L5_2 = L5_2(L6_2, L7_2, L8_2)
-  L5_2 = A1_2 + L5_2
-  L6_2 = vector3
-  L7_2 = -L3_2
-  L8_2 = 0
-  L9_2 = 0
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L6_2 = A1_2 + L6_2
-  L7_2 = vector3
-  L8_2 = 0
-  L9_2 = 0
-  L10_2 = -L3_2
-  L7_2 = L7_2(L8_2, L9_2, L10_2)
-  L7_2 = A1_2 + L7_2
-  L8_2 = vector3
-  L9_2 = 0
-  L10_2 = 0
-  L11_2 = L3_2
-  L8_2 = L8_2(L9_2, L10_2, L11_2)
-  L8_2 = A1_2 + L8_2
-  L9_2 = RotationToDirection
-  L10_2 = L8_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = RotationToDirection
-  L11_2 = L7_2
-  L10_2 = L10_2(L11_2)
-  L9_2 = L9_2 - L10_2
-  L10_2 = RotationToDirection
-  L11_2 = L5_2
-  L10_2 = L10_2(L11_2)
-  L11_2 = RotationToDirection
-  L12_2 = L6_2
-  L11_2 = L11_2(L12_2)
-  L10_2 = L10_2 - L11_2
-  L11_2 = math
-  L11_2 = L11_2.rad
-  L12_2 = A1_2.y
-  L11_2 = L11_2(L12_2)
-  L11_2 = -L11_2
-  L12_2 = math
-  L12_2 = L12_2.cos
-  L13_2 = L11_2
-  L12_2 = L12_2(L13_2)
-  L12_2 = L9_2 * L12_2
-  L13_2 = math
-  L13_2 = L13_2.sin
-  L14_2 = L11_2
-  L13_2 = L13_2(L14_2)
-  L13_2 = L10_2 * L13_2
-  L12_2 = L12_2 - L13_2
-  L13_2 = math
-  L13_2 = L13_2.sin
-  L14_2 = L11_2
-  L13_2 = L13_2(L14_2)
-  L13_2 = L9_2 * L13_2
-  L14_2 = math
-  L14_2 = L14_2.cos
-  L15_2 = L11_2
-  L14_2 = L14_2(L15_2)
-  L14_2 = L10_2 * L14_2
-  L13_2 = L13_2 + L14_2
-  L14_2 = L4_2 * L3_2
-  L14_2 = A0_2 + L14_2
-  L14_2 = L14_2 + L12_2
-  L14_2 = L14_2 + L13_2
-  L15_2 = nil
-  L16_2 = GetScreenCoordFromWorldCoord
-  L17_2 = L14_2.x
-  L18_2 = L14_2.y
-  L19_2 = L14_2.z
-  L16_2, L17_2, L18_2 = L16_2(L17_2, L18_2, L19_2)
-  L19_2 = {}
-  L19_2.X = L17_2
-  L19_2.Y = L18_2
-  if not (L19_2 and L17_2) or not L18_2 then
-    L20_2 = L4_2 * L3_2
-    L20_2 = A0_2 + L20_2
-    return L20_2
-  end
-  L20_2 = L4_2 * L3_2
-  L20_2 = A0_2 + L20_2
-  L21_2 = GetScreenCoordFromWorldCoord
-  L22_2 = L20_2.x
-  L23_2 = L20_2.y
-  L24_2 = L20_2.z
-  L21_2, L22_2, L23_2 = L21_2(L22_2, L23_2, L24_2)
-  L24_2 = {}
-  L24_2.X = L22_2
-  L24_2.Y = L23_2
-  if not (L24_2 and L22_2) or not L23_2 then
-    L25_2 = L4_2 * L3_2
-    L25_2 = A0_2 + L25_2
-    return L25_2
-  end
-  L25_2 = 1.0E-5
-  L26_2 = math
-  L26_2 = L26_2.abs
-  L27_2 = L19_2.X
-  L28_2 = L24_2.X
-  L27_2 = L27_2 - L28_2
-  L26_2 = L26_2(L27_2)
-  if not (L25_2 > L26_2) then
-    L26_2 = math
-    L26_2 = L26_2.abs
-    L27_2 = L19_2.Y
-    L28_2 = L24_2.Y
-    L27_2 = L27_2 - L28_2
-    L26_2 = L26_2(L27_2)
-    if not (L25_2 > L26_2) then
-      goto lbl_159
-    end
-  end
-  L26_2 = L4_2 * L3_2
-  L26_2 = A0_2 + L26_2
-  do return L26_2 end
-  ::lbl_159::
-  L26_2 = A2_2.x
-  L27_2 = L24_2.X
-  L26_2 = L26_2 - L27_2
-  L27_2 = L19_2.X
-  L28_2 = L24_2.X
-  L27_2 = L27_2 - L28_2
-  L26_2 = L26_2 / L27_2
-  L27_2 = A2_2.y
-  L28_2 = L24_2.Y
-  L27_2 = L27_2 - L28_2
-  L28_2 = L19_2.Y
-  L29_2 = L24_2.Y
-  L28_2 = L28_2 - L29_2
-  L27_2 = L27_2 / L28_2
-  L28_2 = L4_2 * L3_2
-  L28_2 = A0_2 + L28_2
-  L29_2 = L12_2 * L26_2
-  L28_2 = L28_2 + L29_2
-  L29_2 = L13_2 * L27_2
-  L28_2 = L28_2 + L29_2
-  return L28_2
-end
-ScreenRelToWorld = L3_1
-function L3_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L3_2 = GetCamCoord
-  L4_2 = A1_2
-  L3_2 = L3_2(L4_2)
-  L4_2 = cache
-  L4_2 = L4_2.ped
-  L5_2 = StartShapeTestRay
-  L6_2 = L3_2.x
-  L7_2 = L3_2.y
-  L8_2 = L3_2.z
-  L9_2 = A0_2.x
-  L10_2 = A0_2.y
-  L11_2 = A0_2.z
-  L12_2 = A2_2
-  L13_2 = L4_2
-  L14_2 = 0
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L6_2 = GetShapeTestResult
-  L7_2 = L5_2
-  L6_2, L7_2, L8_2, L9_2, L10_2 = L6_2(L7_2)
-  currentCoords = L8_2
-  L11_2 = L7_2
-  L12_2 = L8_2
-  L13_2 = L10_2
-  return L11_2, L12_2, L13_2
-end
-LocationInWorld = L3_1
-L3_1 = Utils
-function L4_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L1_2 = GetDisabledControlNormal
-  L2_2 = 0
-  L3_2 = 239
-  L1_2 = L1_2(L2_2, L3_2)
-  L2_2 = GetDisabledControlNormal
-  L3_2 = 0
-  L4_2 = 240
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = GetWorldCoordFromScreenCoord
-  L4_2 = L1_2
-  L5_2 = L2_2
-  L3_2, L4_2 = L3_2(L4_2, L5_2)
-  L5_2 = L3_2
-  L6_2 = L4_2 * 120
-  L6_2 = L3_2 + L6_2
-  L7_2 = StartShapeTestSweptSphere
-  L8_2 = L5_2.x
-  L9_2 = L5_2.y
-  L10_2 = L5_2.z
-  L11_2 = L6_2.x
-  L12_2 = L6_2.y
-  L13_2 = L6_2.z
-  L14_2 = 0.01
-  L15_2 = 17
-  L16_2 = A0_2 or L16_2
-  if not A0_2 then
-    L16_2 = cache
-    L16_2 = L16_2.ped
-  end
-  L17_2 = 4
-  L7_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-  L8_2 = GetShapeTestResult
-  L9_2 = L7_2
-  L8_2, L9_2, L10_2, L11_2, L12_2 = L8_2(L9_2)
-  if not L8_2 then
-    L13_2 = nil
-    L14_2 = nil
-    return L13_2, L14_2
-  end
-  L13_2 = L10_2
-  L14_2 = L12_2
-  return L13_2, L14_2
-end
-L3_1.getCursorHitCoords = L4_1
-L3_1 = string
-function L4_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L2_2 = type
-  L3_2 = A1_2
-  L2_2 = L2_2(L3_2)
-  if "string" == L2_2 then
-    L2_2 = A0_2 == A1_2
-    return L2_2
-  else
-    L2_2 = type
-    L3_2 = A1_2
-    L2_2 = L2_2(L3_2)
-    if "table" == L2_2 then
-      L2_2 = ipairs
-      L3_2 = A1_2
-      L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-      for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-        if A0_2 == L7_2 then
-          L8_2 = true
-          return L8_2
-        end
-      end
-      L2_2 = false
-      return L2_2
-    end
+    return false
   end
 end
-L3_1.includes = L4_1
-L3_1 = {}
-L3_1.ESC = 322
-L3_1.F1 = 288
-L3_1.F2 = 289
-L3_1.F3 = 170
-L3_1.F5 = 166
-L3_1.F6 = 167
-L3_1.F7 = 168
-L3_1.F8 = 169
-L3_1.F9 = 56
-L3_1.F10 = 57
-L3_1["~"] = 243
-L3_1["1"] = 157
-L3_1["2"] = 158
-L3_1["3"] = 160
-L3_1["4"] = 164
-L3_1["5"] = 165
-L3_1["6"] = 159
-L3_1["7"] = 161
-L3_1["8"] = 162
-L3_1["9"] = 163
-L3_1["-"] = 84
-L3_1["="] = 83
-L3_1.BACKSPACE = 177
-L3_1.TAB = 37
-L3_1.Q = 44
-L3_1.W = 32
-L3_1.E = 38
-L3_1.R = 45
-L3_1.T = 245
-L3_1.Y = 246
-L3_1.U = 303
-L3_1.P = 199
-L3_1["["] = 39
-L3_1["]"] = 40
-L3_1.ENTER = 18
-L3_1.CAPS = 137
-L3_1.A = 34
-L3_1.S = 8
-L3_1.D = 9
-L3_1.F = 23
-L3_1.G = 47
-L3_1.H = 74
-L3_1.K = 311
-L3_1.L = 182
-L3_1.LEFTSHIFT = 21
-L3_1.Z = 20
-L3_1.X = 73
-L3_1.C = 26
-L3_1.V = 0
-L3_1.B = 29
-L3_1.N = 249
-L3_1.M = 244
-L3_1[","] = 82
-L3_1["."] = 81
-L3_1.LEFTCTRL = 36
-L3_1.LEFTALT = 19
-L3_1.SPACE = 22
-L3_1.RIGHTCTRL = 70
-L3_1.HOME = 213
-L3_1.PAGEUP = 10
-L3_1.PAGEDOWN = 11
-L3_1.DELETE = 178
-L3_1.LEFT = 174
-L3_1.RIGHT = 175
-L3_1.TOP = 27
-L3_1.DOWN = 173
-L3_1.NENTER = 201
-L3_1.N4 = 108
-L3_1.N5 = 60
-L3_1.N6 = 107
-L3_1["N+"] = 96
-L3_1["N-"] = 97
-L3_1.N7 = 117
-L3_1.N8 = 61
-L3_1.N9 = 118
-Keys = L3_1
+
+
+Keys = {}
+Keys.ESC = 322
+Keys.F1 = 288
+Keys.F2 = 289
+Keys.F3 = 170
+Keys.F5 = 166
+Keys.F6 = 167
+Keys.F7 = 168
+Keys.F8 = 169
+Keys.F9 = 56
+Keys.F10 = 57
+Keys["~"] = 243
+Keys["1"] = 157
+Keys["2"] = 158
+Keys["3"] = 160
+Keys["4"] = 164
+Keys["5"] = 165
+Keys["6"] = 159
+Keys["7"] = 161
+Keys["8"] = 162
+Keys["9"] = 163
+Keys["-"] = 84
+Keys["="] = 83
+Keys.BACKSPACE = 177
+Keys.TAB = 37
+Keys.Q = 44
+Keys.W = 32
+Keys.E = 38
+Keys.R = 45
+Keys.T = 245
+Keys.Y = 246
+Keys.U = 303
+Keys.P = 199
+Keys["["] = 39
+Keys["]"] = 40
+Keys.ENTER = 18
+Keys.CAPS = 137
+Keys.A = 34
+Keys.S = 8
+Keys.D = 9
+Keys.F = 23
+Keys.G = 47
+Keys.H = 74
+Keys.K = 311
+Keys.L = 182
+Keys.LEFTSHIFT = 21
+Keys.Z = 20
+Keys.X = 73
+Keys.C = 26
+Keys.V = 0
+Keys.B = 29
+Keys.N = 249
+Keys.M = 244
+
+
+Keys[","] = 82
+Keys["."] = 81
+Keys.LEFTCTRL = 36
+Keys.LEFTALT = 19
+Keys.SPACE = 22
+Keys.RIGHTCTRL = 70
+Keys.HOME = 213
+Keys.PAGEUP = 10
+Keys.PAGEDOWN = 11
+Keys.DELETE = 178
+Keys.LEFT = 174
+Keys.RIGHT = 175
+Keys.TOP = 27
+Keys.DOWN = 173
+Keys.NENTER = 201
+Keys.N4 = 108
+Keys.N5 = 60
+Keys.N6 = 107
+Keys["N+"] = 96
+Keys["N-"] = 97
+Keys.N7 = 117
+Keys.N8 = 61
+Keys.N9 = 118
+
 DrawingInstructional = false
-L3_1 = Utils
-function L4_1(A0_2)
-  local L1_2, L2_2, L3_2
-  L1_2 = DrawingInstructional
-  if L1_2 then
-    L1_2 = Debug
-    L2_2 = "Instructional"
-    L3_2 = "Instructional already being drawn, updating keys."
-    L1_2(L2_2, L3_2)
+
+function Utils.DrawInstructional(controlList)
+  if DrawingInstructional then
+    Debug("Instructional", "Instructional already being drawn, updating keys.")
     return
   end
-  L1_2 = CreateThread
-  function L2_2()
-    local L0_3, L1_3, L2_3, L3_3
+  CreateThread(function()
     DrawingInstructional = true
-    while true do
-      L0_3 = DrawingInstructional
-      if not L0_3 then
-        break
-      end
-      L0_3 = Wait
-      L1_3 = 0
-      L0_3(L1_3)
-      L0_3 = Utils
-      L0_3 = L0_3.GetControls
-      L1_3 = A0_2
-      L0_3 = L0_3(L1_3)
-      L1_3 = Utils
-      L1_3 = L1_3.CreateInstructional
-      L2_3 = L0_3
-      L1_3 = L1_3(L2_3)
-      L2_3 = Utils
-      L2_3 = L2_3.DrawScaleform
-      L3_3 = L1_3
-      L2_3(L3_3)
+    while DrawingInstructional do
+      Wait(0)
+      local controls = Utils.GetControls(controlList)
+      local scaleform = Utils.CreateInstructional(controls)
+      Utils.DrawScaleform(scaleform)
     end
-  end
-  L1_2(L2_2)
+  end)
 end
-L3_1.DrawInstructional = L4_1
-L3_1 = Utils
-function L4_1()
-  local L0_2, L1_2
+
+function Utils.RemoveInstructional()
   DrawingInstructional = false
 end
-L3_1.RemoveInstructional = L4_1
-L3_1 = {}
-L4_1 = Utils
-function L5_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2
-  L0_2 = cache
-  L0_2 = L0_2.ped
-  L1_2 = ToggleInventoryClothing
-  L2_2 = true
-  L1_2(L2_2)
-  L1_2 = {}
-  L2_2 = {}
-  L3_2 = GetPedDrawableVariation
-  L4_2 = L0_2
-  L5_2 = 8
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.item = L3_2
-  L3_2 = GetPedTextureVariation
-  L4_2 = L0_2
-  L5_2 = 8
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.texture = L3_2
-  L1_2["t-shirt"] = L2_2
-  L2_2 = {}
-  L3_2 = GetPedDrawableVariation
-  L4_2 = L0_2
-  L5_2 = 11
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.item = L3_2
-  L3_2 = GetPedTextureVariation
-  L4_2 = L0_2
-  L5_2 = 11
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.texture = L3_2
-  L1_2.torso2 = L2_2
-  L2_2 = {}
-  L3_2 = GetPedDrawableVariation
-  L4_2 = L0_2
-  L5_2 = 3
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.item = L3_2
-  L3_2 = GetPedTextureVariation
-  L4_2 = L0_2
-  L5_2 = 3
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.texture = L3_2
-  L1_2.arms = L2_2
-  L2_2 = {}
-  L3_2 = GetPedDrawableVariation
-  L4_2 = L0_2
-  L5_2 = 4
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.item = L3_2
-  L3_2 = GetPedTextureVariation
-  L4_2 = L0_2
-  L5_2 = 4
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.texture = L3_2
-  L1_2.pants = L2_2
-  L2_2 = {}
-  L3_2 = GetPedDrawableVariation
-  L4_2 = L0_2
-  L5_2 = 6
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.item = L3_2
-  L3_2 = GetPedTextureVariation
-  L4_2 = L0_2
-  L5_2 = 6
-  L3_2 = L3_2(L4_2, L5_2)
-  L2_2.texture = L3_2
-  L1_2.shoes = L2_2
-  L3_1 = L1_2
-  L1_2 = Config
-  L1_2 = L1_2.NakedPlayerClothes
-  L2_2 = GetEntityModel
-  L3_2 = L0_2
-  L2_2 = L2_2(L3_2)
-  L3_2 = joaat
-  L4_2 = "mp_m_freemode_01"
-  L3_2 = L3_2(L4_2)
-  if L2_2 == L3_2 then
-    L2_2 = "Male"
-    if L2_2 then
-      goto lbl_88
-    end
+
+
+local savedClothes = {}
+
+function Utils.stripPlayer()
+  local ped = cache.ped
+  ToggleInventoryClothing(true)
+  local clothes = {}
+  clothes["t-shirt"] = {
+    item = GetPedDrawableVariation(ped, 8),
+    texture = GetPedTextureVariation(ped, 8)
+  }
+  clothes.torso2 = {
+    item = GetPedDrawableVariation(ped, 11),
+    texture = GetPedTextureVariation(ped, 11)
+  }
+  clothes.arms = {
+    item = GetPedDrawableVariation(ped, 3),
+    texture = GetPedTextureVariation(ped, 3)
+  }
+  clothes.pants = {
+    item = GetPedDrawableVariation(ped, 4),
+    texture = GetPedTextureVariation(ped, 4)
+  }
+  clothes.shoes = {
+    item = GetPedDrawableVariation(ped, 6),
+    texture = GetPedTextureVariation(ped, 6)
+  }
+  savedClothes = clothes
+
+  local nakedClothes = Config.NakedPlayerClothes
+  local model = GetEntityModel(ped)
+  local gender
+  if model == joaat("mp_m_freemode_01") then
+    gender = "Male"
+  else
+    gender = "Female"
   end
-  L2_2 = "Female"
-  ::lbl_88::
-  L1_2 = L1_2[L2_2]
-  L2_2 = Utils
-  L2_2 = L2_2.wearClothes
-  L3_2 = L1_2
-  L2_2(L3_2)
+  Utils.wearClothes(nakedClothes[gender])
 end
-L4_1.stripPlayer = L5_1
-L4_1 = Utils
-function L5_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L1_2 = cache
-  L1_2 = L1_2.ped
-  L2_2 = SetPedComponentVariation
-  L3_2 = L1_2
-  L4_2 = 8
-  L5_2 = A0_2["t-shirt"]
-  L5_2 = L5_2.item
-  L6_2 = A0_2["t-shirt"]
-  L6_2 = L6_2.texture
-  L7_2 = 0
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L2_2 = SetPedComponentVariation
-  L3_2 = L1_2
-  L4_2 = 11
-  L5_2 = A0_2.torso2
-  L5_2 = L5_2.item
-  L6_2 = A0_2.torso2
-  L6_2 = L6_2.texture
-  L7_2 = 0
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L2_2 = SetPedComponentVariation
-  L3_2 = L1_2
-  L4_2 = 3
-  L5_2 = A0_2.arms
-  L5_2 = L5_2.item
-  L6_2 = A0_2.arms
-  L6_2 = L6_2.texture
-  L7_2 = 0
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L2_2 = SetPedComponentVariation
-  L3_2 = L1_2
-  L4_2 = 4
-  L5_2 = A0_2.pants
-  L5_2 = L5_2.item
-  L6_2 = A0_2.pants
-  L6_2 = L6_2.texture
-  L7_2 = 0
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L2_2 = SetPedComponentVariation
-  L3_2 = L1_2
-  L4_2 = 6
-  L5_2 = A0_2.shoes
-  L5_2 = L5_2.item
-  L6_2 = A0_2.shoes
-  L6_2 = L6_2.texture
-  L7_2 = 0
-  L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
+
+function Utils.wearClothes(clothes)
+  local ped = cache.ped
+  SetPedComponentVariation(ped, 8, clothes["t-shirt"].item, clothes["t-shirt"].texture, 0)
+  SetPedComponentVariation(ped, 11, clothes.torso2.item, clothes.torso2.texture, 0)
+  SetPedComponentVariation(ped, 3, clothes.arms.item, clothes.arms.texture, 0)
+  SetPedComponentVariation(ped, 4, clothes.pants.item, clothes.pants.texture, 0)
+  SetPedComponentVariation(ped, 6, clothes.shoes.item, clothes.shoes.texture, 0)
 end
-L4_1.wearClothes = L5_1
-L4_1 = Utils
-function L5_1()
-  local L0_2, L1_2
-  L0_2 = ToggleInventoryClothing
-  L1_2 = true
-  L0_2(L1_2)
-  L0_2 = Utils
-  L0_2 = L0_2.wearClothes
-  L1_2 = L3_1
-  L0_2(L1_2)
-  L0_2 = {}
-  L3_1 = L0_2
-  L0_2 = ToggleInventoryClothing
-  L1_2 = false
-  L0_2(L1_2)
+
+function Utils.restorePlayerClothes()
+  ToggleInventoryClothing(true)
+  Utils.wearClothes(savedClothes)
+  savedClothes = {}
+  ToggleInventoryClothing(false)
 end
-L4_1.restorePlayerClothes = L5_1
-
-
-
-
-
-

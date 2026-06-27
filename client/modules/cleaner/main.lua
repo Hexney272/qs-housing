@@ -1,4183 +1,1807 @@
+local sincos = require("glm").sincos
+local rad = require("glm").rad
+
+local CleanerRobot = lib.class("CleanerRobot")
+
+local TICK_RATE = 16
+local DOCK_ARRIVAL_DISTANCE = 0.3
+
+local WALL_DETECT_FRONT = 0.4
+local WALL_DETECT_SIDE = 0.4
+local WALL_FOLLOW_MAX_DIST = 1.5
+local OPENING_THRESHOLD = 2.0
+local JUNK_ANGLE_THRESHOLD = 15
+local OPENING_PASS_DISTANCE = 0.3
 
 
+local function getDefaultConfig()
+    local cfg = Config.CleanerRobot or {}
+    return {
+        moveSpeed = cfg.moveSpeed or 0.012,
+        maxSpeed = cfg.maxSpeed or 0.018,
+        acceleration = cfg.acceleration or 3.0E-4,
+        deceleration = cfg.deceleration or 8.0E-4,
+        raycastDistance = cfg.raycastDistance or 0.8,
+        junkDetectRadius = cfg.junkDetectRadius or 15.0,
+        maxDistanceFromDock = cfg.maxDistanceFromDock or 15.0,
+        cleaningTimeout = cfg.cleaningTimeout or 300000,
+        randomDirectionTime = cfg.randomDirectionTime or 8000,
+        maxStuckTime = cfg.maxStuckTime or 3000,
+        wobbleEnabled = false ~= cfg.wobbleEnabled,
+        wobbleAmount = cfg.wobbleAmount or 0.15,
+        wobbleSpeed = cfg.wobbleSpeed or 0.08,
+    }
+end
 
 
+function CleanerRobot:constructor()
+    local config = getDefaultConfig()
+    self.robots = {}
+    self.activeThread = false
+    self.interactionThread = false
+    self.moveSpeed = config.moveSpeed
+    self.maxSpeed = config.maxSpeed
+    self.acceleration = config.acceleration
+    self.deceleration = config.deceleration
+    self.raycastDistance = config.raycastDistance
+    self.junkDetectRadius = config.junkDetectRadius
+    self.maxDistanceFromDock = config.maxDistanceFromDock
+    self.cleaningTimeout = config.cleaningTimeout
+    self.randomDirectionTime = config.randomDirectionTime
+    self.maxStuckTime = config.maxStuckTime
+    self.wobbleEnabled = config.wobbleEnabled
+    self.wobbleAmount = config.wobbleAmount
+    self.wobbleSpeed = config.wobbleSpeed
+    self.cleanerModels = {}
+    return self
+end
 
 
-local L0_1, L1_1, L2_1, L3_1, L4_1, L5_1, L6_1, L7_1, L8_1, L9_1, L10_1, L11_1, L12_1, L13_1, L14_1, L15_1
-L0_1 = require
-L1_1 = "glm"
-L0_1 = L0_1(L1_1)
-L0_1 = L0_1.sincos
-L1_1 = require
-L2_1 = "glm"
-L1_1 = L1_1(L2_1)
-L1_1 = L1_1.rad
-L2_1 = lib
-L2_1 = L2_1.class
-L3_1 = "CleanerRobot"
-L2_1 = L2_1(L3_1)
-function L3_1()
-  local L0_2, L1_2, L2_2
-  L0_2 = Config
-  L0_2 = L0_2.CleanerRobot
-  if not L0_2 then
-    L0_2 = {}
-  end
-  L1_2 = {}
-  L2_2 = L0_2.moveSpeed
-  if not L2_2 then
-    L2_2 = 0.012
-  end
-  L1_2.moveSpeed = L2_2
-  L2_2 = L0_2.maxSpeed
-  if not L2_2 then
-    L2_2 = 0.018
-  end
-  L1_2.maxSpeed = L2_2
-  L2_2 = L0_2.acceleration
-  if not L2_2 then
-    L2_2 = 3.0E-4
-  end
-  L1_2.acceleration = L2_2
-  L2_2 = L0_2.deceleration
-  if not L2_2 then
-    L2_2 = 8.0E-4
-  end
-  L1_2.deceleration = L2_2
-  L2_2 = L0_2.raycastDistance
-  if not L2_2 then
-    L2_2 = 0.8
-  end
-  L1_2.raycastDistance = L2_2
-  L2_2 = L0_2.junkDetectRadius
-  if not L2_2 then
-    L2_2 = 15.0
-  end
-  L1_2.junkDetectRadius = L2_2
-  L2_2 = L0_2.maxDistanceFromDock
-  if not L2_2 then
-    L2_2 = 15.0
-  end
-  L1_2.maxDistanceFromDock = L2_2
-  L2_2 = L0_2.cleaningTimeout
-  if not L2_2 then
-    L2_2 = 300000
-  end
-  L1_2.cleaningTimeout = L2_2
-  L2_2 = L0_2.randomDirectionTime
-  if not L2_2 then
-    L2_2 = 8000
-  end
-  L1_2.randomDirectionTime = L2_2
-  L2_2 = L0_2.maxStuckTime
-  if not L2_2 then
-    L2_2 = 3000
-  end
-  L1_2.maxStuckTime = L2_2
-  L2_2 = L0_2.wobbleEnabled
-  L2_2 = false ~= L2_2
-  L1_2.wobbleEnabled = L2_2
-  L2_2 = L0_2.wobbleAmount
-  if not L2_2 then
-    L2_2 = 0.15
-  end
-  L1_2.wobbleAmount = L2_2
-  L2_2 = L0_2.wobbleSpeed
-  if not L2_2 then
-    L2_2 = 0.08
-  end
-  L1_2.wobbleSpeed = L2_2
-  return L1_2
-end
-L4_1 = 16
-L5_1 = 0.3
-function L6_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = L3_1
-  L1_2 = L1_2()
-  L2_2 = {}
-  A0_2.robots = L2_2
-  A0_2.activeThread = false
-  A0_2.interactionThread = false
-  L2_2 = L1_2.moveSpeed
-  A0_2.moveSpeed = L2_2
-  L2_2 = L1_2.maxSpeed
-  A0_2.maxSpeed = L2_2
-  L2_2 = L1_2.acceleration
-  A0_2.acceleration = L2_2
-  L2_2 = L1_2.deceleration
-  A0_2.deceleration = L2_2
-  L2_2 = L1_2.raycastDistance
-  A0_2.raycastDistance = L2_2
-  L2_2 = L1_2.junkDetectRadius
-  A0_2.junkDetectRadius = L2_2
-  L2_2 = L1_2.maxDistanceFromDock
-  A0_2.maxDistanceFromDock = L2_2
-  L2_2 = L1_2.cleaningTimeout
-  A0_2.cleaningTimeout = L2_2
-  L2_2 = L1_2.randomDirectionTime
-  A0_2.randomDirectionTime = L2_2
-  L2_2 = L1_2.maxStuckTime
-  A0_2.maxStuckTime = L2_2
-  L2_2 = L1_2.wobbleEnabled
-  A0_2.wobbleEnabled = L2_2
-  L2_2 = L1_2.wobbleAmount
-  A0_2.wobbleAmount = L2_2
-  L2_2 = L1_2.wobbleSpeed
-  A0_2.wobbleSpeed = L2_2
-  L2_2 = {}
-  A0_2.cleanerModels = L2_2
-  return A0_2
-end
-L2_1.constructor = L6_1
-function L6_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2
-  L1_2 = {}
-  A0_2.cleanerModels = L1_2
-  L1_2 = pairs
-  L2_2 = Config
-  L2_2 = L2_2.Furniture
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L6_2.items
-    if L7_2 then
-      L7_2 = ipairs
-      L8_2 = L6_2.items
-      L7_2, L8_2, L9_2, L10_2 = L7_2(L8_2)
-      for L11_2, L12_2 in L7_2, L8_2, L9_2, L10_2 do
-        L13_2 = L12_2.isCleanerRobot
-        if L13_2 then
-          L13_2 = A0_2.cleanerModels
-          L14_2 = L12_2.object
-          L15_2 = {}
-          L16_2 = L12_2.object
-          L15_2.model = L16_2
-          L16_2 = L12_2.isCleanerRobot
-          L16_2 = L16_2.dockerModel
-          L15_2.dockerModel = L16_2
-          L13_2[L14_2] = L15_2
-        end
-        L13_2 = L12_2.colors
-        if L13_2 then
-          L13_2 = pairs
-          L14_2 = L12_2.colors
-          L13_2, L14_2, L15_2, L16_2 = L13_2(L14_2)
-          for L17_2, L18_2 in L13_2, L14_2, L15_2, L16_2 do
-            L19_2 = L18_2.isCleanerRobot
-            if L19_2 then
-              L19_2 = A0_2.cleanerModels
-              L20_2 = L18_2.object
-              L21_2 = {}
-              L22_2 = L18_2.object
-              L21_2.model = L22_2
-              L22_2 = L18_2.isCleanerRobot
-              L22_2 = L22_2.dockerModel
-              L21_2.dockerModel = L22_2
-              L19_2[L20_2] = L21_2
-            end
-          end
-        end
-      end
-    end
-  end
-end
-L2_1.buildModelList = L6_1
-function L6_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2
-  L2_2 = A0_2.cleanerModels
-  L2_2 = L2_2[A1_2]
-  L3_2 = nil ~= L2_2
-  L4_2 = L2_2
-  return L3_2, L4_2
-end
-L2_1.isCleanerModel = L6_1
-function L6_1(A0_2, A1_2, A2_2, A3_2, A4_2)
-  local L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  L5_2 = A2_2 * A3_2
-  L5_2 = A1_2 + L5_2
-  L6_2 = _ENV
-  L7_2 = "StartExpensiveSynchronousShapeTestLosProbe"
-  L6_2 = L6_2[L7_2]
-  L7_2 = A1_2.x
-  L8_2 = A1_2.y
-  L9_2 = A1_2.z
-  L10_2 = L5_2.x
-  L11_2 = L5_2.y
-  L12_2 = L5_2.z
-  L13_2 = 17
-  if A4_2 then
-    L14_2 = A4_2[1]
-    if L14_2 then
-      goto lbl_21
-    end
-  end
-  L14_2 = 0
-  ::lbl_21::
-  L15_2 = 4
-  L6_2 = L6_2(L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2)
-  L7_2 = GetShapeTestResultIncludingMaterial
-  L8_2 = L6_2
-  L7_2, L8_2, L9_2, L10_2, L11_2, L12_2 = L7_2(L8_2)
-  if 1 == L8_2 then
-    L13_2 = true
-    L14_2 = vec3
-    L15_2 = L9_2.x
-    L16_2 = L9_2.y
-    L17_2 = L9_2.z
-    L14_2 = L14_2(L15_2, L16_2, L17_2)
-    L15_2 = L12_2
-    return L13_2, L14_2, L15_2
-  end
-  L13_2 = false
-  L14_2 = nil
-  L15_2 = nil
-  return L13_2, L14_2, L15_2
-end
-L2_1.performRaycast = L6_1
-function L6_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = L0_1
-  L3_2 = L1_1
-  L4_2 = vec3
-  L5_2 = 0
-  L6_2 = 0
-  L7_2 = A1_2
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2, L6_2, L7_2)
-  L3_2, L4_2, L5_2, L6_2, L7_2 = L3_2(L4_2, L5_2, L6_2, L7_2)
-  L2_2, L3_2 = L2_2(L3_2, L4_2, L5_2, L6_2, L7_2)
-  L4_2 = vec3
-  L5_2 = L2_2.z
-  L6_2 = L3_2.z
-  L7_2 = 0.0
-  return L4_2(L5_2, L6_2, L7_2)
-end
-L2_1.headingToDirection = L6_1
-function L6_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2
-  L3_2 = DoesEntityExist
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = GetEntityCoords
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  L5_2 = A0_2
-  L4_2 = A0_2.normalizeAngle
-  L6_2 = A2_2
-  L4_2 = L4_2(L5_2, L6_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.headingToDirection
-  L7_2 = L4_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = vec3
-  L7_2 = L3_2.x
-  L8_2 = L3_2.y
-  L9_2 = L3_2.z
-  L9_2 = L9_2 + 0.15
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L8_2 = A0_2
-  L7_2 = A0_2.performRaycast
-  L9_2 = L6_2
-  L10_2 = L5_2
-  L11_2 = A0_2.raycastDistance
-  L12_2 = {}
-  L13_2 = A1_2.dockHandle
-  L12_2[1] = L13_2
-  L7_2, L8_2, L9_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
-  if L7_2 then
-    L10_2 = A1_2.dockHandle
-    if L9_2 ~= L10_2 then
-      if L8_2 then
-        L10_2 = L3_2 - L8_2
-        L10_2 = #L10_2
-        L11_2 = Debug
-        L12_2 = "CleanerRobot: Hit obstacle in direction:"
-        L13_2 = L4_2
-        L14_2 = "distance"
-        L15_2 = L10_2
-        L11_2(L12_2, L13_2, L14_2, L15_2)
-        L11_2 = A0_2.raycastDistance
-        L11_2 = L10_2 >= L11_2
-        return L11_2
-      end
-      L10_2 = false
-      return L10_2
-    end
-  end
-  L10_2 = true
-  return L10_2
-end
-L2_1.canMoveInDirection = L6_1
-function L6_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L2_2 = DoesEntityExist
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = false
-    return L2_2
-  end
-  L2_2 = A1_2.currentHeading
-  if not L2_2 then
-    L2_2 = GetEntityHeading
-    L3_2 = A1_2.robotHandle
-    L2_2 = L2_2(L3_2)
-  end
-  L4_2 = A0_2
-  L3_2 = A0_2.canMoveInDirection
-  L5_2 = A1_2
-  L6_2 = L2_2
-  return L3_2(L4_2, L5_2, L6_2)
-end
-L2_1.isForwardClear = L6_1
-L6_1 = 0.4
-L7_1 = 1.5
-L8_1 = 0.4
-L9_1 = 2.0
-L10_1 = 15
-L11_1 = 0.3
-function L12_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L4_2 = DoesEntityExist
-  L5_2 = A1_2.robotHandle
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    return A3_2
-  end
-  L4_2 = GetEntityCoords
-  L5_2 = A1_2.robotHandle
-  L4_2 = L4_2(L5_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.headingToDirection
-  L7_2 = A2_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = vec3
-  L7_2 = L4_2.x
-  L8_2 = L4_2.y
-  L9_2 = L4_2.z
-  L9_2 = L9_2 + 0.15
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L8_2 = A0_2
-  L7_2 = A0_2.performRaycast
-  L9_2 = L6_2
-  L10_2 = L5_2
-  L11_2 = A3_2
-  L12_2 = {}
-  L13_2 = A1_2.robotHandle
-  L14_2 = A1_2.dockHandle
-  L12_2[1] = L13_2
-  L12_2[2] = L14_2
-  L7_2, L8_2, L9_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2)
-  if L7_2 then
-    L10_2 = A1_2.dockHandle
-    if L9_2 ~= L10_2 and L8_2 then
-      L10_2 = L4_2 - L8_2
-      L10_2 = #L10_2
-      return L10_2
-    end
-  end
-  return A3_2
-end
-L2_1.getDistanceInDirection = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = A1_2.currentHeading
-  if not L2_2 then
-    L2_2 = GetEntityHeading
-    L3_2 = A1_2.robotHandle
-    L2_2 = L2_2(L3_2)
-    if not L2_2 then
-      L2_2 = 0
-    end
-  end
-  A1_2.navState = "moving"
-  A1_2.moveDirection = L2_2
-  A1_2.lastWallDistance = nil
-  A1_2.wallFollowStartTime = nil
-  A1_2.openingDetected = false
-  A1_2.openingDirection = nil
-  A1_2.turnCompletePosition = nil
-  A1_2.isInitialized = true
-  L3_2 = Debug
-  L4_2 = "CleanerRobot: Wall-following initialized, direction:"
-  L5_2 = A1_2.moveDirection
-  L3_2(L4_2, L5_2)
-end
-L2_1.initRoombaState = L12_1
-function L12_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2
-  L5_2 = A0_2
-  L4_2 = A0_2.getDistanceInDirection
-  L6_2 = A1_2
-  L7_2 = A2_2
-  L8_2 = A3_2
-  return L4_2(L5_2, L6_2, L7_2, L8_2)
-end
-L2_1.getWallDistance = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2
-  L3_2 = A0_2
-  L2_2 = A0_2.getWallDistance
-  L4_2 = A1_2
-  L5_2 = A1_2.moveDirection
-  L6_2 = L6_1
-  L2_2 = L2_2(L3_2, L4_2, L5_2, L6_2)
-  L3_2 = L6_1
-  L3_2 = L2_2 < L3_2
-  L4_2 = L2_2
-  return L3_2, L4_2
-end
-L2_1.isFrontBlocked = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L3_2 = A0_2
-  L2_2 = A0_2.normalizeAngle
-  L4_2 = A1_2.moveDirection
-  L4_2 = L4_2 - 90
-  L2_2 = L2_2(L3_2, L4_2)
-  L4_2 = A0_2
-  L3_2 = A0_2.getWallDistance
-  L5_2 = A1_2
-  L6_2 = L2_2
-  L7_2 = L8_1
-  return L3_2(L4_2, L5_2, L6_2, L7_2)
-end
-L2_1.getRightWallDistance = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L3_2 = A0_2
-  L2_2 = A0_2.getRightWallDistance
-  L4_2 = A1_2
-  L2_2 = L2_2(L3_2, L4_2)
-  L3_2 = A1_2.lastWallDistance
-  if not L3_2 then
-    L3_2 = L2_2
-  end
-  L4_2 = L2_2 - L3_2
-  L5_2 = L9_1
-  if L4_2 > L5_2 then
-    L5_2 = A0_2
-    L4_2 = A0_2.normalizeAngle
-    L6_2 = A1_2.moveDirection
-    L6_2 = L6_2 - 90
-    L4_2 = L4_2(L5_2, L6_2)
-    L5_2 = Debug
-    L6_2 = "CleanerRobot: Opening detected! Distance jump from"
-    L7_2 = L3_2
-    L8_2 = "to"
-    L9_2 = L2_2
-    L5_2(L6_2, L7_2, L8_2, L9_2)
-    L5_2 = true
-    L6_2 = L4_2
-    return L5_2, L6_2
-  end
-  L4_2 = false
-  L5_2 = 0
-  return L4_2, L5_2
-end
-L2_1.checkRightOpening = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2
-  L3_2 = {}
-  L4_2 = GetEntityCoords
-  L5_2 = A1_2.robotHandle
-  L4_2 = L4_2(L5_2)
-  if not A2_2 then
-    A2_2 = A0_2.maxDistanceFromDock
-  end
-  L5_2 = junk
-  L6_2 = L5_2
-  L5_2 = L5_2.getAll
-  L5_2 = L5_2(L6_2)
-  if not L5_2 then
-    return L3_2
-  end
-  L6_2 = pairs
-  L7_2 = L5_2
-  L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-  for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-    L12_2 = false
-    L13_2 = ipairs
-    L14_2 = A1_2.cleanedJunk
-    L13_2, L14_2, L15_2, L16_2 = L13_2(L14_2)
-    for L17_2, L18_2 in L13_2, L14_2, L15_2, L16_2 do
-      if L18_2 == L10_2 then
-        L12_2 = true
-        break
-      end
-    end
-    if not L12_2 then
-      L13_2 = L11_2.handle
-      if L13_2 then
-        L13_2 = DoesEntityExist
-        L14_2 = L11_2.handle
-        L13_2 = L13_2(L14_2)
-        if L13_2 then
-          L13_2 = GetEntityCoords
-          L14_2 = L11_2.handle
-          L13_2 = L13_2(L14_2)
-          L14_2 = L4_2 - L13_2
-          L14_2 = #L14_2
-          if A2_2 >= L14_2 then
-            L15_2 = table
-            L15_2 = L15_2.insert
-            L16_2 = L3_2
-            L17_2 = {}
-            L17_2.id = L10_2
-            L17_2.coords = L13_2
-            L17_2.distance = L14_2
-            L18_2 = L11_2.handle
-            L17_2.handle = L18_2
-            L15_2(L16_2, L17_2)
-          end
-        end
-      end
-    end
-  end
-  L6_2 = table
-  L6_2 = L6_2.sort
-  L7_2 = L3_2
-  function L8_2(A0_3, A1_3)
-    local L2_3, L3_3
-    L2_3 = A0_3.distance
-    L3_3 = A1_3.distance
-    L2_3 = L2_3 < L3_3
-    return L2_3
-  end
-  L6_2(L7_2, L8_2)
-  return L3_2
-end
-L2_1.findAllJunkInRange = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L3_2 = A0_2
-  L2_2 = A0_2.findAllJunkInRange
-  L4_2 = A1_2
-  L5_2 = A0_2.maxDistanceFromDock
-  L2_2 = L2_2(L3_2, L4_2, L5_2)
-  L3_2 = #L2_2
-  if L3_2 > 0 then
-    L3_2 = L2_2[1]
-    L4_2 = L3_2.handle
-    if L4_2 then
-      L4_2 = DoesEntityExist
-      L5_2 = L3_2.handle
-      L4_2 = L4_2(L5_2)
-      if L4_2 then
-        L4_2 = L3_2.id
-        L5_2 = L3_2.coords
-        return L4_2, L5_2
-      end
-    end
-  end
-  L3_2 = nil
-  L4_2 = nil
-  return L3_2, L4_2
-end
-L2_1.findNearbyJunk = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2
-  if not A2_2 then
-    A2_2 = 1.5
-  end
-  L3_2 = GetEntityCoords
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  L4_2 = junk
-  L5_2 = L4_2
-  L4_2 = L4_2.getAll
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    L5_2 = nil
-    L6_2 = nil
-    L7_2 = nil
-    return L5_2, L6_2, L7_2
-  end
-  L5_2 = nil
-  L6_2 = math
-  L6_2 = L6_2.huge
-  L7_2 = pairs
-  L8_2 = L4_2
-  L7_2, L8_2, L9_2, L10_2 = L7_2(L8_2)
-  for L11_2, L12_2 in L7_2, L8_2, L9_2, L10_2 do
-    L13_2 = false
-    L14_2 = ipairs
-    L15_2 = A1_2.cleanedJunk
-    L14_2, L15_2, L16_2, L17_2 = L14_2(L15_2)
-    for L18_2, L19_2 in L14_2, L15_2, L16_2, L17_2 do
-      if L19_2 == L11_2 then
-        L13_2 = true
-        break
-      end
-    end
-    if not L13_2 then
-      L14_2 = L12_2.handle
-      if L14_2 then
-        L14_2 = DoesEntityExist
-        L15_2 = L12_2.handle
-        L14_2 = L14_2(L15_2)
-        if L14_2 then
-          L14_2 = GetEntityCoords
-          L15_2 = L12_2.handle
-          L14_2 = L14_2(L15_2)
-          L15_2 = L3_2 - L14_2
-          L15_2 = #L15_2
-          if A2_2 >= L15_2 and L6_2 > L15_2 then
-            L16_2 = {}
-            L16_2.id = L11_2
-            L16_2.coords = L14_2
-            L16_2.distance = L15_2
-            L5_2 = L16_2
-            L6_2 = L15_2
-          end
-        end
-      end
-    end
-  end
-  if L5_2 then
-    L7_2 = L5_2.id
-    L8_2 = L5_2.coords
-    L9_2 = L5_2.distance
-    return L7_2, L8_2, L9_2
-  end
-  L7_2 = nil
-  L8_2 = nil
-  L9_2 = nil
-  return L7_2, L8_2, L9_2
-end
-L2_1.findVeryCloseJunk = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2
-  L2_2 = GetEntityCoords
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  L3_2 = junk
-  L4_2 = L3_2
-  L3_2 = L3_2.getAll
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L4_2 = nil
-    L5_2 = nil
-    L6_2 = nil
-    return L4_2, L5_2, L6_2
-  end
-  L4_2 = {}
-  L5_2 = pairs
-  L6_2 = L3_2
-  L5_2, L6_2, L7_2, L8_2 = L5_2(L6_2)
-  for L9_2, L10_2 in L5_2, L6_2, L7_2, L8_2 do
-    L11_2 = false
-    L12_2 = ipairs
-    L13_2 = A1_2.cleanedJunk
-    L12_2, L13_2, L14_2, L15_2 = L12_2(L13_2)
-    for L16_2, L17_2 in L12_2, L13_2, L14_2, L15_2 do
-      if L17_2 == L9_2 then
-        L11_2 = true
-        break
-      end
-    end
-    if not L11_2 then
-      L12_2 = L10_2.handle
-      if L12_2 then
-        L12_2 = DoesEntityExist
-        L13_2 = L10_2.handle
-        L12_2 = L12_2(L13_2)
-        if L12_2 then
-          L12_2 = GetEntityCoords
-          L13_2 = L10_2.handle
-          L12_2 = L12_2(L13_2)
-          L13_2 = L2_2 - L12_2
-          L13_2 = #L13_2
-          L15_2 = A0_2
-          L14_2 = A0_2.isJunkVisible
-          L16_2 = A1_2
-          L17_2 = L10_2.handle
-          L14_2 = L14_2(L15_2, L16_2, L17_2)
-          if L14_2 then
-            L14_2 = table
-            L14_2 = L14_2.insert
-            L15_2 = L4_2
-            L16_2 = {}
-            L16_2.id = L9_2
-            L16_2.coords = L12_2
-            L16_2.distance = L13_2
-            L14_2(L15_2, L16_2)
-          end
-        end
-      end
-    end
-  end
-  L5_2 = #L4_2
-  if 0 == L5_2 then
-    L5_2 = nil
-    L6_2 = nil
-    L7_2 = nil
-    return L5_2, L6_2, L7_2
-  end
-  L5_2 = table
-  L5_2 = L5_2.sort
-  L6_2 = L4_2
-  function L7_2(A0_3, A1_3)
-    local L2_3, L3_3
-    L2_3 = A0_3.distance
-    L3_3 = A1_3.distance
-    L2_3 = L2_3 < L3_3
-    return L2_3
-  end
-  L5_2(L6_2, L7_2)
-  L5_2 = L4_2[1]
-  L6_2 = L5_2.id
-  L7_2 = L5_2.coords
-  L8_2 = L5_2.distance
-  return L6_2, L7_2, L8_2
-end
-L2_1.findVisibleJunk = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L3_2 = false
-  L4_2 = ipairs
-  L5_2 = A1_2.cleanedJunk
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2)
-  for L8_2, L9_2 in L4_2, L5_2, L6_2, L7_2 do
-    if L9_2 == A2_2 then
-      L3_2 = true
-      break
-    end
-  end
-  if L3_2 then
-    L4_2 = Debug
-    L5_2 = "CleanerRobot: Junk already cleaned:"
-    L6_2 = A2_2
-    L4_2(L5_2, L6_2)
-    return
-  end
-  L4_2 = table
-  L4_2 = L4_2.insert
-  L5_2 = A1_2.cleanedJunk
-  L6_2 = A2_2
-  L4_2(L5_2, L6_2)
-  L4_2 = junk
-  L5_2 = L4_2
-  L4_2 = L4_2.getAll
-  L4_2 = L4_2(L5_2)
-  if L4_2 then
-    L5_2 = L4_2[A2_2]
-    if L5_2 then
-      L5_2 = L4_2[A2_2]
-      L5_2 = L5_2.handle
-      if L5_2 then
-        L5_2 = DoesEntityExist
-        L6_2 = L4_2[A2_2]
-        L6_2 = L6_2.handle
-        L5_2 = L5_2(L6_2)
-        if L5_2 then
-          L5_2 = SetEntityDrawOutline
-          L6_2 = L4_2[A2_2]
-          L6_2 = L6_2.handle
-          L7_2 = false
-          L5_2(L6_2, L7_2)
-        end
-      end
-    end
-  end
-  L5_2 = lib
-  L5_2 = L5_2.callback
-  L5_2 = L5_2.await
-  L6_2 = "housing:junk:remove"
-  L7_2 = false
-  L8_2 = A2_2
-  L9_2 = A1_2.house
-  L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-  if L5_2 then
-    L6_2 = junk
-    L7_2 = L6_2
-    L6_2 = L6_2.remove
-    L8_2 = A2_2
-    L6_2(L7_2, L8_2)
-    L6_2 = Debug
-    L7_2 = "CleanerRobot: Cleaned and removed junk"
-    L8_2 = A2_2
-    L6_2(L7_2, L8_2)
-    L6_2 = PlaySoundFrontend
-    L7_2 = -1
-    L8_2 = "PICK_UP"
-    L9_2 = "HUD_FRONTEND_DEFAULT_SOUNDSET"
-    L10_2 = true
-    L6_2(L7_2, L8_2, L9_2, L10_2)
-  else
-    L6_2 = ipairs
-    L7_2 = A1_2.cleanedJunk
-    L6_2, L7_2, L8_2, L9_2 = L6_2(L7_2)
-    for L10_2, L11_2 in L6_2, L7_2, L8_2, L9_2 do
-      if L11_2 == A2_2 then
-        L12_2 = table
-        L12_2 = L12_2.remove
-        L13_2 = A1_2.cleanedJunk
-        L14_2 = L10_2
-        L12_2(L13_2, L14_2)
-        break
-      end
-    end
-    L6_2 = Debug
-    L7_2 = "CleanerRobot: Failed to remove junk on server:"
-    L8_2 = A2_2
-    L6_2(L7_2, L8_2)
-  end
-end
-L2_1.cleanJunk = L12_1
-function L12_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2
-  L4_2 = A2_2 - A1_2
-  L5_2 = math
-  L5_2 = L5_2.min
-  L6_2 = A3_2
-  L7_2 = 1.0
-  L5_2 = L5_2(L6_2, L7_2)
-  L4_2 = L4_2 * L5_2
-  L4_2 = A1_2 + L4_2
-  return L4_2
-end
-L2_1.lerp = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2
-  while A1_2 < 0 do
-    A1_2 = A1_2 + 360
-  end
-  while true do
-    L2_2 = 360
-    if not (A1_2 >= L2_2) then
-      break
-    end
-    A1_2 = A1_2 - 360
-  end
-  return A1_2
-end
-L2_1.normalizeAngle = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2
-  L3_2 = A2_2 - A1_2
-  while true do
-    L4_2 = 180
-    if not (L3_2 > L4_2) then
-      break
-    end
-    L3_2 = L3_2 - 360
-  end
-  while true do
-    L4_2 = -180
-    if not (L3_2 < L4_2) then
-      break
-    end
-    L3_2 = L3_2 + 360
-  end
-  return L3_2
-end
-L2_1.getAngleDifference = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  if not A2_2 then
-    A2_2 = 5
-  end
-  L3_2 = math
-  L3_2 = L3_2.abs
-  L5_2 = A0_2
-  L4_2 = A0_2.getAngleDifference
-  L6_2 = A1_2.currentHeading
-  if not L6_2 then
-    L6_2 = 0
-  end
-  L7_2 = A1_2.targetHeading
-  if not L7_2 then
-    L7_2 = 0
-  end
-  L4_2, L5_2, L6_2, L7_2 = L4_2(L5_2, L6_2, L7_2)
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2)
-  L4_2 = A2_2 >= L3_2
-  return L4_2
-end
-L2_1.hasReachedTargetHeading = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2
-  L2_2 = GetGameTimer
-  L2_2 = L2_2()
-  L3_2 = A1_2.headingLockTime
-  if not L3_2 then
-    L3_2 = true
-    return L3_2
-  end
-  L3_2 = A1_2.headingLockTime
-  L3_2 = L2_2 - L3_2
-  L4_2 = 500
-  if L3_2 > L4_2 then
-    L4_2 = true
-    return L4_2
-  end
-  L5_2 = A0_2
-  L4_2 = A0_2.hasReachedTargetHeading
-  L6_2 = A1_2
-  L7_2 = 10
-  L4_2 = L4_2(L5_2, L6_2, L7_2)
-  if L4_2 then
-    L4_2 = true
-    return L4_2
-  end
-  L4_2 = false
-  return L4_2
-end
-L2_1.canUpdateTargetHeading = L12_1
-function L12_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2
-  L4_2 = DoesEntityExist
-  L5_2 = A1_2.robotHandle
-  L4_2 = L4_2(L5_2)
-  if not L4_2 then
-    return
-  end
-  L5_2 = A0_2
-  L4_2 = A0_2.normalizeAngle
-  L6_2 = A2_2
-  L4_2 = L4_2(L5_2, L6_2)
-  if not A3_2 then
-    L5_2 = A1_2.targetHeading
-    if L5_2 then
-      L5_2 = math
-      L5_2 = L5_2.abs
-      L7_2 = A0_2
-      L6_2 = A0_2.getAngleDifference
-      L8_2 = A1_2.targetHeading
-      L9_2 = L4_2
-      L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2 = L6_2(L7_2, L8_2, L9_2)
-      L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2)
-      if L5_2 > 30 then
-        L7_2 = A0_2
-        L6_2 = A0_2.canUpdateTargetHeading
-        L8_2 = A1_2
-        L6_2 = L6_2(L7_2, L8_2)
-        if not L6_2 then
-          L4_2 = A1_2.targetHeading
-      end
-      else
-        L6_2 = GetGameTimer
-        L6_2 = L6_2()
-        A1_2.headingLockTime = L6_2
-      end
-  end
-  else
-    L5_2 = GetGameTimer
-    L5_2 = L5_2()
-    A1_2.headingLockTime = L5_2
-  end
-  A1_2.targetHeading = L4_2
-  L5_2 = A1_2.currentHeading
-  if not L5_2 then
-    L5_2 = GetEntityHeading
-    L6_2 = A1_2.robotHandle
-    L5_2 = L5_2(L6_2)
-  end
-  L7_2 = A0_2
-  L6_2 = A0_2.getAngleDifference
-  L8_2 = L5_2
-  L9_2 = L4_2
-  L6_2 = L6_2(L7_2, L8_2, L9_2)
-  L7_2 = 8.0
-  L8_2 = math
-  L8_2 = L8_2.min
-  L9_2 = math
-  L9_2 = L9_2.abs
-  L10_2 = L6_2
-  L9_2 = L9_2(L10_2)
-  L10_2 = L7_2
-  L8_2 = L8_2(L9_2, L10_2)
-  L9_2 = nil
-  L10_2 = math
-  L10_2 = L10_2.abs
-  L11_2 = L6_2
-  L10_2 = L10_2(L11_2)
-  if L10_2 < 1 then
-    L9_2 = L4_2
-  else
-    if L6_2 > 0 then
-      L10_2 = 1
-      if L10_2 then
-        goto lbl_73
-      end
-    end
-    L10_2 = -1
-    ::lbl_73::
-    L12_2 = A0_2
-    L11_2 = A0_2.normalizeAngle
-    L13_2 = L8_2 * L10_2
-    L13_2 = L5_2 + L13_2
-    L11_2 = L11_2(L12_2, L13_2)
-    L9_2 = L11_2
-  end
-  L10_2 = A0_2.wobbleEnabled
-  if L10_2 then
-    L10_2 = A1_2.velocity
-    L11_2 = 0.001
-    if L10_2 > L11_2 then
-      L10_2 = math
-      L10_2 = L10_2.abs
-      L11_2 = L6_2
-      L10_2 = L10_2(L11_2)
-      if L10_2 < 10 then
-        L10_2 = A1_2.wobblePhase
-        if not L10_2 then
-          L10_2 = 0
-        end
-        L11_2 = A0_2.wobbleSpeed
-        L10_2 = L10_2 + L11_2
-        A1_2.wobblePhase = L10_2
-        L10_2 = math
-        L10_2 = L10_2.sin
-        L11_2 = A1_2.wobblePhase
-        L10_2 = L10_2(L11_2)
-        L11_2 = A0_2.wobbleAmount
-        L10_2 = L10_2 * L11_2
-        L11_2 = A1_2.velocity
-        L12_2 = A0_2.maxSpeed
-        L11_2 = L11_2 / L12_2
-        L10_2 = L10_2 * L11_2
-        L9_2 = L9_2 + L10_2
-      end
-    end
-  end
-  A1_2.currentHeading = L9_2
-  L11_2 = A0_2
-  L10_2 = A0_2.normalizeAngle
-  L12_2 = L9_2 + 180
-  L10_2 = L10_2(L11_2, L12_2)
-  L11_2 = SetEntityHeading
-  L12_2 = A1_2.robotHandle
-  L13_2 = L10_2
-  L11_2(L12_2, L13_2)
-end
-L2_1.updateRotation = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2
-  L3_2 = A1_2.velocity
-  if not L3_2 then
-    L3_2 = 0
-  end
-  if A2_2 then
-    L4_2 = A0_2.moveSpeed
-    L6_2 = A0_2
-    L5_2 = A0_2.lerp
-    L7_2 = L3_2
-    L8_2 = L4_2
-    L9_2 = A0_2.acceleration
-    L9_2 = L9_2 * 10
-    L5_2 = L5_2(L6_2, L7_2, L8_2, L9_2)
-    A1_2.velocity = L5_2
-    L5_2 = A1_2.velocity
-    L6_2 = A0_2.maxSpeed
-    if L5_2 > L6_2 then
-      L5_2 = A0_2.maxSpeed
-      A1_2.velocity = L5_2
-    end
-  else
-    L5_2 = A0_2
-    L4_2 = A0_2.lerp
-    L6_2 = L3_2
-    L7_2 = 0
-    L8_2 = A0_2.deceleration
-    L8_2 = L8_2 * 10
-    L4_2 = L4_2(L5_2, L6_2, L7_2, L8_2)
-    A1_2.velocity = L4_2
-    L4_2 = A1_2.velocity
-    L5_2 = 1.0E-4
-    if L4_2 < L5_2 then
-      A1_2.velocity = 0
-    end
-  end
-end
-L2_1.updateVelocity = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2
-  L3_2 = DoesEntityExist
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = A1_2.velocity
-  L4_2 = 1.0E-4
-  if L3_2 < L4_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = GetEntityCoords
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  L4_2 = A1_2.currentHeading
-  if not L4_2 then
-    L4_2 = GetEntityHeading
-    L5_2 = A1_2.robotHandle
-    L4_2 = L4_2(L5_2)
-  end
-  L6_2 = A0_2
-  L5_2 = A0_2.headingToDirection
-  L7_2 = L4_2
-  L5_2 = L5_2(L6_2, L7_2)
-  L6_2 = A1_2.velocity
-  L6_2 = L5_2 * L6_2
-  L7_2 = L3_2.x
-  L8_2 = L6_2.x
-  L7_2 = L7_2 + L8_2
-  L8_2 = L3_2.y
-  L9_2 = L6_2.y
-  L8_2 = L8_2 + L9_2
-  L9_2 = A1_2.baseZ
-  L10_2 = A1_2.robotHeightOffset
-  L9_2 = L9_2 + L10_2
-  L10_2 = SetEntityCoords
-  L11_2 = A1_2.robotHandle
-  L12_2 = L7_2
-  L13_2 = L8_2
-  L14_2 = L9_2
-  L15_2 = false
-  L16_2 = false
-  L17_2 = false
-  L18_2 = false
-  L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2)
-  L10_2 = GetGameTimer
-  L10_2 = L10_2()
-  A1_2.lastMoveTime = L10_2
-  L10_2 = true
-  return L10_2
-end
-L2_1.applyMovement = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L3_2 = DoesEntityExist
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = DoesEntityExist
-  L4_2 = A2_2
-  L3_2 = L3_2(L4_2)
-  if not L3_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = GetEntityCoords
-  L4_2 = A1_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  L4_2 = GetEntityCoords
-  L5_2 = A2_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = math
-  L5_2 = L5_2.abs
-  L6_2 = L3_2.z
-  L7_2 = L4_2.z
-  L6_2 = L6_2 - L7_2
-  L5_2 = L5_2(L6_2)
-  if L5_2 > 3.0 then
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = HasEntityClearLosToEntity
-  L6_2 = A1_2.robotHandle
-  L7_2 = A2_2
-  L8_2 = 17
-  return L5_2(L6_2, L7_2, L8_2)
-end
-L2_1.isJunkVisible = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2
-  L2_2 = DoesEntityExist
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = 0
-    L3_2 = false
-    return L2_2, L3_2
-  end
-  L2_2 = GetEntityCoords
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  L3_2 = A1_2.currentHeading
-  if not L3_2 then
-    L3_2 = GetEntityHeading
-    L4_2 = A1_2.robotHandle
-    L3_2 = L3_2(L4_2)
-  end
-  L4_2 = A1_2.isInitialized
-  if not L4_2 then
-    L5_2 = A0_2
-    L4_2 = A0_2.initRoombaState
-    L6_2 = A1_2
-    L4_2(L5_2, L6_2)
-  end
-  L4_2 = A1_2.navState
-  if not L4_2 then
-    A1_2.navState = "moving"
-  end
-  L4_2 = A1_2.moveDirection
-  if L4_2 then
-    L4_2 = type
-    L5_2 = A1_2.moveDirection
-    L4_2 = L4_2(L5_2)
-    if "number" == L4_2 then
-      goto lbl_37
-    end
-  end
-  A1_2.moveDirection = L3_2
-  ::lbl_37::
-  L4_2 = math
-  L4_2 = L4_2.abs
-  L6_2 = A0_2
-  L5_2 = A0_2.getAngleDifference
-  L7_2 = L3_2
-  L8_2 = A1_2.moveDirection
-  L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L5_2(L6_2, L7_2, L8_2)
-  L4_2 = L4_2(L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-  L6_2 = A0_2
-  L5_2 = A0_2.findVisibleJunk
-  L7_2 = A1_2
-  L5_2, L6_2, L7_2 = L5_2(L6_2, L7_2)
-  if L5_2 and L6_2 then
-    L8_2 = 1.2
-    if L7_2 < L8_2 then
-      L9_2 = A0_2
-      L8_2 = A0_2.cleanJunk
-      L10_2 = A1_2
-      L11_2 = L5_2
-      L8_2(L9_2, L10_2, L11_2)
-      A1_2.currentTarget = nil
-      A1_2.turnCompletePosition = nil
-      A1_2.navState = "moving"
-      A1_2.lastWallDistance = nil
-      A1_2.moveDirection = L3_2
-      L8_2 = Debug
-      L9_2 = "CleanerRobot: Cleaned visible junk, back to normal movement"
-      L8_2(L9_2)
-      L8_2 = L3_2
-      L9_2 = true
-      return L8_2, L9_2
-    end
-    L8_2 = L6_2.x
-    L9_2 = L2_2.x
-    L8_2 = L8_2 - L9_2
-    L9_2 = L6_2.y
-    L10_2 = L2_2.y
-    L9_2 = L9_2 - L10_2
-    L11_2 = A0_2
-    L10_2 = A0_2.normalizeAngle
-    L12_2 = math
-    L12_2 = L12_2.deg
-    L13_2 = math
-    L13_2 = L13_2.atan
-    L14_2 = L8_2
-    L15_2 = L9_2
-    L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L13_2(L14_2, L15_2)
-    L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L12_2(L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-    L10_2 = L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-    L11_2 = math
-    L11_2 = L11_2.abs
-    L13_2 = A0_2
-    L12_2 = A0_2.getAngleDifference
-    L14_2 = L3_2
-    L15_2 = L10_2
-    L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L12_2(L13_2, L14_2, L15_2)
-    L11_2 = L11_2(L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-    L12_2 = L10_1
-    if L11_2 > L12_2 then
-      A1_2.moveDirection = L10_2
-      A1_2.navState = "turning_to_junk"
-      A1_2.currentTarget = L6_2
-      L12_2 = Debug
-      L13_2 = "CleanerRobot: Visible junk found! OVERRIDING current state, turning to face it. Distance:"
-      L14_2 = L7_2
-      L12_2(L13_2, L14_2)
-      L12_2 = L10_2
-      L13_2 = false
-      return L12_2, L13_2
-    else
-      A1_2.navState = "moving"
-      A1_2.lastWallDistance = nil
-      A1_2.moveDirection = L10_2
-      A1_2.currentTarget = L6_2
-      L12_2 = Debug
-      L13_2 = "CleanerRobot: Visible junk found! OVERRIDING current state, going straight to it. Distance:"
-      L14_2 = L7_2
-      L12_2(L13_2, L14_2)
-      L12_2 = L10_2
-      L13_2 = true
-      return L12_2, L13_2
-    end
-  end
-  L9_2 = A0_2
-  L8_2 = A0_2.findVeryCloseJunk
-  L10_2 = A1_2
-  L11_2 = 1.5
-  L8_2, L9_2, L10_2 = L8_2(L9_2, L10_2, L11_2)
-  if L8_2 and L9_2 then
-    L12_2 = A0_2
-    L11_2 = A0_2.cleanJunk
-    L13_2 = A1_2
-    L14_2 = L8_2
-    L11_2(L12_2, L13_2, L14_2)
-    A1_2.currentTarget = nil
-    A1_2.turnCompletePosition = nil
-    A1_2.navState = "moving"
-    A1_2.lastWallDistance = nil
-    A1_2.moveDirection = L3_2
-    L11_2 = Debug
-    L12_2 = "CleanerRobot: Cleaned very close junk (1.5m), back to normal movement. Distance:"
-    L13_2 = L10_2
-    L11_2(L12_2, L13_2)
-    L11_2 = L3_2
-    L12_2 = true
-    return L11_2, L12_2
-  end
-  L11_2 = A1_2.navState
-  if "turning_to_junk" == L11_2 then
-    if L5_2 and L6_2 then
-      L11_2 = L6_2.x
-      L12_2 = L2_2.x
-      L11_2 = L11_2 - L12_2
-      L12_2 = L6_2.y
-      L13_2 = L2_2.y
-      L12_2 = L12_2 - L13_2
-      L14_2 = A0_2
-      L13_2 = A0_2.normalizeAngle
-      L15_2 = math
-      L15_2 = L15_2.deg
-      L16_2 = math
-      L16_2 = L16_2.atan
-      L17_2 = L11_2
-      L18_2 = L12_2
-      L16_2, L17_2, L18_2, L19_2, L20_2 = L16_2(L17_2, L18_2)
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2, L19_2, L20_2)
-      L13_2 = L13_2(L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L14_2 = math
-      L14_2 = L14_2.abs
-      L16_2 = A0_2
-      L15_2 = A0_2.getAngleDifference
-      L17_2 = L3_2
-      L18_2 = L13_2
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2)
-      L14_2 = L14_2(L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L15_2 = L10_1
-      if L14_2 > L15_2 then
-        A1_2.moveDirection = L13_2
-        A1_2.currentTarget = L6_2
-        L15_2 = L13_2
-        L16_2 = false
-        return L15_2, L16_2
-      else
-        A1_2.navState = "moving"
-        A1_2.lastWallDistance = nil
-        A1_2.moveDirection = L13_2
-        A1_2.currentTarget = L6_2
-        L15_2 = L13_2
-        L16_2 = true
-        return L15_2, L16_2
-      end
-    end
-    L11_2 = L10_1
-    if L4_2 < L11_2 then
-      A1_2.navState = "moving"
-      A1_2.moveDirection = L3_2
-      L11_2 = vec3
-      L12_2 = L2_2.x
-      L13_2 = L2_2.y
-      L14_2 = L2_2.z
-      L11_2 = L11_2(L12_2, L13_2, L14_2)
-      A1_2.turnCompletePosition = L11_2
-      L11_2 = Debug
-      L12_2 = "CleanerRobot: Turned to junk, moving towards it"
-      L11_2(L12_2)
-      L11_2 = L3_2
-      L12_2 = true
-      return L11_2, L12_2
-    end
-    L11_2 = A1_2.moveDirection
-    L12_2 = false
-    return L11_2, L12_2
-  end
-  L11_2 = A1_2.navState
-  if "turning" == L11_2 then
-    if L5_2 and L6_2 then
-      L11_2 = L6_2.x
-      L12_2 = L2_2.x
-      L11_2 = L11_2 - L12_2
-      L12_2 = L6_2.y
-      L13_2 = L2_2.y
-      L12_2 = L12_2 - L13_2
-      L14_2 = A0_2
-      L13_2 = A0_2.normalizeAngle
-      L15_2 = math
-      L15_2 = L15_2.deg
-      L16_2 = math
-      L16_2 = L16_2.atan
-      L17_2 = L11_2
-      L18_2 = L12_2
-      L16_2, L17_2, L18_2, L19_2, L20_2 = L16_2(L17_2, L18_2)
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2, L19_2, L20_2)
-      L13_2 = L13_2(L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      A1_2.moveDirection = L13_2
-      A1_2.navState = "turning_to_junk"
-      A1_2.currentTarget = L6_2
-      L14_2 = Debug
-      L15_2 = "CleanerRobot: Visible junk found while turning, switching to junk!"
-      L14_2(L15_2)
-      L14_2 = L13_2
-      L15_2 = false
-      return L14_2, L15_2
-    end
-    L11_2 = L10_1
-    if L4_2 < L11_2 then
-      L11_2 = vec3
-      L12_2 = L2_2.x
-      L13_2 = L2_2.y
-      L14_2 = L2_2.z
-      L11_2 = L11_2(L12_2, L13_2, L14_2)
-      A1_2.turnCompletePosition = L11_2
-      A1_2.moveDirection = L3_2
-      L11_2 = A1_2.openingDetected
-      if L11_2 then
-        A1_2.navState = "passing_opening"
-        A1_2.openingDetected = false
-        L11_2 = Debug
-        L12_2 = "CleanerRobot: Now passing through opening"
-        L11_2(L12_2)
-      else
-        A1_2.navState = "following_wall"
-        L12_2 = A0_2
-        L11_2 = A0_2.getRightWallDistance
-        L13_2 = A1_2
-        L11_2 = L11_2(L12_2, L13_2)
-        A1_2.lastWallDistance = L11_2
-        L11_2 = GetGameTimer
-        L11_2 = L11_2()
-        A1_2.wallFollowStartTime = L11_2
-        L11_2 = Debug
-        L12_2 = "CleanerRobot: Turn complete, now following wall. Right wall dist:"
-        L13_2 = A1_2.lastWallDistance
-        L11_2(L12_2, L13_2)
-      end
-      L11_2 = L3_2
-      L12_2 = true
-      return L11_2, L12_2
-    end
-    L11_2 = A1_2.moveDirection
-    L12_2 = false
-    return L11_2, L12_2
-  end
-  L11_2 = A1_2.navState
-  if "passing_opening" == L11_2 then
-    if L5_2 and L6_2 then
-      L11_2 = L6_2.x
-      L12_2 = L2_2.x
-      L11_2 = L11_2 - L12_2
-      L12_2 = L6_2.y
-      L13_2 = L2_2.y
-      L12_2 = L12_2 - L13_2
-      L14_2 = A0_2
-      L13_2 = A0_2.normalizeAngle
-      L15_2 = math
-      L15_2 = L15_2.deg
-      L16_2 = math
-      L16_2 = L16_2.atan
-      L17_2 = L11_2
-      L18_2 = L12_2
-      L16_2, L17_2, L18_2, L19_2, L20_2 = L16_2(L17_2, L18_2)
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2, L19_2, L20_2)
-      L13_2 = L13_2(L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L14_2 = math
-      L14_2 = L14_2.abs
-      L16_2 = A0_2
-      L15_2 = A0_2.getAngleDifference
-      L17_2 = L3_2
-      L18_2 = L13_2
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2)
-      L14_2 = L14_2(L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L15_2 = L10_1
-      if L14_2 > L15_2 then
-        A1_2.moveDirection = L13_2
-        A1_2.navState = "turning_to_junk"
-        A1_2.currentTarget = L6_2
-        L15_2 = Debug
-        L16_2 = "CleanerRobot: Visible junk found while passing opening, switching to junk!"
-        L15_2(L16_2)
-        L15_2 = L13_2
-        L16_2 = false
-        return L15_2, L16_2
-      else
-        A1_2.navState = "moving"
-        A1_2.lastWallDistance = nil
-        A1_2.moveDirection = L13_2
-        A1_2.currentTarget = L6_2
-        L15_2 = Debug
-        L16_2 = "CleanerRobot: Visible junk found while passing opening, going straight!"
-        L15_2(L16_2)
-        L15_2 = L13_2
-        L16_2 = true
-        return L15_2, L16_2
-      end
-    end
-    L11_2 = A1_2.turnCompletePosition
-    if L11_2 then
-      L11_2 = L2_2.x
-      L12_2 = A1_2.turnCompletePosition
-      L12_2 = L12_2.x
-      L11_2 = L11_2 - L12_2
-      L12_2 = L2_2.y
-      L13_2 = A1_2.turnCompletePosition
-      L13_2 = L13_2.y
-      L12_2 = L12_2 - L13_2
-      L13_2 = math
-      L13_2 = L13_2.sqrt
-      L14_2 = L11_2 * L11_2
-      L15_2 = L12_2 * L12_2
-      L14_2 = L14_2 + L15_2
-      L13_2 = L13_2(L14_2)
-      L14_2 = L11_1
-      L14_2 = L14_2 + 0.5
-      if L13_2 > L14_2 then
-        A1_2.navState = "moving"
-        A1_2.turnCompletePosition = nil
-        A1_2.lastWallDistance = nil
-        L14_2 = Debug
-        L15_2 = "CleanerRobot: Passed through opening, RESET to normal movement"
-        L14_2(L15_2)
-      end
-    else
-      A1_2.navState = "moving"
-      A1_2.lastWallDistance = nil
-    end
-    L12_2 = A0_2
-    L11_2 = A0_2.getWallDistance
-    L13_2 = A1_2
-    L14_2 = L3_2
-    L15_2 = L6_1
-    L11_2 = L11_2(L12_2, L13_2, L14_2, L15_2)
-    L12_2 = L6_1
-    if L11_2 < L12_2 then
-      L12_2 = Debug
-      L13_2 = "CleanerRobot: Passing opening, frontDist:"
-      L14_2 = L11_2
-      L15_2 = "WALL_DETECT_FRONT:"
-      L16_2 = L6_1
-      L12_2(L13_2, L14_2, L15_2, L16_2)
-      L13_2 = A0_2
-      L12_2 = A0_2.normalizeAngle
-      L14_2 = L3_2 + 90
-      L12_2 = L12_2(L13_2, L14_2)
-      A1_2.moveDirection = L12_2
-      A1_2.navState = "turning"
-      A1_2.openingDetected = false
-      L12_2 = A1_2.moveDirection
-      L13_2 = false
-      return L12_2, L13_2
-    end
-    L12_2 = L3_2
-    L13_2 = true
-    return L12_2, L13_2
-  end
-  L11_2 = A1_2.navState
-  if "following_wall" == L11_2 then
-    if L5_2 and L6_2 then
-      L11_2 = L6_2.x
-      L12_2 = L2_2.x
-      L11_2 = L11_2 - L12_2
-      L12_2 = L6_2.y
-      L13_2 = L2_2.y
-      L12_2 = L12_2 - L13_2
-      L14_2 = A0_2
-      L13_2 = A0_2.normalizeAngle
-      L15_2 = math
-      L15_2 = L15_2.deg
-      L16_2 = math
-      L16_2 = L16_2.atan
-      L17_2 = L11_2
-      L18_2 = L12_2
-      L16_2, L17_2, L18_2, L19_2, L20_2 = L16_2(L17_2, L18_2)
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2, L19_2, L20_2)
-      L13_2 = L13_2(L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L14_2 = math
-      L14_2 = L14_2.abs
-      L16_2 = A0_2
-      L15_2 = A0_2.getAngleDifference
-      L17_2 = L3_2
-      L18_2 = L13_2
-      L15_2, L16_2, L17_2, L18_2, L19_2, L20_2 = L15_2(L16_2, L17_2, L18_2)
-      L14_2 = L14_2(L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-      L15_2 = L10_1
-      if L14_2 > L15_2 then
-        A1_2.moveDirection = L13_2
-        A1_2.navState = "turning_to_junk"
-        A1_2.currentTarget = L6_2
-        L15_2 = Debug
-        L16_2 = "CleanerRobot: Visible junk found while following wall, switching to junk!"
-        L15_2(L16_2)
-        L15_2 = L13_2
-        L16_2 = false
-        return L15_2, L16_2
-      else
-        A1_2.navState = "moving"
-        A1_2.lastWallDistance = nil
-        A1_2.moveDirection = L13_2
-        A1_2.currentTarget = L6_2
-        L15_2 = Debug
-        L16_2 = "CleanerRobot: Visible junk found while following wall, going straight!"
-        L15_2(L16_2)
-        L15_2 = L13_2
-        L16_2 = true
-        return L15_2, L16_2
-      end
-    end
-    L12_2 = A0_2
-    L11_2 = A0_2.getWallDistance
-    L13_2 = A1_2
-    L14_2 = L3_2
-    L15_2 = L6_1
-    L11_2 = L11_2(L12_2, L13_2, L14_2, L15_2)
-    L12_2 = L6_1
-    if L11_2 < L12_2 then
-      L12_2 = Debug
-      L13_2 = "838 CleanerRobot: Wall ahead while following, frontDist:"
-      L14_2 = L11_2
-      L15_2 = "WALL_DETECT_FRONT:"
-      L16_2 = L6_1
-      L12_2(L13_2, L14_2, L15_2, L16_2)
-      L13_2 = A0_2
-      L12_2 = A0_2.normalizeAngle
-      L14_2 = L3_2 + 90
-      L12_2 = L12_2(L13_2, L14_2)
-      A1_2.moveDirection = L12_2
-      A1_2.navState = "turning"
-      A1_2.openingDetected = false
-      L12_2 = Debug
-      L13_2 = "CleanerRobot: Wall ahead while following, turning left"
-      L12_2(L13_2)
-      L12_2 = A1_2.moveDirection
-      L13_2 = false
-      return L12_2, L13_2
-    end
-    L13_2 = A0_2
-    L12_2 = A0_2.getRightWallDistance
-    L14_2 = A1_2
-    L12_2 = L12_2(L13_2, L14_2)
-    L13_2 = A1_2.lastWallDistance
-    if not L13_2 then
-      L13_2 = L12_2
-    end
-    L14_2 = L12_2 - L13_2
-    L15_2 = L9_1
-    if L14_2 > L15_2 then
-      L15_2 = A0_2
-      L14_2 = A0_2.normalizeAngle
-      L16_2 = L3_2 - 90
-      L14_2 = L14_2(L15_2, L16_2)
-      L16_2 = A0_2
-      L15_2 = A0_2.getWallDistance
-      L17_2 = A1_2
-      L18_2 = L14_2
-      L19_2 = L6_1
-      L15_2 = L15_2(L16_2, L17_2, L18_2, L19_2)
-      L16_2 = L6_1
-      if L15_2 >= L16_2 then
-        L16_2 = Debug
-        L17_2 = "859 CleanerRobot: Opening detected! Dist jumped from"
-        L18_2 = L13_2
-        L19_2 = "to"
-        L20_2 = L12_2
-        L16_2(L17_2, L18_2, L19_2, L20_2)
-        A1_2.moveDirection = L14_2
-        A1_2.navState = "turning"
-        A1_2.openingDetected = true
-        A1_2.openingDirection = L14_2
-        L16_2 = Debug
-        L17_2 = "CleanerRobot: Opening detected! Dist jumped from"
-        L18_2 = L13_2
-        L19_2 = "to"
-        L20_2 = L12_2
-        L16_2(L17_2, L18_2, L19_2, L20_2)
-        L16_2 = A1_2.moveDirection
-        L17_2 = false
-        return L16_2, L17_2
-      end
-    end
-    A1_2.lastWallDistance = L12_2
-    L14_2 = L3_2
-    L15_2 = true
-    return L14_2, L15_2
-  end
-  L11_2 = A1_2.turnCompletePosition
-  if L11_2 then
-    L11_2 = L2_2.x
-    L12_2 = A1_2.turnCompletePosition
-    L12_2 = L12_2.x
-    L11_2 = L11_2 - L12_2
-    L12_2 = L2_2.y
-    L13_2 = A1_2.turnCompletePosition
-    L13_2 = L13_2.y
-    L12_2 = L12_2 - L13_2
-    L13_2 = math
-    L13_2 = L13_2.sqrt
-    L14_2 = L11_2 * L11_2
-    L15_2 = L12_2 * L12_2
-    L14_2 = L14_2 + L15_2
-    L13_2 = L13_2(L14_2)
-    L14_2 = L11_1
-    if L13_2 < L14_2 then
-      L14_2 = L3_2
-      L15_2 = true
-      return L14_2, L15_2
-    else
-      A1_2.turnCompletePosition = nil
-    end
-  end
-  L12_2 = A0_2
-  L11_2 = A0_2.getWallDistance
-  L13_2 = A1_2
-  L14_2 = L3_2
-  L15_2 = L6_1
-  L11_2 = L11_2(L12_2, L13_2, L14_2, L15_2)
-  L12_2 = L6_1
-  if L11_2 < L12_2 then
-    L13_2 = A0_2
-    L12_2 = A0_2.normalizeAngle
-    L14_2 = L3_2 + 90
-    L12_2 = L12_2(L13_2, L14_2)
-    A1_2.moveDirection = L12_2
-    A1_2.navState = "turning"
-    A1_2.openingDetected = false
-    L12_2 = A1_2.moveDirection
-    L13_2 = false
-    return L12_2, L13_2
-  end
-  A1_2.moveDirection = L3_2
-  L12_2 = L3_2
-  L13_2 = true
-  return L12_2, L13_2
-end
-L2_1.updateCleaningState = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2
-  L4_2 = A0_2
-  L3_2 = A0_2.getWallDistance
-  L5_2 = A1_2
-  L6_2 = A2_2
-  L7_2 = L6_1
-  L3_2 = L3_2(L4_2, L5_2, L6_2, L7_2)
-  L4_2 = L6_1
-  L4_2 = L3_2 < L4_2
-  L5_2 = L3_2
-  return L4_2, L5_2
-end
-L2_1.isPathBlocked = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2
-  L2_2 = DoesEntityExist
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  if not L2_2 then
-    L2_2 = true
-    return L2_2
-  end
-  L2_2 = GetEntityCoords
-  L3_2 = A1_2.robotHandle
-  L2_2 = L2_2(L3_2)
-  L3_2 = A1_2.dockCoords
-  L4_2 = math
-  L4_2 = L4_2.sqrt
-  L5_2 = L2_2.x
-  L6_2 = L3_2.x
-  L5_2 = L5_2 - L6_2
-  L5_2 = L5_2 ^ 2
-  L6_2 = L2_2.y
-  L7_2 = L3_2.y
-  L6_2 = L6_2 - L7_2
-  L6_2 = L6_2 ^ 2
-  L5_2 = L5_2 + L6_2
-  L4_2 = L4_2(L5_2)
-  L5_2 = L5_1
-  if L4_2 < L5_2 then
-    A1_2.velocity = 0
-    A1_2.state = "docked"
-    L5_2 = A1_2.isOwner
-    if L5_2 then
-      L5_2 = A1_2.networkedRobotHandle
-      if L5_2 then
-        L5_2 = DoesEntityExist
-        L6_2 = A1_2.networkedRobotHandle
-        L5_2 = L5_2(L6_2)
-        if L5_2 then
-          L5_2 = DeleteEntity
-          L6_2 = A1_2.networkedRobotHandle
-          L5_2(L6_2)
-        end
-        A1_2.networkedRobotHandle = nil
-        L5_2 = A1_2.decorationHandle
-        if L5_2 then
-          L5_2 = DoesEntityExist
-          L6_2 = A1_2.decorationHandle
-          L5_2 = L5_2(L6_2)
-          if L5_2 then
-            L5_2 = A1_2.decorationHandle
-            A1_2.robotHandle = L5_2
-            L5_2 = SetEntityCoords
-            L6_2 = A1_2.robotHandle
-            L7_2 = L3_2.x
-            L8_2 = L3_2.y
-            L9_2 = L3_2.z
-            L10_2 = false
-            L11_2 = false
-            L12_2 = false
-            L13_2 = false
-            L5_2(L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2)
-            L5_2 = SetEntityHeading
-            L6_2 = A1_2.robotHandle
-            L7_2 = A1_2.dockRotation
-            L7_2 = L7_2.z
-            L5_2(L6_2, L7_2)
-          end
-        end
-        L5_2 = TriggerServerEvent
-        L6_2 = "housing:cleaner:stopped"
-        L7_2 = A1_2.house
-        L8_2 = A1_2.id
-        L5_2(L6_2, L7_2, L8_2)
-        A1_2.isOwner = false
-      end
-    end
-    L5_2 = A1_2.dockRotation
-    L5_2 = L5_2.z
-    A1_2.currentHeading = L5_2
-    L5_2 = Debug
-    L6_2 = "CleanerRobot: Returned to dock"
-    L5_2(L6_2)
-    L5_2 = PlaySoundFrontend
-    L6_2 = -1
-    L7_2 = "Beep_Green"
-    L8_2 = "DLC_HEIST_HACKING_SNAKE_SOUNDS"
-    L9_2 = true
-    L5_2(L6_2, L7_2, L8_2, L9_2)
-    L5_2 = SendReactMessage
-    L6_2 = "cleaner_sound"
-    L7_2 = {}
-    L7_2.action = "stop"
-    L5_2(L6_2, L7_2)
-    L5_2 = true
-    return L5_2
-  end
-  L5_2 = L3_2.x
-  L6_2 = L2_2.x
-  L5_2 = L5_2 - L6_2
-  L6_2 = L3_2.y
-  L7_2 = L2_2.y
-  L6_2 = L6_2 - L7_2
-  L7_2 = math
-  L7_2 = L7_2.sqrt
-  L8_2 = L5_2 * L5_2
-  L9_2 = L6_2 * L6_2
-  L8_2 = L8_2 + L9_2
-  L7_2 = L7_2(L8_2)
-  if L7_2 > 0 then
-    L5_2 = L5_2 / L7_2
-    L6_2 = L6_2 / L7_2
-  end
-  L8_2 = math
-  L8_2 = L8_2.deg
-  L9_2 = math
-  L9_2 = L9_2.atan
-  L10_2 = L5_2
-  L11_2 = L6_2
-  L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2 = L9_2(L10_2, L11_2)
-  L8_2 = L8_2(L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2)
-  L10_2 = A0_2
-  L9_2 = A0_2.normalizeAngle
-  L11_2 = L8_2
-  L9_2 = L9_2(L10_2, L11_2)
-  A1_2.currentHeading = L9_2
-  L9_2 = SetEntityHeading
-  L10_2 = A1_2.robotHandle
-  L11_2 = A1_2.currentHeading
-  L9_2(L10_2, L11_2)
-  L9_2 = A0_2.moveSpeed
-  L9_2 = L9_2 * 1.5
-  L10_2 = L2_2.x
-  L11_2 = L5_2 * L9_2
-  L10_2 = L10_2 + L11_2
-  L11_2 = L2_2.y
-  L12_2 = L6_2 * L9_2
-  L11_2 = L11_2 + L12_2
-  L12_2 = A1_2.baseZ
-  L13_2 = A1_2.robotHeightOffset
-  L12_2 = L12_2 + L13_2
-  L13_2 = SetEntityCoords
-  L14_2 = A1_2.robotHandle
-  L15_2 = L10_2
-  L16_2 = L11_2
-  L17_2 = L12_2
-  L18_2 = false
-  L19_2 = false
-  L20_2 = false
-  L21_2 = false
-  L13_2(L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2)
-  L13_2 = GetGameTimer
-  L13_2 = L13_2()
-  A1_2.lastMoveTime = L13_2
-  L13_2 = false
-  return L13_2
-end
-L2_1.updateReturningState = L12_1
-function L12_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = A0_2.activeThread
-  if L1_2 then
-    return
-  end
-  A0_2.activeThread = true
-  L1_2 = CreateThread
-  function L2_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3, L13_3
-    while true do
-      L0_3 = A0_2.activeThread
-      if not L0_3 then
-        break
-      end
-      L0_3 = false
-      L1_3 = pairs
-      L2_3 = A0_2.robots
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.state
-        if "cleaning" ~= L7_3 then
-          L7_3 = L6_3.state
-          if "returning" ~= L7_3 then
-            goto lbl_99
-          end
-        end
-        L0_3 = true
-        L7_3 = L6_3.velocity
-        if not L7_3 then
-          L6_3.velocity = 0
-        end
-        L7_3 = L6_3.wobblePhase
-        if not L7_3 then
-          L6_3.wobblePhase = 0
-        end
-        L7_3 = L6_3.currentHeading
-        if not L7_3 then
-          L7_3 = GetEntityHeading
-          L8_3 = L6_3.robotHandle
-          L7_3 = L7_3(L8_3)
-          L6_3.currentHeading = L7_3
-        end
-        L7_3 = L6_3.isInitialized
-        if not L7_3 then
-          L7_3 = A0_2
-          L8_3 = L7_3
-          L7_3 = L7_3.initRoombaState
-          L9_3 = L6_3
-          L7_3(L8_3, L9_3)
-        end
-        L7_3 = L6_3.state
-        if "cleaning" == L7_3 then
-          L7_3 = L6_3.cleaningStartTime
-          if L7_3 then
-            L7_3 = GetGameTimer
-            L7_3 = L7_3()
-            L8_3 = L6_3.cleaningStartTime
-            L7_3 = L7_3 - L8_3
-            L8_3 = A0_2.cleaningTimeout
-            if L7_3 >= L8_3 then
-              L6_3.state = "returning"
-              L6_3.cleaningStartTime = nil
-              L8_3 = Notification
-              L9_3 = i18n
-              L9_3 = L9_3.t
-              L10_3 = "cleaner.returning"
-              L9_3 = L9_3(L10_3)
-              L10_3 = "info"
-              L8_3(L9_3, L10_3)
-              L8_3 = Debug
-              L9_3 = "CleanerRobot: Cleaning timeout, returning to dock"
-              L10_3 = L5_3
-              L8_3(L9_3, L10_3)
-          end
-          else
-            L7_3 = A0_2
-            L8_3 = L7_3
-            L7_3 = L7_3.updateCleaningState
-            L9_3 = L6_3
-            L7_3, L8_3 = L7_3(L8_3, L9_3)
-            L9_3 = A0_2
-            L10_3 = L9_3
-            L9_3 = L9_3.updateRotation
-            L11_3 = L6_3
-            L12_3 = L7_3
-            L13_3 = false
-            L9_3(L10_3, L11_3, L12_3, L13_3)
-            L9_3 = A0_2
-            L10_3 = L9_3
-            L9_3 = L9_3.updateVelocity
-            L11_3 = L6_3
-            L12_3 = L8_3
-            L9_3(L10_3, L11_3, L12_3)
-            if L8_3 then
-              L9_3 = A0_2
-              L10_3 = L9_3
-              L9_3 = L9_3.applyMovement
-              L11_3 = L6_3
-              L12_3 = false
-              L9_3(L10_3, L11_3, L12_3)
-            end
-          end
-        else
-          L7_3 = L6_3.state
-          if "returning" == L7_3 then
-            L7_3 = A0_2
-            L8_3 = L7_3
-            L7_3 = L7_3.updateReturningState
-            L9_3 = L6_3
-            L7_3 = L7_3(L8_3, L9_3)
-            if L7_3 then
-            else
-            end
-          end
-        end
-        ::lbl_99::
-      end
-      if not L0_3 then
-        A0_2.activeThread = false
-        break
-      end
-      L1_3 = Wait
-      L2_3 = L4_1
-      L1_3(L2_3)
-    end
-  end
-  L1_2(L2_2)
-end
-L2_1.startUpdateLoop = L12_1
-function L12_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2, L21_2, L22_2, L23_2
-  if A1_2 then
-    L3_2 = A1_2.id
-    if L3_2 then
-      goto lbl_8
-    end
-  end
-  L3_2 = false
-  do return L3_2 end
-  ::lbl_8::
-  L4_2 = A0_2
-  L3_2 = A0_2.isCleanerModel
-  L5_2 = A1_2.modelName
-  L3_2, L4_2 = L3_2(L4_2, L5_2)
-  if not L3_2 or not L4_2 then
-    L5_2 = false
-    return L5_2
-  end
-  L5_2 = A0_2.robots
-  L6_2 = A1_2.id
-  L5_2 = L5_2[L6_2]
-  if L5_2 then
-    L5_2 = Debug
-    L6_2 = "CleanerRobot: Robot already exists for decoration"
-    L7_2 = A1_2.id
-    L5_2(L6_2, L7_2)
-    L5_2 = true
-    return L5_2
-  end
-  L5_2 = A1_2.handle
-  if L5_2 then
-    L6_2 = DoesEntityExist
-    L7_2 = L5_2
-    L6_2 = L6_2(L7_2)
-    if L6_2 then
-      goto lbl_41
-    end
-  end
-  L6_2 = Debug
-  L7_2 = "CleanerRobot: Decoration object handle not found"
-  L6_2(L7_2)
-  L6_2 = false
-  do return L6_2 end
-  ::lbl_41::
-  L6_2 = A1_2.coords
-  L7_2 = A1_2.rotation
-  if not L7_2 then
-    L7_2 = vec3
-    L8_2 = 0
-    L9_2 = 0
-    L10_2 = 0
-    L7_2 = L7_2(L8_2, L9_2, L10_2)
-  end
-  L8_2 = joaat
-  L9_2 = L4_2.model
-  L8_2 = L8_2(L9_2)
-  L9_2 = joaat
-  L10_2 = L4_2.dockerModel
-  L9_2 = L9_2(L10_2)
-  L10_2 = lib
-  L10_2 = L10_2.requestModel
-  L11_2 = L9_2
-  L12_2 = Config
-  L12_2 = L12_2.DefaultRequestModelTimeout
-  if not L12_2 then
-    L12_2 = 5000
-  end
-  L10_2(L11_2, L12_2)
-  L10_2 = CreateObject
-  L11_2 = L9_2
-  L12_2 = L6_2.x
-  L13_2 = L6_2.y
-  L14_2 = L6_2.z
-  L14_2 = L14_2 - 0.07
-  L15_2 = false
-  L16_2 = false
-  L17_2 = false
-  L10_2 = L10_2(L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-  L11_2 = DoesEntityExist
-  L12_2 = L10_2
-  L11_2 = L11_2(L12_2)
-  if not L11_2 then
-    L11_2 = Debug
-    L12_2 = "CleanerRobot: Failed to spawn dock"
-    L11_2(L12_2)
-    L11_2 = SetModelAsNoLongerNeeded
-    L12_2 = L9_2
-    L11_2(L12_2)
-    L11_2 = false
-    return L11_2
-  end
-  L11_2 = SetEntityRotation
-  L12_2 = L10_2
-  L13_2 = L7_2.x
-  L14_2 = L7_2.y
-  L15_2 = L7_2.z
-  L16_2 = 0
-  L17_2 = false
-  L11_2(L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-  L11_2 = FreezeEntityPosition
-  L12_2 = L10_2
-  L13_2 = true
-  L11_2(L12_2, L13_2)
-  L11_2 = SetEntityCompletelyDisableCollision
-  L12_2 = L10_2
-  L13_2 = true
-  L14_2 = false
-  L11_2(L12_2, L13_2, L14_2)
-  L11_2 = SetModelAsNoLongerNeeded
-  L12_2 = L9_2
-  L11_2(L12_2)
-  L11_2 = GetModelDimensions
-  L12_2 = L9_2
-  L11_2, L12_2 = L11_2(L12_2)
-  L13_2 = L12_2.z
-  L14_2 = L11_2.z
-  L13_2 = L13_2 - L14_2
-  L14_2 = L6_2.z
-  L15_2 = GetModelDimensions
-  L16_2 = L8_2
-  L15_2, L16_2 = L15_2(L16_2)
-  L17_2 = L16_2.z
-  L18_2 = L15_2.z
-  L17_2 = L17_2 - L18_2
-  L17_2 = L17_2 * 0.5
-  L18_2 = vec3
-  L19_2 = L6_2.x
-  L20_2 = L6_2.y
-  L21_2 = L14_2 + L17_2
-  L18_2 = L18_2(L19_2, L20_2, L21_2)
-  L19_2 = {}
-  L20_2 = A1_2.id
-  L19_2.id = L20_2
-  L19_2.decorationObj = A1_2
-  L19_2.robotHandle = L5_2
-  L19_2.dockHandle = L10_2
-  L20_2 = L4_2.model
-  L19_2.robotModel = L20_2
-  L20_2 = L4_2.dockerModel
-  L19_2.dockModel = L20_2
-  L19_2.dockCoords = L18_2
-  L19_2.dockRotation = L7_2
-  L19_2.baseZ = L14_2
-  L19_2.robotHeightOffset = L17_2
-  L19_2.state = "docked"
-  L19_2.currentTarget = nil
-  L20_2 = {}
-  L19_2.cleanedJunk = L20_2
-  L19_2.house = A2_2
-  L19_2.velocity = 0
-  L20_2 = L7_2.z
-  L19_2.targetHeading = L20_2
-  L20_2 = L7_2.z
-  L19_2.currentHeading = L20_2
-  L19_2.wobblePhase = 0
-  L19_2.lastMoveTime = 0
-  L20_2 = vec3
-  L21_2 = L6_2.x
-  L22_2 = L6_2.y
-  L23_2 = L6_2.z
-  L20_2 = L20_2(L21_2, L22_2, L23_2)
-  L19_2.lastKnownCoords = L20_2
-  L19_2.isInitialized = false
-  L19_2.navState = "moving"
-  L19_2.moveDirection = nil
-  L19_2.lastWallDistance = nil
-  L19_2.wallFollowStartTime = nil
-  L19_2.openingDetected = false
-  L19_2.openingDirection = nil
-  L19_2.turnCompletePosition = nil
-  L20_2 = A0_2.robots
-  L21_2 = A1_2.id
-  L20_2[L21_2] = L19_2
-  L20_2 = Debug
-  L21_2 = "CleanerRobot: Initialized cleaner for decoration"
-  L22_2 = A1_2.id
-  L20_2(L21_2, L22_2)
-  L20_2 = true
-  return L20_2
-end
-L2_1.spawnForDecoration = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    return
-  end
-  L3_2 = L2_2.isOwner
-  if L3_2 then
-    L3_2 = L2_2.state
-    if "cleaning" ~= L3_2 then
-      L3_2 = L2_2.state
-      if "returning" ~= L3_2 then
-        goto lbl_26
-      end
-    end
-    L3_2 = TriggerServerEvent
-    L4_2 = "housing:cleaner:stopped"
-    L5_2 = L2_2.house
-    L6_2 = A1_2
-    L3_2(L4_2, L5_2, L6_2)
-    L3_2 = SendReactMessage
-    L4_2 = "cleaner_sound"
-    L5_2 = {}
-    L5_2.action = "stop"
-    L3_2(L4_2, L5_2)
-  end
-  ::lbl_26::
-  L3_2 = L2_2.networkedRobotHandle
-  if L3_2 then
-    L3_2 = DoesEntityExist
-    L4_2 = L2_2.networkedRobotHandle
-    L3_2 = L3_2(L4_2)
-    if L3_2 then
-      L3_2 = DeleteEntity
-      L4_2 = L2_2.networkedRobotHandle
-      L3_2(L4_2)
-      L2_2.networkedRobotHandle = nil
-    end
-  end
-  L3_2 = DoesEntityExist
-  L4_2 = L2_2.dockHandle
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L3_2 = DeleteEntity
-    L4_2 = L2_2.dockHandle
-    L3_2(L4_2)
-  end
-  L3_2 = DoesEntityExist
-  L4_2 = L2_2.robotHandle
-  L3_2 = L3_2(L4_2)
-  if L3_2 then
-    L3_2 = SetEntityCoords
-    L4_2 = L2_2.robotHandle
-    L5_2 = L2_2.dockCoords
-    L5_2 = L5_2.x
-    L6_2 = L2_2.dockCoords
-    L6_2 = L6_2.y
-    L7_2 = L2_2.dockCoords
-    L7_2 = L7_2.z
-    L8_2 = false
-    L9_2 = false
-    L10_2 = false
-    L11_2 = false
-    L3_2(L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-    L3_2 = SetEntityHeading
-    L4_2 = L2_2.robotHandle
-    L5_2 = L2_2.dockRotation
-    L5_2 = L5_2.z
-    L3_2(L4_2, L5_2)
-  end
-  L3_2 = A0_2.robots
-  L3_2[A1_2] = nil
-  L3_2 = Debug
-  L4_2 = "CleanerRobot: Despawned cleaner"
-  L5_2 = A1_2
-  L3_2(L4_2, L5_2)
-end
-L2_1.despawn = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    L3_2 = Debug
-    L4_2 = "CleanerRobot: Robot not found"
-    L5_2 = A1_2
-    L3_2(L4_2, L5_2)
-    return
-  end
-  L3_2 = L2_2.state
-  if "docked" ~= L3_2 then
-    L3_2 = L2_2.state
-    if "idle" ~= L3_2 then
-      L3_2 = Debug
-      L4_2 = "CleanerRobot: Robot is not ready to clean"
-      L5_2 = L2_2.state
-      L3_2(L4_2, L5_2)
-      return
-    end
-  end
-  L3_2 = lib
-  L3_2 = L3_2.callback
-  L3_2 = L3_2.await
-  L4_2 = "housing:cleaner:start"
-  L5_2 = false
-  L6_2 = L2_2.house
-  L7_2 = A1_2
-  L8_2 = L2_2.robotModel
-  L3_2, L4_2 = L3_2(L4_2, L5_2, L6_2, L7_2, L8_2)
-  if not L3_2 then
-    if "already_active" == L4_2 then
-      L5_2 = Notification
-      L6_2 = i18n
-      L6_2 = L6_2.t
-      L7_2 = "cleaner.already_active"
-      L6_2 = L6_2(L7_2)
-      L7_2 = "error"
-      L5_2(L6_2, L7_2)
-    end
-    L5_2 = Debug
-    L6_2 = "CleanerRobot: Server rejected start"
-    L7_2 = L4_2
-    L5_2(L6_2, L7_2)
-    return
-  end
-  L5_2 = L2_2.robotHandle
-  L2_2.decorationHandle = L5_2
-  L2_2.isOwner = true
-  L5_2 = joaat
-  L6_2 = L2_2.robotModel
-  L5_2 = L5_2(L6_2)
-  L6_2 = lib
-  L6_2 = L6_2.requestModel
-  L7_2 = L5_2
-  L8_2 = Config
-  L8_2 = L8_2.DefaultRequestModelTimeout
-  if not L8_2 then
-    L8_2 = 5000
-  end
-  L6_2(L7_2, L8_2)
-  L6_2 = L2_2.dockCoords
-  L7_2 = CreateObject
-  L8_2 = L5_2
-  L9_2 = L6_2.x
-  L10_2 = L6_2.y
-  L11_2 = L6_2.z
-  L12_2 = true
-  L13_2 = true
-  L14_2 = true
-  L7_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L8_2 = DoesEntityExist
-  L9_2 = L7_2
-  L8_2 = L8_2(L9_2)
-  if not L8_2 then
-    L8_2 = Debug
-    L9_2 = "CleanerRobot: Failed to spawn networked robot"
-    L8_2(L9_2)
-    L8_2 = TriggerServerEvent
-    L9_2 = "housing:cleaner:stopped"
-    L10_2 = L2_2.house
-    L11_2 = A1_2
-    L8_2(L9_2, L10_2, L11_2)
-    L8_2 = SetModelAsNoLongerNeeded
-    L9_2 = L5_2
-    L8_2(L9_2)
-    return
-  end
-  L8_2 = SetEntityInvincible
-  L9_2 = L7_2
-  L10_2 = true
-  L8_2(L9_2, L10_2)
-  L8_2 = SetEntityRotation
-  L9_2 = L7_2
-  L10_2 = 0.0
-  L11_2 = 0.0
-  L12_2 = L2_2.dockRotation
-  L12_2 = L12_2.z
-  L13_2 = 0
-  L14_2 = false
-  L8_2(L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L8_2 = SetEntityCompletelyDisableCollision
-  L9_2 = L7_2
-  L10_2 = true
-  L11_2 = false
-  L8_2(L9_2, L10_2, L11_2)
-  L8_2 = SetModelAsNoLongerNeeded
-  L9_2 = L5_2
-  L8_2(L9_2)
-  L2_2.networkedRobotHandle = L7_2
-  L2_2.robotHandle = L7_2
-  L8_2 = NetworkGetNetworkIdFromEntity
-  L9_2 = L7_2
-  L8_2 = L8_2(L9_2)
-  L9_2 = TriggerServerEvent
-  L10_2 = "housing:cleaner:updateNetworkId"
-  L11_2 = L2_2.house
-  L12_2 = A1_2
-  L13_2 = L8_2
-  L9_2(L10_2, L11_2, L12_2, L13_2)
-  L2_2.state = "cleaning"
-  L9_2 = {}
-  L2_2.cleanedJunk = L9_2
-  L2_2.velocity = 0
-  L2_2.wobblePhase = 0
-  L9_2 = GetEntityHeading
-  L10_2 = L7_2
-  L9_2 = L9_2(L10_2)
-  L2_2.currentHeading = L9_2
-  L9_2 = L2_2.currentHeading
-  L2_2.targetHeading = L9_2
-  L9_2 = GetGameTimer
-  L9_2 = L9_2()
-  L2_2.lastMoveTime = L9_2
-  L9_2 = GetGameTimer
-  L9_2 = L9_2()
-  L2_2.cleaningStartTime = L9_2
-  L10_2 = A0_2
-  L9_2 = A0_2.initRoombaState
-  L11_2 = L2_2
-  L9_2(L10_2, L11_2)
-  L2_2.currentTarget = nil
-  L9_2 = Debug
-  L10_2 = "CleanerRobot: Started cleaning with networked robot"
-  L11_2 = A1_2
-  L12_2 = "networkId"
-  L13_2 = L8_2
-  L9_2(L10_2, L11_2, L12_2, L13_2)
-  L9_2 = Notification
-  L10_2 = i18n
-  L10_2 = L10_2.t
-  L11_2 = "cleaner.cleaning"
-  L10_2 = L10_2(L11_2)
-  L11_2 = "info"
-  L9_2(L10_2, L11_2)
-  L10_2 = A0_2
-  L9_2 = A0_2.startUpdateLoop
-  L9_2(L10_2)
-  L9_2 = PlaySoundFrontend
-  L10_2 = -1
-  L11_2 = "Beep_Green"
-  L12_2 = "DLC_HEIST_HACKING_SNAKE_SOUNDS"
-  L13_2 = true
-  L9_2(L10_2, L11_2, L12_2, L13_2)
-  L9_2 = SendReactMessage
-  L10_2 = "cleaner_sound"
-  L11_2 = {}
-  L11_2.action = "start"
-  L9_2(L10_2, L11_2)
-end
-L2_1.startCleaning = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    return
-  end
-  L3_2 = L2_2.state
-  if "cleaning" == L3_2 then
-    L2_2.state = "returning"
-    L2_2.cleaningStartTime = nil
-    L3_2 = Notification
-    L4_2 = i18n
-    L4_2 = L4_2.t
-    L5_2 = "cleaner.returning"
-    L4_2 = L4_2(L5_2)
-    L5_2 = "info"
-    L3_2(L4_2, L5_2)
-    L3_2 = Debug
-    L4_2 = "CleanerRobot: Returning to dock"
-    L5_2 = A1_2
-    L3_2(L4_2, L5_2)
-    L4_2 = A0_2
-    L3_2 = A0_2.startUpdateLoop
-    L3_2(L4_2)
-  end
-end
-L2_1.stopCleaning = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    return
-  end
-  L2_2.state = "returning"
-  L3_2 = Notification
-  L4_2 = i18n
-  L4_2 = L4_2.t
-  L5_2 = "cleaner.returning"
-  L4_2 = L4_2(L5_2)
-  L5_2 = "info"
-  L3_2(L4_2, L5_2)
-  L4_2 = A0_2
-  L3_2 = A0_2.startUpdateLoop
-  L3_2(L4_2)
-  L3_2 = Debug
-  L4_2 = "CleanerRobot: Manually returning to dock"
-  L5_2 = A1_2
-  L3_2(L4_2, L5_2)
-end
-L2_1.returnToDock = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  return L2_2
-end
-L2_1.get = L12_1
-function L12_1(A0_2)
-  local L1_2
-  L1_2 = A0_2.robots
-  return L1_2
-end
-L2_1.getAll = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    L3_2 = "unknown"
-    return L3_2
-  end
-  L3_2 = L2_2.state
-  return L3_2
-end
-L2_1.getState = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2
-  L2_2 = A0_2.robots
-  L2_2 = L2_2[A1_2]
-  if not L2_2 then
-    L3_2 = false
-    return L3_2
-  end
-  L3_2 = L2_2.state
-  L3_2 = "cleaning" == L3_2
-  return L3_2
-end
-L2_1.isActive = L12_1
-function L12_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = next
-  L2_2 = A0_2.robots
-  L1_2 = L1_2(L2_2)
-  L1_2 = nil ~= L1_2
-  return L1_2
-end
-L2_1.hasRobots = L12_1
-function L12_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2
-  L1_2 = pairs
-  L2_2 = A0_2.robots
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L6_2.state
-    if "cleaning" ~= L7_2 then
-      L7_2 = L6_2.state
-      if "returning" ~= L7_2 then
-        goto lbl_14
-      end
-    end
-    L7_2 = true
-    L8_2 = L5_2
-    do return L7_2, L8_2 end
-    ::lbl_14::
-  end
-  L1_2 = false
-  L2_2 = nil
-  return L1_2, L2_2
-end
-L2_1.hasActiveCleaningRobot = L12_1
-function L12_1(A0_2, A1_2, A2_2, A3_2)
-  local L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2
-  L4_2 = A0_2.robots
-  L4_2 = L4_2[A1_2]
-  if not L4_2 then
-    return
-  end
-  L5_2 = L4_2.state
-  if "docked" ~= L5_2 then
-    L5_2 = Debug
-    L6_2 = "CleanerRobot: Cannot reinitialize - robot not docked"
-    L5_2(L6_2)
-    return
-  end
-  L5_2 = A0_2.cleanerModels
-  L6_2 = L4_2.robotModel
-  L5_2 = L5_2[L6_2]
-  if not L5_2 then
-    return
-  end
-  L6_2 = DoesEntityExist
-  L7_2 = L4_2.dockHandle
-  L6_2 = L6_2(L7_2)
-  if L6_2 then
-    L6_2 = DeleteEntity
-    L7_2 = L4_2.dockHandle
-    L6_2(L7_2)
-  end
-  L6_2 = joaat
-  L7_2 = L5_2.dockerModel
-  L6_2 = L6_2(L7_2)
-  L7_2 = lib
-  L7_2 = L7_2.requestModel
-  L8_2 = L6_2
-  L9_2 = Config
-  L9_2 = L9_2.DefaultRequestModelTimeout
-  if not L9_2 then
-    L9_2 = 5000
-  end
-  L7_2(L8_2, L9_2)
-  L7_2 = CreateObject
-  L8_2 = L6_2
-  L9_2 = A2_2.x
-  L10_2 = A2_2.y
-  L11_2 = A2_2.z
-  L12_2 = false
-  L13_2 = false
-  L14_2 = false
-  L7_2 = L7_2(L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L8_2 = DoesEntityExist
-  L9_2 = L7_2
-  L8_2 = L8_2(L9_2)
-  if not L8_2 then
-    L8_2 = Debug
-    L9_2 = "CleanerRobot: Failed to respawn dock"
-    L8_2(L9_2)
-    L8_2 = SetModelAsNoLongerNeeded
-    L9_2 = L6_2
-    L8_2(L9_2)
-    return
-  end
-  L8_2 = SetEntityRotation
-  L9_2 = L7_2
-  L10_2 = A3_2.x
-  L11_2 = A3_2.y
-  L12_2 = A3_2.z
-  L13_2 = 0
-  L14_2 = false
-  L8_2(L9_2, L10_2, L11_2, L12_2, L13_2, L14_2)
-  L8_2 = FreezeEntityPosition
-  L9_2 = L7_2
-  L10_2 = true
-  L8_2(L9_2, L10_2)
-  L8_2 = SetEntityCompletelyDisableCollision
-  L9_2 = L7_2
-  L10_2 = true
-  L11_2 = false
-  L8_2(L9_2, L10_2, L11_2)
-  L8_2 = SetEntityInvincible
-  L9_2 = L7_2
-  L10_2 = true
-  L8_2(L9_2, L10_2)
-  L8_2 = SetModelAsNoLongerNeeded
-  L9_2 = L6_2
-  L8_2(L9_2)
-  L8_2 = GetModelDimensions
-  L9_2 = L6_2
-  L8_2, L9_2 = L8_2(L9_2)
-  L10_2 = L9_2.z
-  L11_2 = L8_2.z
-  L10_2 = L10_2 - L11_2
-  L11_2 = A2_2.z
-  L11_2 = L11_2 + L10_2
-  L11_2 = L11_2 + 0.02
-  L12_2 = DoesEntityExist
-  L13_2 = L4_2.robotHandle
-  L12_2 = L12_2(L13_2)
-  if L12_2 then
-    L12_2 = SetEntityCoords
-    L13_2 = L4_2.robotHandle
-    L14_2 = A2_2.x
-    L15_2 = A2_2.y
-    L16_2 = L11_2
-    L17_2 = false
-    L18_2 = false
-    L19_2 = false
-    L20_2 = false
-    L12_2(L13_2, L14_2, L15_2, L16_2, L17_2, L18_2, L19_2, L20_2)
-    L12_2 = SetEntityRotation
-    L13_2 = L4_2.robotHandle
-    L14_2 = 0.0
-    L15_2 = 0.0
-    L16_2 = A3_2.z
-    L17_2 = 0
-    L18_2 = false
-    L12_2(L13_2, L14_2, L15_2, L16_2, L17_2, L18_2)
-  end
-  L12_2 = joaat
-  L13_2 = L4_2.robotModel
-  L12_2 = L12_2(L13_2)
-  L13_2 = GetModelDimensions
-  L14_2 = L12_2
-  L13_2, L14_2 = L13_2(L14_2)
-  L15_2 = L14_2.z
-  L16_2 = L13_2.z
-  L15_2 = L15_2 - L16_2
-  L15_2 = L15_2 * 0.5
-  L4_2.dockHandle = L7_2
-  L16_2 = vec3
-  L17_2 = A2_2.x
-  L18_2 = A2_2.y
-  L19_2 = A2_2.z
-  L19_2 = L19_2 + L15_2
-  L16_2 = L16_2(L17_2, L18_2, L19_2)
-  L4_2.dockCoords = L16_2
-  L4_2.dockRotation = A3_2
-  L16_2 = A2_2.z
-  L4_2.baseZ = L16_2
-  L16_2 = vec3
-  L17_2 = A2_2.x
-  L18_2 = A2_2.y
-  L19_2 = A2_2.z
-  L16_2 = L16_2(L17_2, L18_2, L19_2)
-  L4_2.lastKnownCoords = L16_2
-  L16_2 = A3_2.z
-  L4_2.currentHeading = L16_2
-  L16_2 = A3_2.z
-  L4_2.targetHeading = L16_2
-  L16_2 = Debug
-  L17_2 = "CleanerRobot: Reinitialized at new position"
-  L18_2 = A1_2
-  L16_2(L17_2, L18_2)
-end
-L2_1.reinitializeAtPosition = L12_1
-function L12_1(A0_2)
-  local L1_2
-  L1_2 = A0_2.cleanerModels
-  return L1_2
-end
-L2_1.getCleanerModels = L12_1
-function L12_1(A0_2)
-  local L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2
-  L1_2 = pairs
-  L2_2 = A0_2.robots
-  L1_2, L2_2, L3_2, L4_2 = L1_2(L2_2)
-  for L5_2, L6_2 in L1_2, L2_2, L3_2, L4_2 do
-    L7_2 = L6_2.isOwner
-    if L7_2 then
-      L7_2 = L6_2.state
-      if "cleaning" ~= L7_2 then
-        L7_2 = L6_2.state
-        if "returning" ~= L7_2 then
-          goto lbl_19
-        end
-      end
-      L7_2 = TriggerServerEvent
-      L8_2 = "housing:cleaner:stopped"
-      L9_2 = L6_2.house
-      L10_2 = L5_2
-      L7_2(L8_2, L9_2, L10_2)
-    end
-    ::lbl_19::
-    L7_2 = L6_2.networkedRobotHandle
-    if L7_2 then
-      L7_2 = DoesEntityExist
-      L8_2 = L6_2.networkedRobotHandle
-      L7_2 = L7_2(L8_2)
-      if L7_2 then
-        L7_2 = DeleteEntity
-        L8_2 = L6_2.networkedRobotHandle
-        L7_2(L8_2)
-      end
-    end
-    L7_2 = DoesEntityExist
-    L8_2 = L6_2.dockHandle
-    L7_2 = L7_2(L8_2)
-    if L7_2 then
-      L7_2 = DeleteEntity
-      L8_2 = L6_2.dockHandle
-      L7_2(L8_2)
-    end
-  end
-  L1_2 = SendReactMessage
-  L2_2 = "cleaner_sound"
-  L3_2 = {}
-  L3_2.action = "stop"
-  L1_2(L2_2, L3_2)
-  A0_2.activeThread = false
-  A0_2.interactionThread = false
-  L1_2 = {}
-  A0_2.robots = L1_2
-end
-L2_1.cleanAll = L12_1
-function L12_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L2_2 = decorate
-  if L2_2 then
-    L2_2 = decorate
-    L2_2 = L2_2.objects
-    if L2_2 then
-      goto lbl_9
-    end
-  end
-  do return end
-  ::lbl_9::
-  L2_2 = pairs
-  L3_2 = decorate
-  L3_2 = L3_2.objects
-  L2_2, L3_2, L4_2, L5_2 = L2_2(L3_2)
-  for L6_2, L7_2 in L2_2, L3_2, L4_2, L5_2 do
-    L8_2 = L7_2.spawned
-    if L8_2 then
-      L8_2 = L7_2.coords
-      if L8_2 then
-        L8_2 = L7_2.handle
-        if L8_2 then
-          L9_2 = A0_2
-          L8_2 = A0_2.isCleanerModel
-          L10_2 = L7_2.modelName
-          L8_2 = L8_2(L9_2, L10_2)
-          if L8_2 then
-            L10_2 = A0_2
-            L9_2 = A0_2.spawnForDecoration
-            L11_2 = L7_2
-            L12_2 = A1_2
-            L9_2(L10_2, L11_2, L12_2)
-          end
-        end
-      end
-    end
-  end
-end
-L2_1.scanAndSpawnFromDecorations = L12_1
-function L12_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = A0_2.interactionThread
-  if L1_2 then
-    return
-  end
-  L1_2 = Config
-  L1_2 = L1_2.UseTarget
-  if L1_2 then
-    return
-  end
-  A0_2.interactionThread = true
-  L1_2 = CreateThread
-  function L2_2()
-    local L0_3, L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3, L10_3, L11_3, L12_3
-    while true do
-      L0_3 = A0_2.interactionThread
-      if not L0_3 then
-        break
-      end
-      L0_3 = CurrentHouse
-      if not L0_3 then
-        break
-      end
-      L0_3 = GetEntityCoords
-      L1_3 = cache
-      L1_3 = L1_3.ped
-      L0_3 = L0_3(L1_3)
-      L1_3 = nil
-      L2_3 = 2.5
-      L3_3 = pairs
-      L4_3 = A0_2.robots
-      L3_3, L4_3, L5_3, L6_3 = L3_3(L4_3)
-      for L7_3, L8_3 in L3_3, L4_3, L5_3, L6_3 do
-        L9_3 = DoesEntityExist
-        L10_3 = L8_3.dockHandle
-        L9_3 = L9_3(L10_3)
-        if L9_3 then
-          L9_3 = GetEntityCoords
-          L10_3 = L8_3.dockHandle
-          L9_3 = L9_3(L10_3)
-          L10_3 = L0_3 - L9_3
-          L10_3 = #L10_3
-          if L2_3 > L10_3 then
-            L2_3 = L10_3
-            L11_3 = {}
-            L11_3.id = L7_3
-            L11_3.data = L8_3
-            L1_3 = L11_3
-          end
-        end
-      end
-      if L1_3 then
-        L3_3 = CurrentHouseData
-        if L3_3 then
-          L3_3 = CurrentHouseData
-          L3_3 = L3_3.haskey
-          if L3_3 then
-            L3_3 = GetEntityCoords
-            L4_3 = L1_3.data
-            L4_3 = L4_3.dockHandle
-            L3_3 = L3_3(L4_3)
-            L4_3 = L1_3.data
-            L4_3 = L4_3.state
-            L5_3 = ""
-            if "docked" == L4_3 or "idle" == L4_3 then
-              L6_3 = i18n
-              L6_3 = L6_3.t
-              L7_3 = "cleaner.press_start"
-              L6_3 = L6_3(L7_3)
-              L5_3 = L6_3
-            elseif "cleaning" == L4_3 then
-              L6_3 = i18n
-              L6_3 = L6_3.t
-              L7_3 = "cleaner.press_stop"
-              L6_3 = L6_3(L7_3)
-              L5_3 = L6_3
-            elseif "returning" == L4_3 then
-              L6_3 = i18n
-              L6_3 = L6_3.t
-              L7_3 = "cleaner.returning"
-              L6_3 = L6_3(L7_3)
-              L5_3 = L6_3
-            end
-            L6_3 = DrawText3D
-            L7_3 = L3_3.x
-            L8_3 = L3_3.y
-            L9_3 = L3_3.z
-            L9_3 = L9_3 + 0.3
-            L10_3 = L5_3
-            L11_3 = "cleaner_robot"
-            L12_3 = "E"
-            L6_3(L7_3, L8_3, L9_3, L10_3, L11_3, L12_3)
-            L6_3 = IsControlJustPressed
-            L7_3 = 0
-            L8_3 = 38
-            L6_3 = L6_3(L7_3, L8_3)
-            if L6_3 then
-              if "docked" == L4_3 or "idle" == L4_3 then
-                L6_3 = A0_2
-                L7_3 = L6_3
-                L6_3 = L6_3.startCleaning
-                L8_3 = L1_3.id
-                L6_3(L7_3, L8_3)
-              elseif "cleaning" == L4_3 then
-                L6_3 = A0_2
-                L7_3 = L6_3
-                L6_3 = L6_3.stopCleaning
-                L8_3 = L1_3.id
-                L6_3(L7_3, L8_3)
-              end
-            end
-          end
-        end
-      end
-      L3_3 = Wait
-      L4_3 = 0
-      L3_3(L4_3)
-    end
-    A0_2.interactionThread = false
-  end
-  L1_2(L2_2)
-end
-L2_1.startInteractionLoop = L12_1
-function L12_1(A0_2)
-  local L1_2
-  A0_2.interactionThread = false
-end
-L2_1.stopInteractionLoop = L12_1
-L12_1 = _G
-L14_1 = L2_1
-L13_1 = L2_1.new
-L13_1 = L13_1(L14_1)
-L12_1.cleanerRobot = L13_1
-L12_1 = CreateThread
-function L13_1()
-  local L0_2, L1_2
-  L0_2 = Wait
-  L1_2 = 1000
-  L0_2(L1_2)
-  L0_2 = cleanerRobot
-  L1_2 = L0_2
-  L0_2 = L0_2.buildModelList
-  L0_2(L1_2)
-end
-L12_1(L13_1)
-L12_1 = {}
-L13_1 = CreateThread
-function L14_1()
-  local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-  while true do
-    L0_2 = Wait
-    L1_2 = 500
-    L0_2(L1_2)
-    L0_2 = CurrentHouse
-    if not L0_2 then
-      L0_2 = {}
-      L12_1 = L0_2
-    else
-      L0_2 = decorate
-      if L0_2 then
-        L0_2 = decorate
-        L0_2 = L0_2.objects
-        if not L0_2 then
-        else
-          L0_2 = pairs
-          L1_2 = decorate
-          L1_2 = L1_2.objects
-          L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-          for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-            L6_2 = L5_2.id
-            if L6_2 then
-              L6_2 = L5_2.spawned
-              if L6_2 then
-                L6_2 = L5_2.coords
-                if L6_2 then
-                  L6_2 = L5_2.handle
-                  if L6_2 then
-                    L6_2 = cleanerRobot
-                    L7_2 = L6_2
-                    L6_2 = L6_2.isCleanerModel
-                    L8_2 = L5_2.modelName
-                    L6_2 = L6_2(L7_2, L8_2)
-                    if L6_2 then
-                      L7_2 = cleanerRobot
-                      L8_2 = L7_2
-                      L7_2 = L7_2.get
-                      L9_2 = L5_2.id
-                      L7_2 = L7_2(L8_2, L9_2)
-                      if not L7_2 then
-                        L9_2 = L5_2.id
-                        L8_2 = L12_1
-                        L10_2 = {}
-                        L11_2 = vec3
-                        L12_2 = L5_2.coords
-                        L12_2 = L12_2.x
-                        L13_2 = L5_2.coords
-                        L13_2 = L13_2.y
-                        L14_2 = L5_2.coords
-                        L14_2 = L14_2.z
-                        L11_2 = L11_2(L12_2, L13_2, L14_2)
-                        L10_2.coords = L11_2
-                        L11_2 = L5_2.rotation
-                        if L11_2 then
-                          L11_2 = vec3
-                          L12_2 = L5_2.rotation
-                          L12_2 = L12_2.x
-                          L13_2 = L5_2.rotation
-                          L13_2 = L13_2.y
-                          L14_2 = L5_2.rotation
-                          L14_2 = L14_2.z
-                          L11_2 = L11_2(L12_2, L13_2, L14_2)
-                          if L11_2 then
-                            goto lbl_79
-                          end
+function CleanerRobot:buildModelList()
+    self.cleanerModels = {}
+    for _, category in pairs(Config.Furniture) do
+        if category.items then
+            for _, item in ipairs(category.items) do
+                if item.isCleanerRobot then
+                    self.cleanerModels[item.object] = {
+                        model = item.object,
+                        dockerModel = item.isCleanerRobot.dockerModel,
+                    }
+                end
+                if item.colors then
+                    for _, colorVariant in pairs(item.colors) do
+                        if colorVariant.isCleanerRobot then
+                            self.cleanerModels[colorVariant.object] = {
+                                model = colorVariant.object,
+                                dockerModel = colorVariant.isCleanerRobot.dockerModel,
+                            }
                         end
-                        L11_2 = vec3
-                        L12_2 = 0
-                        L13_2 = 0
-                        L14_2 = 0
-                        L11_2 = L11_2(L12_2, L13_2, L14_2)
-                        ::lbl_79::
-                        L10_2.rotation = L11_2
-                        L8_2[L9_2] = L10_2
-                        L8_2 = cleanerRobot
-                        L9_2 = L8_2
-                        L8_2 = L8_2.spawnForDecoration
-                        L10_2 = L5_2
-                        L11_2 = CurrentHouse
-                        L8_2(L9_2, L10_2, L11_2)
-                      else
-                        L9_2 = L5_2.id
-                        L8_2 = L12_1
-                        L8_2 = L8_2[L9_2]
-                        if L8_2 then
-                          L9_2 = vec3
-                          L10_2 = L5_2.coords
-                          L10_2 = L10_2.x
-                          L11_2 = L5_2.coords
-                          L11_2 = L11_2.y
-                          L12_2 = L5_2.coords
-                          L12_2 = L12_2.z
-                          L9_2 = L9_2(L10_2, L11_2, L12_2)
-                          L10_2 = L5_2.rotation
-                          if L10_2 then
-                            L10_2 = vec3
-                            L11_2 = L5_2.rotation
-                            L11_2 = L11_2.x
-                            L12_2 = L5_2.rotation
-                            L12_2 = L12_2.y
-                            L13_2 = L5_2.rotation
-                            L13_2 = L13_2.z
-                            L10_2 = L10_2(L11_2, L12_2, L13_2)
-                            if L10_2 then
-                              goto lbl_118
-                            end
-                          end
-                          L10_2 = vec3
-                          L11_2 = 0
-                          L12_2 = 0
-                          L13_2 = 0
-                          L10_2 = L10_2(L11_2, L12_2, L13_2)
-                          ::lbl_118::
-                          L11_2 = L8_2.coords
-                          L11_2 = L9_2 - L11_2
-                          L11_2 = #L11_2
-                          L12_2 = 0.1
-                          L11_2 = L11_2 > L12_2
-                          L12_2 = math
-                          L12_2 = L12_2.abs
-                          L13_2 = L10_2.z
-                          L14_2 = L8_2.rotation
-                          L14_2 = L14_2.z
-                          L13_2 = L13_2 - L14_2
-                          L12_2 = L12_2(L13_2)
-                          L12_2 = L12_2 > 1.0
-                          if L11_2 or L12_2 then
-                            L13_2 = L5_2.handle
-                            L7_2.robotHandle = L13_2
-                            L13_2 = cleanerRobot
-                            L14_2 = L13_2
-                            L13_2 = L13_2.reinitializeAtPosition
-                            L15_2 = L5_2.id
-                            L16_2 = L9_2
-                            L17_2 = L10_2
-                            L13_2(L14_2, L15_2, L16_2, L17_2)
-                            L14_2 = L5_2.id
-                            L13_2 = L12_1
-                            L15_2 = {}
-                            L15_2.coords = L9_2
-                            L15_2.rotation = L10_2
-                            L13_2[L14_2] = L15_2
-                          end
-                        end
-                      end
                     end
-                  end
                 end
-              end
             end
-          end
-          L0_2 = pairs
-          L1_2 = L12_1
-          L0_2, L1_2, L2_2, L3_2 = L0_2(L1_2)
-          for L4_2, L5_2 in L0_2, L1_2, L2_2, L3_2 do
-            L6_2 = false
-            L7_2 = pairs
-            L8_2 = decorate
-            L8_2 = L8_2.objects
-            L7_2, L8_2, L9_2, L10_2 = L7_2(L8_2)
-            for L11_2, L12_2 in L7_2, L8_2, L9_2, L10_2 do
-              L13_2 = L12_2.id
-              if L13_2 == L4_2 then
-                L6_2 = true
-                break
-              end
-            end
-            if not L6_2 then
-              L7_2 = L12_1
-              L7_2[L4_2] = nil
-              L7_2 = cleanerRobot
-              L8_2 = L7_2
-              L7_2 = L7_2.despawn
-              L9_2 = L4_2
-              L7_2(L8_2, L9_2)
-            end
-          end
         end
-      end
     end
-  end
 end
-L13_1(L14_1)
-L13_1 = Config
-L13_1 = L13_1.UseTarget
-if L13_1 then
-  L13_1 = CreateThread
-  function L14_1()
-    local L0_2, L1_2, L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2
-    L0_2 = Wait
-    L1_2 = 2000
-    L0_2(L1_2)
-    L0_2 = cleanerRobot
-    L1_2 = L0_2
-    L0_2 = L0_2.getCleanerModels
-    L0_2 = L0_2(L1_2)
-    while true do
-      L1_2 = next
-      L2_2 = L0_2
-      L1_2 = L1_2(L2_2)
-      if nil ~= L1_2 then
-        break
-      end
-      L1_2 = Wait
-      L2_2 = 500
-      L1_2(L2_2)
-      L1_2 = cleanerRobot
-      L2_2 = L1_2
-      L1_2 = L1_2.getCleanerModels
-      L1_2 = L1_2(L2_2)
-      L0_2 = L1_2
-    end
-    L1_2 = {}
-    L2_2 = {}
-    L3_2 = pairs
-    L4_2 = L0_2
-    L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-    for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-      L9_2 = table
-      L9_2 = L9_2.insert
-      L10_2 = L1_2
-      L11_2 = joaat
-      L12_2 = L7_2
-      L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2 = L11_2(L12_2)
-      L9_2(L10_2, L11_2, L12_2, L13_2, L14_2, L15_2, L16_2, L17_2)
-      L9_2 = L8_2.dockerModel
-      if L9_2 then
-        L9_2 = joaat
-        L10_2 = L8_2.dockerModel
-        L9_2 = L9_2(L10_2)
-        L10_2 = false
-        L11_2 = ipairs
-        L12_2 = L2_2
-        L11_2, L12_2, L13_2, L14_2 = L11_2(L12_2)
-        for L15_2, L16_2 in L11_2, L12_2, L13_2, L14_2 do
-          if L16_2 == L9_2 then
-            L10_2 = true
-            break
-          end
-        end
-        if not L10_2 then
-          L11_2 = table
-          L11_2 = L11_2.insert
-          L12_2 = L2_2
-          L13_2 = L9_2
-          L11_2(L12_2, L13_2)
-        end
-      end
-    end
-    L3_2 = #L1_2
-    if 0 == L3_2 then
-      return
-    end
-    L3_2 = {}
-    L4_2 = {}
-    L4_2.icon = "fas fa-play"
-    L5_2 = i18n
-    L5_2 = L5_2.t
-    L6_2 = "cleaner.start"
-    L5_2 = L5_2(L6_2)
-    L4_2.label = L5_2
-    function L5_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.robotHandle
-        L8_3 = A0_3.entity
-        if L7_3 == L8_3 then
-          L7_3 = L6_3.state
-          if "docked" ~= L7_3 then
-            L7_3 = L6_3.state
-            if "idle" ~= L7_3 then
-              break
-            end
-          end
-          L7_3 = cleanerRobot
-          L8_3 = L7_3
-          L7_3 = L7_3.startCleaning
-          L9_3 = L5_3
-          L7_3(L8_3, L9_3)
-          break
-        end
-      end
-    end
-    L4_2.onSelect = L5_2
-    function L5_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-      L1_3 = CurrentHouse
-      if not L1_3 then
-        L1_3 = false
-        return L1_3
-      end
-      L1_3 = CurrentHouseData
-      if L1_3 then
-        L1_3 = CurrentHouseData
-        L1_3 = L1_3.haskey
-        if L1_3 then
-          goto lbl_15
-        end
-      end
-      L1_3 = false
-      do return L1_3 end
-      ::lbl_15::
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.robotHandle
-        if L7_3 == A0_3 then
-          L7_3 = L6_3.state
-          L7_3 = "docked" == L7_3
-          return L7_3
-        end
-      end
-      L1_3 = false
-      return L1_3
-    end
-    L4_2.canInteract = L5_2
-    L4_2.distance = 2.5
-    L5_2 = {}
-    L5_2.icon = "fas fa-stop"
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "cleaner.stop"
-    L6_2 = L6_2(L7_2)
-    L5_2.label = L6_2
-    function L6_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.robotHandle
-        L8_3 = A0_3.entity
-        if L7_3 == L8_3 then
-          L7_3 = L6_3.state
-          if "cleaning" == L7_3 then
-            L7_3 = cleanerRobot
-            L8_3 = L7_3
-            L7_3 = L7_3.stopCleaning
-            L9_3 = L5_3
-            L7_3(L8_3, L9_3)
-          end
-          break
-        end
-      end
-    end
-    L5_2.onSelect = L6_2
-    function L6_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-      L1_3 = CurrentHouse
-      if not L1_3 then
-        L1_3 = false
-        return L1_3
-      end
-      L1_3 = CurrentHouseData
-      if L1_3 then
-        L1_3 = CurrentHouseData
-        L1_3 = L1_3.haskey
-        if L1_3 then
-          goto lbl_15
-        end
-      end
-      L1_3 = false
-      do return L1_3 end
-      ::lbl_15::
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.robotHandle
-        if L7_3 == A0_3 then
-          L7_3 = L6_3.state
-          L7_3 = "cleaning" == L7_3
-          return L7_3
-        end
-      end
-      L1_3 = false
-      return L1_3
-    end
-    L5_2.canInteract = L6_2
-    L5_2.distance = 2.5
-    L3_2[1] = L4_2
-    L3_2[2] = L5_2
-    L4_2 = {}
-    L5_2 = {}
-    L5_2.icon = "fas fa-home"
-    L6_2 = i18n
-    L6_2 = L6_2.t
-    L7_2 = "cleaner.return_dock"
-    L6_2 = L6_2(L7_2)
-    L5_2.label = L6_2
-    function L6_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        L8_3 = A0_3.entity
-        if L7_3 == L8_3 then
-          L7_3 = cleanerRobot
-          L8_3 = L7_3
-          L7_3 = L7_3.returnToDock
-          L9_3 = L5_3
-          L7_3(L8_3, L9_3)
-          break
-        end
-      end
-    end
-    L5_2.onSelect = L6_2
-    function L6_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-      L1_3 = CurrentHouse
-      if not L1_3 then
-        L1_3 = false
-        return L1_3
-      end
-      L1_3 = CurrentHouseData
-      if L1_3 then
-        L1_3 = CurrentHouseData
-        L1_3 = L1_3.haskey
-        if L1_3 then
-          goto lbl_15
-        end
-      end
-      L1_3 = false
-      do return L1_3 end
-      ::lbl_15::
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        if L7_3 == A0_3 then
-          L7_3 = L6_3.state
-          L7_3 = "cleaning" == L7_3
-          return L7_3
-        end
-      end
-      L1_3 = false
-      return L1_3
-    end
-    L5_2.canInteract = L6_2
-    L5_2.distance = 2.5
-    L6_2 = {}
-    L6_2.icon = "fas fa-play"
-    L7_2 = i18n
-    L7_2 = L7_2.t
-    L8_2 = "cleaner.start"
-    L7_2 = L7_2(L8_2)
-    L6_2.label = L7_2
-    function L7_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        L8_3 = A0_3.entity
-        if L7_3 == L8_3 then
-          L7_3 = L6_3.state
-          if "docked" ~= L7_3 then
-            L7_3 = L6_3.state
-            if "idle" ~= L7_3 then
-              break
-            end
-          end
-          L7_3 = cleanerRobot
-          L8_3 = L7_3
-          L7_3 = L7_3.startCleaning
-          L9_3 = L5_3
-          L7_3(L8_3, L9_3)
-          break
-        end
-      end
-    end
-    L6_2.onSelect = L7_2
-    function L7_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-      L1_3 = CurrentHouse
-      if not L1_3 then
-        L1_3 = false
-        return L1_3
-      end
-      L1_3 = CurrentHouseData
-      if L1_3 then
-        L1_3 = CurrentHouseData
-        L1_3 = L1_3.haskey
-        if L1_3 then
-          goto lbl_15
-        end
-      end
-      L1_3 = false
-      do return L1_3 end
-      ::lbl_15::
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        if L7_3 == A0_3 then
-          L7_3 = L6_3.state
-          L7_3 = "docked" == L7_3
-          return L7_3
-        end
-      end
-      L1_3 = false
-      return L1_3
-    end
-    L6_2.canInteract = L7_2
-    L6_2.distance = 2.5
-    L7_2 = {}
-    L7_2.icon = "fas fa-stop"
-    L8_2 = i18n
-    L8_2 = L8_2.t
-    L9_2 = "cleaner.stop"
-    L8_2 = L8_2(L9_2)
-    L7_2.label = L8_2
-    function L8_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        L8_3 = A0_3.entity
-        if L7_3 == L8_3 then
-          L7_3 = L6_3.state
-          if "cleaning" == L7_3 then
-            L7_3 = cleanerRobot
-            L8_3 = L7_3
-            L7_3 = L7_3.stopCleaning
-            L9_3 = L5_3
-            L7_3(L8_3, L9_3)
-          end
-          break
-        end
-      end
-    end
-    L7_2.onSelect = L8_2
-    function L8_2(A0_3)
-      local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-      L1_3 = CurrentHouse
-      if not L1_3 then
-        L1_3 = false
-        return L1_3
-      end
-      L1_3 = CurrentHouseData
-      if L1_3 then
-        L1_3 = CurrentHouseData
-        L1_3 = L1_3.haskey
-        if L1_3 then
-          goto lbl_15
-        end
-      end
-      L1_3 = false
-      do return L1_3 end
-      ::lbl_15::
-      L1_3 = pairs
-      L2_3 = cleanerRobot
-      L3_3 = L2_3
-      L2_3 = L2_3.getAll
-      L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-      L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-      for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-        L7_3 = L6_3.dockHandle
-        if L7_3 == A0_3 then
-          L7_3 = L6_3.state
-          L7_3 = "cleaning" == L7_3
-          return L7_3
-        end
-      end
-      L1_3 = false
-      return L1_3
-    end
-    L7_2.canInteract = L8_2
-    L7_2.distance = 2.5
-    L4_2[1] = L5_2
-    L4_2[2] = L6_2
-    L4_2[3] = L7_2
-    L5_2 = GetResourceState
-    L6_2 = "ox_target"
-    L5_2 = L5_2(L6_2)
-    if "started" == L5_2 then
-      L5_2 = exports
-      L5_2 = L5_2.ox_target
-      L6_2 = L5_2
-      L5_2 = L5_2.addModel
-      L7_2 = L1_2
-      L8_2 = L3_2
-      L5_2(L6_2, L7_2, L8_2)
-      L5_2 = #L2_2
-      if L5_2 > 0 then
-        L5_2 = exports
-        L5_2 = L5_2.ox_target
-        L6_2 = L5_2
-        L5_2 = L5_2.addModel
-        L7_2 = L2_2
-        L8_2 = L4_2
-        L5_2(L6_2, L7_2, L8_2)
-      end
-      L5_2 = Debug
-      L6_2 = "CleanerRobot: Registered ox_target models (robot + dock)"
-      L5_2(L6_2)
+
+
+function CleanerRobot:isCleanerModel(modelName)
+    local modelData = self.cleanerModels[modelName]
+    return nil ~= modelData, modelData
+end
+
+function CleanerRobot:performRaycast(origin, direction, distance, ignoreEntities)
+    local endPos = origin + direction * distance
+    local ignoreEntity
+    if ignoreEntities and ignoreEntities[1] then
+        ignoreEntity = ignoreEntities[1]
     else
-      L5_2 = GetResourceState
-      L6_2 = "qb-target"
-      L5_2 = L5_2(L6_2)
-      if "started" == L5_2 then
-        L5_2 = exports
-        L5_2 = L5_2["qb-target"]
-        L6_2 = L5_2
-        L5_2 = L5_2.AddTargetModel
-        L7_2 = L1_2
-        L8_2 = {}
-        L9_2 = {}
-        L10_2 = {}
-        L10_2.icon = "fas fa-play"
-        L11_2 = i18n
-        L11_2 = L11_2.t
-        L12_2 = "cleaner.start"
-        L11_2 = L11_2(L12_2)
-        L10_2.label = L11_2
-        function L11_2(A0_3)
-          local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-          L1_3 = pairs
-          L2_3 = cleanerRobot
-          L3_3 = L2_3
-          L2_3 = L2_3.getAll
-          L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-          L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-          for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-            L7_3 = L6_3.robotHandle
-            if L7_3 == A0_3 then
-              L7_3 = L6_3.state
-              if "docked" ~= L7_3 then
-                L7_3 = L6_3.state
-                if "idle" ~= L7_3 then
-                  break
-                end
-              end
-              L7_3 = cleanerRobot
-              L8_3 = L7_3
-              L7_3 = L7_3.startCleaning
-              L9_3 = L5_3
-              L7_3(L8_3, L9_3)
-              break
+        ignoreEntity = 0
+    end
+    local rayHandle = StartExpensiveSynchronousShapeTestLosProbe(
+        origin.x, origin.y, origin.z,
+        endPos.x, endPos.y, endPos.z,
+        17, ignoreEntity, 4
+    )
+    local _, hitResult, hitCoords, _, _, hitEntity = GetShapeTestResultIncludingMaterial(rayHandle)
+    if 1 == hitResult then
+        return true, vec3(hitCoords.x, hitCoords.y, hitCoords.z), hitEntity
+    end
+    return false, nil, nil
+end
+
+
+function CleanerRobot:headingToDirection(heading)
+    local sin, cos = sincos(rad(vec3(0, 0, heading)))
+    return vec3(sin.z, cos.z, 0.0)
+end
+
+function CleanerRobot:canMoveInDirection(robot, angle)
+    if not DoesEntityExist(robot.robotHandle) then
+        return false
+    end
+    local coords = GetEntityCoords(robot.robotHandle)
+    local normalizedAngle = self:normalizeAngle(angle)
+    local direction = self:headingToDirection(normalizedAngle)
+    local rayOrigin = vec3(coords.x, coords.y, coords.z + 0.15)
+    local hit, hitPos, hitEntity = self:performRaycast(rayOrigin, direction, self.raycastDistance, { robot.dockHandle })
+    if hit then
+        if hitEntity ~= robot.dockHandle then
+            if hitPos then
+                local hitDistance = #(coords - hitPos)
+                Debug("CleanerRobot: Hit obstacle in direction:", normalizedAngle, "distance", hitDistance)
+                return hitDistance >= self.raycastDistance
             end
-          end
+            return false
         end
-        L10_2.action = L11_2
-        function L11_2(A0_3)
-          local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-          L1_3 = CurrentHouse
-          if not L1_3 then
-            L1_3 = false
-            return L1_3
-          end
-          L1_3 = CurrentHouseData
-          if L1_3 then
-            L1_3 = CurrentHouseData
-            L1_3 = L1_3.haskey
-            if L1_3 then
-              goto lbl_15
-            end
-          end
-          L1_3 = false
-          do return L1_3 end
-          ::lbl_15::
-          L1_3 = pairs
-          L2_3 = cleanerRobot
-          L3_3 = L2_3
-          L2_3 = L2_3.getAll
-          L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-          L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-          for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-            L7_3 = L6_3.robotHandle
-            if L7_3 == A0_3 then
-              L7_3 = L6_3.state
-              L7_3 = "docked" == L7_3
-              return L7_3
-            end
-          end
-          L1_3 = false
-          return L1_3
+    end
+    return true
+end
+
+
+function CleanerRobot:isForwardClear(robot)
+    if not DoesEntityExist(robot.robotHandle) then
+        return false
+    end
+    local heading = robot.currentHeading
+    if not heading then
+        heading = GetEntityHeading(robot.robotHandle)
+    end
+    return self:canMoveInDirection(robot, heading)
+end
+
+function CleanerRobot:getDistanceInDirection(robot, angle, maxDistance)
+    if not DoesEntityExist(robot.robotHandle) then
+        return maxDistance
+    end
+    local coords = GetEntityCoords(robot.robotHandle)
+    local direction = self:headingToDirection(angle)
+    local rayOrigin = vec3(coords.x, coords.y, coords.z + 0.15)
+    local hit, hitPos, hitEntity = self:performRaycast(rayOrigin, direction, maxDistance, { robot.robotHandle, robot.dockHandle })
+    if hit then
+        if hitEntity ~= robot.dockHandle and hitPos then
+            return #(coords - hitPos)
         end
-        L10_2.canInteract = L11_2
-        L11_2 = {}
-        L11_2.icon = "fas fa-stop"
-        L12_2 = i18n
-        L12_2 = L12_2.t
-        L13_2 = "cleaner.stop"
-        L12_2 = L12_2(L13_2)
-        L11_2.label = L12_2
-        function L12_2(A0_3)
-          local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-          L1_3 = pairs
-          L2_3 = cleanerRobot
-          L3_3 = L2_3
-          L2_3 = L2_3.getAll
-          L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-          L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-          for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-            L7_3 = L6_3.robotHandle
-            if L7_3 == A0_3 then
-              L7_3 = L6_3.state
-              if "cleaning" == L7_3 then
-                L7_3 = cleanerRobot
-                L8_3 = L7_3
-                L7_3 = L7_3.stopCleaning
-                L9_3 = L5_3
-                L7_3(L8_3, L9_3)
-              end
-              break
-            end
-          end
+    end
+    return maxDistance
+end
+
+
+function CleanerRobot:initRoombaState(robot)
+    local heading = robot.currentHeading
+    if not heading then
+        heading = GetEntityHeading(robot.robotHandle)
+        if not heading then
+            heading = 0
         end
-        L11_2.action = L12_2
-        function L12_2(A0_3)
-          local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-          L1_3 = CurrentHouse
-          if not L1_3 then
-            L1_3 = false
-            return L1_3
-          end
-          L1_3 = CurrentHouseData
-          if L1_3 then
-            L1_3 = CurrentHouseData
-            L1_3 = L1_3.haskey
-            if L1_3 then
-              goto lbl_15
-            end
-          end
-          L1_3 = false
-          do return L1_3 end
-          ::lbl_15::
-          L1_3 = pairs
-          L2_3 = cleanerRobot
-          L3_3 = L2_3
-          L2_3 = L2_3.getAll
-          L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-          L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-          for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-            L7_3 = L6_3.robotHandle
-            if L7_3 == A0_3 then
-              L7_3 = L6_3.state
-              L7_3 = "cleaning" == L7_3
-              return L7_3
-            end
-          end
-          L1_3 = false
-          return L1_3
-        end
-        L11_2.canInteract = L12_2
-        L9_2[1] = L10_2
-        L9_2[2] = L11_2
-        L8_2.options = L9_2
-        L8_2.distance = 2.5
-        L5_2(L6_2, L7_2, L8_2)
-        L5_2 = #L2_2
-        if L5_2 > 0 then
-          L5_2 = exports
-          L5_2 = L5_2["qb-target"]
-          L6_2 = L5_2
-          L5_2 = L5_2.AddTargetModel
-          L7_2 = L2_2
-          L8_2 = {}
-          L9_2 = {}
-          L10_2 = {}
-          L10_2.icon = "fas fa-home"
-          L11_2 = i18n
-          L11_2 = L11_2.t
-          L12_2 = "cleaner.return_dock"
-          L11_2 = L11_2(L12_2)
-          L10_2.label = L11_2
-          function L11_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = cleanerRobot
-                L8_3 = L7_3
-                L7_3 = L7_3.returnToDock
-                L9_3 = L5_3
-                L7_3(L8_3, L9_3)
+    end
+    robot.navState = "moving"
+    robot.moveDirection = heading
+    robot.lastWallDistance = nil
+    robot.wallFollowStartTime = nil
+    robot.openingDetected = false
+    robot.openingDirection = nil
+    robot.turnCompletePosition = nil
+    robot.isInitialized = true
+    Debug("CleanerRobot: Wall-following initialized, direction:", robot.moveDirection)
+end
+
+function CleanerRobot:getWallDistance(robot, angle, maxDistance)
+    return self:getDistanceInDirection(robot, angle, maxDistance)
+end
+
+function CleanerRobot:isFrontBlocked(robot)
+    local dist = self:getWallDistance(robot, robot.moveDirection, WALL_DETECT_FRONT)
+    return dist < WALL_DETECT_FRONT, dist
+end
+
+
+function CleanerRobot:getRightWallDistance(robot)
+    local rightAngle = self:normalizeAngle(robot.moveDirection - 90)
+    return self:getWallDistance(robot, rightAngle, WALL_DETECT_SIDE)
+end
+
+function CleanerRobot:checkRightOpening(robot)
+    local rightDist = self:getRightWallDistance(robot)
+    local lastDist = robot.lastWallDistance
+    if not lastDist then
+        lastDist = rightDist
+    end
+    local distDelta = rightDist - lastDist
+    if distDelta > OPENING_THRESHOLD then
+        local openingAngle = self:normalizeAngle(robot.moveDirection - 90)
+        Debug("CleanerRobot: Opening detected! Distance jump from", lastDist, "to", rightDist)
+        return true, openingAngle
+    end
+    return false, 0
+end
+
+
+function CleanerRobot:findAllJunkInRange(robot, maxRange)
+    local results = {}
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    if not maxRange then
+        maxRange = self.maxDistanceFromDock
+    end
+    local allJunk = junk:getAll()
+    if not allJunk then
+        return results
+    end
+    for junkId, junkData in pairs(allJunk) do
+        local alreadyCleaned = false
+        for _, cleanedId in ipairs(robot.cleanedJunk) do
+            if cleanedId == junkId then
+                alreadyCleaned = true
                 break
-              end
             end
-          end
-          L10_2.action = L11_2
-          function L11_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-            L1_3 = CurrentHouse
-            if not L1_3 then
-              L1_3 = false
-              return L1_3
-            end
-            L1_3 = CurrentHouseData
-            if L1_3 then
-              L1_3 = CurrentHouseData
-              L1_3 = L1_3.haskey
-              if L1_3 then
-                goto lbl_15
-              end
-            end
-            L1_3 = false
-            do return L1_3 end
-            ::lbl_15::
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = L6_3.state
-                L7_3 = "cleaning" == L7_3
-                return L7_3
-              end
-            end
-            L1_3 = false
-            return L1_3
-          end
-          L10_2.canInteract = L11_2
-          L11_2 = {}
-          L11_2.icon = "fas fa-play"
-          L12_2 = i18n
-          L12_2 = L12_2.t
-          L13_2 = "cleaner.start"
-          L12_2 = L12_2(L13_2)
-          L11_2.label = L12_2
-          function L12_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = L6_3.state
-                if "docked" ~= L7_3 then
-                  L7_3 = L6_3.state
-                  if "idle" ~= L7_3 then
-                    break
-                  end
-                end
-                L7_3 = cleanerRobot
-                L8_3 = L7_3
-                L7_3 = L7_3.startCleaning
-                L9_3 = L5_3
-                L7_3(L8_3, L9_3)
-                break
-              end
-            end
-          end
-          L11_2.action = L12_2
-          function L12_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-            L1_3 = CurrentHouse
-            if not L1_3 then
-              L1_3 = false
-              return L1_3
-            end
-            L1_3 = CurrentHouseData
-            if L1_3 then
-              L1_3 = CurrentHouseData
-              L1_3 = L1_3.haskey
-              if L1_3 then
-                goto lbl_15
-              end
-            end
-            L1_3 = false
-            do return L1_3 end
-            ::lbl_15::
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = L6_3.state
-                L7_3 = "docked" == L7_3
-                return L7_3
-              end
-            end
-            L1_3 = false
-            return L1_3
-          end
-          L11_2.canInteract = L12_2
-          L12_2 = {}
-          L12_2.icon = "fas fa-stop"
-          L13_2 = i18n
-          L13_2 = L13_2.t
-          L14_2 = "cleaner.stop"
-          L13_2 = L13_2(L14_2)
-          L12_2.label = L13_2
-          function L13_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3, L8_3, L9_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = L6_3.state
-                if "cleaning" == L7_3 then
-                  L7_3 = cleanerRobot
-                  L8_3 = L7_3
-                  L7_3 = L7_3.stopCleaning
-                  L9_3 = L5_3
-                  L7_3(L8_3, L9_3)
-                end
-                break
-              end
-            end
-          end
-          L12_2.action = L13_2
-          function L13_2(A0_3)
-            local L1_3, L2_3, L3_3, L4_3, L5_3, L6_3, L7_3
-            L1_3 = CurrentHouse
-            if not L1_3 then
-              L1_3 = false
-              return L1_3
-            end
-            L1_3 = CurrentHouseData
-            if L1_3 then
-              L1_3 = CurrentHouseData
-              L1_3 = L1_3.haskey
-              if L1_3 then
-                goto lbl_15
-              end
-            end
-            L1_3 = false
-            do return L1_3 end
-            ::lbl_15::
-            L1_3 = pairs
-            L2_3 = cleanerRobot
-            L3_3 = L2_3
-            L2_3 = L2_3.getAll
-            L2_3, L3_3, L4_3, L5_3, L6_3, L7_3 = L2_3(L3_3)
-            L1_3, L2_3, L3_3, L4_3 = L1_3(L2_3, L3_3, L4_3, L5_3, L6_3, L7_3)
-            for L5_3, L6_3 in L1_3, L2_3, L3_3, L4_3 do
-              L7_3 = L6_3.dockHandle
-              if L7_3 == A0_3 then
-                L7_3 = L6_3.state
-                L7_3 = "cleaning" == L7_3
-                return L7_3
-              end
-            end
-            L1_3 = false
-            return L1_3
-          end
-          L12_2.canInteract = L13_2
-          L9_2[1] = L10_2
-          L9_2[2] = L11_2
-          L9_2[3] = L12_2
-          L8_2.options = L9_2
-          L8_2.distance = 2.5
-          L5_2(L6_2, L7_2, L8_2)
         end
-        L5_2 = Debug
-        L6_2 = "CleanerRobot: Registered qb-target models (robot + dock)"
-        L5_2(L6_2)
-      end
-    end
-  end
-  L13_1(L14_1)
-end
-L13_1 = AddEventHandler
-L14_1 = "onResourceStop"
-function L15_1(A0_2)
-  local L1_2, L2_2
-  L1_2 = GetCurrentResourceName
-  L1_2 = L1_2()
-  if A0_2 == L1_2 then
-    L1_2 = cleanerRobot
-    L2_2 = L1_2
-    L1_2 = L1_2.cleanAll
-    L1_2(L2_2)
-  end
-end
-L13_1(L14_1, L15_1)
-L13_1 = RegisterNetEvent
-L14_1 = "housing:cleaner:setDecorationAlpha"
-function L15_1(A0_2, A1_2, A2_2)
-  local L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2, L12_2
-  L3_2 = decorate
-  if L3_2 then
-    L3_2 = decorate
-    L3_2 = L3_2.objects
-    if L3_2 then
-      goto lbl_9
-    end
-  end
-  do return end
-  ::lbl_9::
-  L3_2 = pairs
-  L4_2 = decorate
-  L4_2 = L4_2.objects
-  L3_2, L4_2, L5_2, L6_2 = L3_2(L4_2)
-  for L7_2, L8_2 in L3_2, L4_2, L5_2, L6_2 do
-    L9_2 = L8_2.id
-    if L9_2 == A1_2 then
-      L9_2 = L8_2.handle
-      if L9_2 then
-        L9_2 = DoesEntityExist
-        L10_2 = L8_2.handle
-        L9_2 = L9_2(L10_2)
-        if L9_2 then
-          L9_2 = SetEntityAlpha
-          L10_2 = L8_2.handle
-          L11_2 = A2_2
-          L12_2 = false
-          L9_2(L10_2, L11_2, L12_2)
-          L9_2 = Debug
-          L10_2 = "CleanerRobot: Set decoration alpha"
-          L11_2 = A1_2
-          L12_2 = A2_2
-          L9_2(L10_2, L11_2, L12_2)
+        if not alreadyCleaned then
+            if junkData.handle then
+                if DoesEntityExist(junkData.handle) then
+                    local junkCoords = GetEntityCoords(junkData.handle)
+                    local dist = #(robotCoords - junkCoords)
+                    if maxRange >= dist then
+                        table.insert(results, {
+                            id = junkId,
+                            coords = junkCoords,
+                            distance = dist,
+                            handle = junkData.handle,
+                        })
+                    end
+                end
+            end
         end
-      end
-      break
     end
-  end
-  L3_2 = cleanerRobot
-  L4_2 = L3_2
-  L3_2 = L3_2.get
-  L5_2 = A1_2
-  L3_2 = L3_2(L4_2, L5_2)
-  if L3_2 then
-    L4_2 = L3_2.decorationHandle
-    if L4_2 then
-      L4_2 = DoesEntityExist
-      L5_2 = L3_2.decorationHandle
-      L4_2 = L4_2(L5_2)
-      if L4_2 then
-        L4_2 = SetEntityAlpha
-        L5_2 = L3_2.decorationHandle
-        L6_2 = A2_2
-        L7_2 = false
-        L4_2(L5_2, L6_2, L7_2)
-      end
-    end
-  end
+    table.sort(results, function(a, b)
+        return a.distance < b.distance
+    end)
+    return results
 end
-L13_1(L14_1, L15_1)
-L13_1 = RegisterNetEvent
-L14_1 = "housing:cleaner:deleteNetworkedRobot"
-function L15_1(A0_2, A1_2)
-  local L2_2, L3_2, L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2
-  L2_2 = cleanerRobot
-  L3_2 = L2_2
-  L2_2 = L2_2.get
-  L4_2 = A1_2
-  L2_2 = L2_2(L3_2, L4_2)
-  if not L2_2 then
-    return
-  end
-  L3_2 = L2_2.networkedRobotHandle
-  if L3_2 then
-    L3_2 = DoesEntityExist
-    L4_2 = L2_2.networkedRobotHandle
-    L3_2 = L3_2(L4_2)
-    if L3_2 then
-      L3_2 = DeleteEntity
-      L4_2 = L2_2.networkedRobotHandle
-      L3_2(L4_2)
-      L2_2.networkedRobotHandle = nil
-      L3_2 = Debug
-      L4_2 = "CleanerRobot: Deleted networked robot by server request"
-      L5_2 = A1_2
-      L3_2(L4_2, L5_2)
+
+
+function CleanerRobot:findNearbyJunk(robot)
+    local junkList = self:findAllJunkInRange(robot, self.maxDistanceFromDock)
+    if #junkList > 0 then
+        local closest = junkList[1]
+        if closest.handle then
+            if DoesEntityExist(closest.handle) then
+                return closest.id, closest.coords
+            end
+        end
     end
-  end
-  L3_2 = L2_2.decorationHandle
-  if L3_2 then
-    L3_2 = DoesEntityExist
-    L4_2 = L2_2.decorationHandle
-    L3_2 = L3_2(L4_2)
-    if L3_2 then
-      L3_2 = L2_2.decorationHandle
-      L2_2.robotHandle = L3_2
-      L3_2 = SetEntityCoords
-      L4_2 = L2_2.robotHandle
-      L5_2 = L2_2.dockCoords
-      L5_2 = L5_2.x
-      L6_2 = L2_2.dockCoords
-      L6_2 = L6_2.y
-      L7_2 = L2_2.dockCoords
-      L7_2 = L7_2.z
-      L8_2 = false
-      L9_2 = false
-      L10_2 = false
-      L11_2 = false
-      L3_2(L4_2, L5_2, L6_2, L7_2, L8_2, L9_2, L10_2, L11_2)
-      L3_2 = SetEntityHeading
-      L4_2 = L2_2.robotHandle
-      L5_2 = L2_2.dockRotation
-      L5_2 = L5_2.z
-      L3_2(L4_2, L5_2)
-    end
-  end
-  L2_2.state = "docked"
-  L2_2.isOwner = false
+    return nil, nil
 end
-L13_1(L14_1, L15_1)
 
 
+function CleanerRobot:findVeryCloseJunk(robot, maxRange)
+    if not maxRange then
+        maxRange = 1.5
+    end
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    local allJunk = junk:getAll()
+    if not allJunk then
+        return nil, nil, nil
+    end
+    local closest = nil
+    local closestDist = math.huge
+    for junkId, junkData in pairs(allJunk) do
+        local alreadyCleaned = false
+        for _, cleanedId in ipairs(robot.cleanedJunk) do
+            if cleanedId == junkId then
+                alreadyCleaned = true
+                break
+            end
+        end
+        if not alreadyCleaned then
+            if junkData.handle then
+                if DoesEntityExist(junkData.handle) then
+                    local junkCoords = GetEntityCoords(junkData.handle)
+                    local dist = #(robotCoords - junkCoords)
+                    if maxRange >= dist and closestDist > dist then
+                        closest = {
+                            id = junkId,
+                            coords = junkCoords,
+                            distance = dist,
+                        }
+                        closestDist = dist
+                    end
+                end
+            end
+        end
+    end
+    if closest then
+        return closest.id, closest.coords, closest.distance
+    end
+    return nil, nil, nil
+end
 
 
+function CleanerRobot:findVisibleJunk(robot)
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    local allJunk = junk:getAll()
+    if not allJunk then
+        return nil, nil, nil
+    end
+    local visibleJunk = {}
+    for junkId, junkData in pairs(allJunk) do
+        local alreadyCleaned = false
+        for _, cleanedId in ipairs(robot.cleanedJunk) do
+            if cleanedId == junkId then
+                alreadyCleaned = true
+                break
+            end
+        end
+        if not alreadyCleaned then
+            if junkData.handle then
+                if DoesEntityExist(junkData.handle) then
+                    local junkCoords = GetEntityCoords(junkData.handle)
+                    local dist = #(robotCoords - junkCoords)
+                    local isVisible = self:isJunkVisible(robot, junkData.handle)
+                    if isVisible then
+                        table.insert(visibleJunk, {
+                            id = junkId,
+                            coords = junkCoords,
+                            distance = dist,
+                        })
+                    end
+                end
+            end
+        end
+    end
+    if 0 == #visibleJunk then
+        return nil, nil, nil
+    end
+    table.sort(visibleJunk, function(a, b)
+        return a.distance < b.distance
+    end)
+    local nearest = visibleJunk[1]
+    return nearest.id, nearest.coords, nearest.distance
+end
 
 
+function CleanerRobot:cleanJunk(robot, junkId)
+    local alreadyCleaned = false
+    for _, cleanedId in ipairs(robot.cleanedJunk) do
+        if cleanedId == junkId then
+            alreadyCleaned = true
+            break
+        end
+    end
+    if alreadyCleaned then
+        Debug("CleanerRobot: Junk already cleaned:", junkId)
+        return
+    end
+    table.insert(robot.cleanedJunk, junkId)
+    local allJunk = junk:getAll()
+    if allJunk then
+        if allJunk[junkId] then
+            if allJunk[junkId].handle then
+                if DoesEntityExist(allJunk[junkId].handle) then
+                    SetEntityDrawOutline(allJunk[junkId].handle, false)
+                end
+            end
+        end
+    end
+    local success = lib.callback.await("housing:junk:remove", false, junkId, robot.house)
+    if success then
+        junk:remove(junkId)
+        Debug("CleanerRobot: Cleaned and removed junk", junkId)
+        PlaySoundFrontend(-1, "PICK_UP", "HUD_FRONTEND_DEFAULT_SOUNDSET", true)
+    else
+        for i, cleanedId in ipairs(robot.cleanedJunk) do
+            if cleanedId == junkId then
+                table.remove(robot.cleanedJunk, i)
+                break
+            end
+        end
+        Debug("CleanerRobot: Failed to remove junk on server:", junkId)
+    end
+end
+
+
+function CleanerRobot:lerp(from, to, alpha)
+    local t = math.min(alpha, 1.0)
+    return from + (to - from) * t
+end
+
+function CleanerRobot:normalizeAngle(angle)
+    while angle < 0 do
+        angle = angle + 360
+    end
+    while angle >= 360 do
+        angle = angle - 360
+    end
+    return angle
+end
+
+function CleanerRobot:getAngleDifference(from, to)
+    local diff = to - from
+    while diff > 180 do
+        diff = diff - 360
+    end
+    while diff < -180 do
+        diff = diff + 360
+    end
+    return diff
+end
+
+function CleanerRobot:hasReachedTargetHeading(robot, tolerance)
+    if not tolerance then
+        tolerance = 5
+    end
+    local currentHeading = robot.currentHeading or 0
+    local targetHeading = robot.targetHeading or 0
+    local absDiff = math.abs(self:getAngleDifference(currentHeading, targetHeading))
+    return tolerance >= absDiff
+end
+
+
+function CleanerRobot:canUpdateTargetHeading(robot)
+    local now = GetGameTimer()
+    if not robot.headingLockTime then
+        return true
+    end
+    local elapsed = now - robot.headingLockTime
+    if elapsed > 500 then
+        return true
+    end
+    if self:hasReachedTargetHeading(robot, 10) then
+        return true
+    end
+    return false
+end
+
+
+function CleanerRobot:updateRotation(robot, targetAngle, forceUpdate)
+    if not DoesEntityExist(robot.robotHandle) then
+        return
+    end
+    local normalizedTarget = self:normalizeAngle(targetAngle)
+    if not forceUpdate then
+        if robot.targetHeading then
+            local angleDiff = math.abs(self:getAngleDifference(robot.targetHeading, normalizedTarget))
+            if angleDiff > 30 then
+                if not self:canUpdateTargetHeading(robot) then
+                    normalizedTarget = robot.targetHeading
+                end
+            else
+                robot.headingLockTime = GetGameTimer()
+            end
+        end
+    else
+        robot.headingLockTime = GetGameTimer()
+    end
+    robot.targetHeading = normalizedTarget
+    local currentHeading = robot.currentHeading
+    if not currentHeading then
+        currentHeading = GetEntityHeading(robot.robotHandle)
+    end
+    local diff = self:getAngleDifference(currentHeading, normalizedTarget)
+    local turnSpeed = 8.0
+    local stepSize = math.min(math.abs(diff), turnSpeed)
+    local newHeading
+    if math.abs(diff) < 1 then
+        newHeading = normalizedTarget
+    else
+        local sign = diff > 0 and 1 or -1
+        newHeading = self:normalizeAngle(currentHeading + stepSize * sign)
+    end
+
+
+    if self.wobbleEnabled then
+        if robot.velocity > 0.001 then
+            if math.abs(diff) < 10 then
+                local wobblePhase = robot.wobblePhase or 0
+                wobblePhase = wobblePhase + self.wobbleSpeed
+                robot.wobblePhase = wobblePhase
+                local wobbleOffset = math.sin(wobblePhase) * self.wobbleAmount
+                wobbleOffset = wobbleOffset * (robot.velocity / self.maxSpeed)
+                newHeading = newHeading + wobbleOffset
+            end
+        end
+    end
+    robot.currentHeading = newHeading
+    local entityHeading = self:normalizeAngle(newHeading + 180)
+    SetEntityHeading(robot.robotHandle, entityHeading)
+end
+
+
+function CleanerRobot:updateVelocity(robot, shouldAccelerate)
+    local currentVelocity = robot.velocity or 0
+    if shouldAccelerate then
+        local targetSpeed = self.moveSpeed
+        robot.velocity = self:lerp(currentVelocity, targetSpeed, self.acceleration * 10)
+        if robot.velocity > self.maxSpeed then
+            robot.velocity = self.maxSpeed
+        end
+    else
+        robot.velocity = self:lerp(currentVelocity, 0, self.deceleration * 10)
+        if robot.velocity < 1.0E-4 then
+            robot.velocity = 0
+        end
+    end
+end
+
+
+function CleanerRobot:applyMovement(robot, _unused)
+    if not DoesEntityExist(robot.robotHandle) then
+        return false
+    end
+    if robot.velocity < 1.0E-4 then
+        return false
+    end
+    local coords = GetEntityCoords(robot.robotHandle)
+    local heading = robot.currentHeading
+    if not heading then
+        heading = GetEntityHeading(robot.robotHandle)
+    end
+    local direction = self:headingToDirection(heading)
+    local moveVec = direction * robot.velocity
+    local newX = coords.x + moveVec.x
+    local newY = coords.y + moveVec.y
+    local newZ = robot.baseZ + robot.robotHeightOffset
+    SetEntityCoords(robot.robotHandle, newX, newY, newZ, false, false, false, false)
+    robot.lastMoveTime = GetGameTimer()
+    return true
+end
+
+
+function CleanerRobot:isJunkVisible(robot, junkHandle)
+    if not DoesEntityExist(robot.robotHandle) then
+        return false
+    end
+    if not DoesEntityExist(junkHandle) then
+        return false
+    end
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    local junkCoords = GetEntityCoords(junkHandle)
+    local zDiff = math.abs(robotCoords.z - junkCoords.z)
+    if zDiff > 3.0 then
+        return false
+    end
+    return HasEntityClearLosToEntity(robot.robotHandle, junkHandle, 17)
+end
+
+
+function CleanerRobot:updateCleaningState(robot, _unused)
+    if not DoesEntityExist(robot.robotHandle) then
+        return 0, false
+    end
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    local currentHeading = robot.currentHeading
+    if not currentHeading then
+        currentHeading = GetEntityHeading(robot.robotHandle)
+    end
+    if not robot.isInitialized then
+        self:initRoombaState(robot)
+    end
+    if not robot.navState then
+        robot.navState = "moving"
+    end
+    if not robot.moveDirection or type(robot.moveDirection) ~= "number" then
+        robot.moveDirection = currentHeading
+    end
+    local headingDiff = math.abs(self:getAngleDifference(currentHeading, robot.moveDirection))
+
+    -- Check for visible junk
+    local visibleJunkId, visibleJunkCoords, visibleJunkDist = self:findVisibleJunk(robot)
+    if visibleJunkId and visibleJunkCoords then
+        if visibleJunkDist < 1.2 then
+            self:cleanJunk(robot, visibleJunkId)
+            robot.currentTarget = nil
+            robot.turnCompletePosition = nil
+            robot.navState = "moving"
+            robot.lastWallDistance = nil
+            robot.moveDirection = currentHeading
+            Debug("CleanerRobot: Cleaned visible junk, back to normal movement")
+            return currentHeading, true
+        end
+
+
+        local dx = visibleJunkCoords.x - robotCoords.x
+        local dy = visibleJunkCoords.y - robotCoords.y
+        local angleToJunk = self:normalizeAngle(math.deg(math.atan(dx, dy)))
+        local angleDiffToJunk = math.abs(self:getAngleDifference(currentHeading, angleToJunk))
+        if angleDiffToJunk > JUNK_ANGLE_THRESHOLD then
+            robot.moveDirection = angleToJunk
+            robot.navState = "turning_to_junk"
+            robot.currentTarget = visibleJunkCoords
+            Debug("CleanerRobot: Visible junk found! OVERRIDING current state, turning to face it. Distance:", visibleJunkDist)
+            return angleToJunk, false
+        else
+            robot.navState = "moving"
+            robot.lastWallDistance = nil
+            robot.moveDirection = angleToJunk
+            robot.currentTarget = visibleJunkCoords
+            Debug("CleanerRobot: Visible junk found! OVERRIDING current state, going straight to it. Distance:", visibleJunkDist)
+            return angleToJunk, true
+        end
+    end
+
+
+    -- Check for very close junk (fallback)
+    local closeJunkId, closeJunkCoords, closeJunkDist = self:findVeryCloseJunk(robot, 1.5)
+    if closeJunkId and closeJunkCoords then
+        self:cleanJunk(robot, closeJunkId)
+        robot.currentTarget = nil
+        robot.turnCompletePosition = nil
+        robot.navState = "moving"
+        robot.lastWallDistance = nil
+        robot.moveDirection = currentHeading
+        Debug("CleanerRobot: Cleaned very close junk (1.5m), back to normal movement. Distance:", closeJunkDist)
+        return currentHeading, true
+    end
+
+
+    -- State: turning_to_junk
+    if "turning_to_junk" == robot.navState then
+        if visibleJunkId and visibleJunkCoords then
+            local dx = visibleJunkCoords.x - robotCoords.x
+            local dy = visibleJunkCoords.y - robotCoords.y
+            local angleToJunk = self:normalizeAngle(math.deg(math.atan(dx, dy)))
+            local angleDiffToJunk = math.abs(self:getAngleDifference(currentHeading, angleToJunk))
+            if angleDiffToJunk > JUNK_ANGLE_THRESHOLD then
+                robot.moveDirection = angleToJunk
+                robot.currentTarget = visibleJunkCoords
+                return angleToJunk, false
+            else
+                robot.navState = "moving"
+                robot.lastWallDistance = nil
+                robot.moveDirection = angleToJunk
+                robot.currentTarget = visibleJunkCoords
+                return angleToJunk, true
+            end
+        end
+        if headingDiff < JUNK_ANGLE_THRESHOLD then
+            robot.navState = "moving"
+            robot.moveDirection = currentHeading
+            robot.turnCompletePosition = vec3(robotCoords.x, robotCoords.y, robotCoords.z)
+            Debug("CleanerRobot: Turned to junk, moving towards it")
+            return currentHeading, true
+        end
+        return robot.moveDirection, false
+    end
+
+
+    -- State: turning
+    if "turning" == robot.navState then
+        if visibleJunkId and visibleJunkCoords then
+            local dx = visibleJunkCoords.x - robotCoords.x
+            local dy = visibleJunkCoords.y - robotCoords.y
+            local angleToJunk = self:normalizeAngle(math.deg(math.atan(dx, dy)))
+            robot.moveDirection = angleToJunk
+            robot.navState = "turning_to_junk"
+            robot.currentTarget = visibleJunkCoords
+            Debug("CleanerRobot: Visible junk found while turning, switching to junk!")
+            return angleToJunk, false
+        end
+        if headingDiff < JUNK_ANGLE_THRESHOLD then
+            robot.turnCompletePosition = vec3(robotCoords.x, robotCoords.y, robotCoords.z)
+            robot.moveDirection = currentHeading
+            if robot.openingDetected then
+                robot.navState = "passing_opening"
+                robot.openingDetected = false
+                Debug("CleanerRobot: Now passing through opening")
+            else
+                robot.navState = "following_wall"
+                robot.lastWallDistance = self:getRightWallDistance(robot)
+                robot.wallFollowStartTime = GetGameTimer()
+                Debug("CleanerRobot: Turn complete, now following wall. Right wall dist:", robot.lastWallDistance)
+            end
+            return currentHeading, true
+        end
+        return robot.moveDirection, false
+    end
+
+
+    -- State: passing_opening
+    if "passing_opening" == robot.navState then
+        if visibleJunkId and visibleJunkCoords then
+            local dx = visibleJunkCoords.x - robotCoords.x
+            local dy = visibleJunkCoords.y - robotCoords.y
+            local angleToJunk = self:normalizeAngle(math.deg(math.atan(dx, dy)))
+            local angleDiffToJunk = math.abs(self:getAngleDifference(currentHeading, angleToJunk))
+            if angleDiffToJunk > JUNK_ANGLE_THRESHOLD then
+                robot.moveDirection = angleToJunk
+                robot.navState = "turning_to_junk"
+                robot.currentTarget = visibleJunkCoords
+                Debug("CleanerRobot: Visible junk found while passing opening, switching to junk!")
+                return angleToJunk, false
+            else
+                robot.navState = "moving"
+                robot.lastWallDistance = nil
+                robot.moveDirection = angleToJunk
+                robot.currentTarget = visibleJunkCoords
+                Debug("CleanerRobot: Visible junk found while passing opening, going straight!")
+                return angleToJunk, true
+            end
+        end
+        if robot.turnCompletePosition then
+            local dx = robotCoords.x - robot.turnCompletePosition.x
+            local dy = robotCoords.y - robot.turnCompletePosition.y
+            local distFromTurn = math.sqrt(dx * dx + dy * dy)
+            if distFromTurn > OPENING_PASS_DISTANCE + 0.5 then
+                robot.navState = "moving"
+                robot.turnCompletePosition = nil
+                robot.lastWallDistance = nil
+                Debug("CleanerRobot: Passed through opening, RESET to normal movement")
+            end
+        else
+            robot.navState = "moving"
+            robot.lastWallDistance = nil
+        end
+
+
+        local frontDist = self:getWallDistance(robot, currentHeading, WALL_DETECT_FRONT)
+        if frontDist < WALL_DETECT_FRONT then
+            Debug("CleanerRobot: Passing opening, frontDist:", frontDist, "WALL_DETECT_FRONT:", WALL_DETECT_FRONT)
+            local newDir = self:normalizeAngle(currentHeading + 90)
+            robot.moveDirection = newDir
+            robot.navState = "turning"
+            robot.openingDetected = false
+            return robot.moveDirection, false
+        end
+        return currentHeading, true
+    end
+
+
+    -- State: following_wall
+    if "following_wall" == robot.navState then
+        if visibleJunkId and visibleJunkCoords then
+            local dx = visibleJunkCoords.x - robotCoords.x
+            local dy = visibleJunkCoords.y - robotCoords.y
+            local angleToJunk = self:normalizeAngle(math.deg(math.atan(dx, dy)))
+            local angleDiffToJunk = math.abs(self:getAngleDifference(currentHeading, angleToJunk))
+            if angleDiffToJunk > JUNK_ANGLE_THRESHOLD then
+                robot.moveDirection = angleToJunk
+                robot.navState = "turning_to_junk"
+                robot.currentTarget = visibleJunkCoords
+                Debug("CleanerRobot: Visible junk found while following wall, switching to junk!")
+                return angleToJunk, false
+            else
+                robot.navState = "moving"
+                robot.lastWallDistance = nil
+                robot.moveDirection = angleToJunk
+                robot.currentTarget = visibleJunkCoords
+                Debug("CleanerRobot: Visible junk found while following wall, going straight!")
+                return angleToJunk, true
+            end
+        end
+        local frontDist = self:getWallDistance(robot, currentHeading, WALL_DETECT_FRONT)
+        if frontDist < WALL_DETECT_FRONT then
+            Debug("838 CleanerRobot: Wall ahead while following, frontDist:", frontDist, "WALL_DETECT_FRONT:", WALL_DETECT_FRONT)
+            local newDir = self:normalizeAngle(currentHeading + 90)
+            robot.moveDirection = newDir
+            robot.navState = "turning"
+            robot.openingDetected = false
+            Debug("CleanerRobot: Wall ahead while following, turning left")
+            return robot.moveDirection, false
+        end
+
+
+        local rightDist = self:getRightWallDistance(robot)
+        local lastWallDist = robot.lastWallDistance
+        if not lastWallDist then
+            lastWallDist = rightDist
+        end
+        local distDelta = rightDist - lastWallDist
+        if distDelta > OPENING_THRESHOLD then
+            local rightAngle = self:normalizeAngle(currentHeading - 90)
+            local rightFrontDist = self:getWallDistance(robot, rightAngle, WALL_DETECT_FRONT)
+            if rightFrontDist >= WALL_DETECT_FRONT then
+                Debug("859 CleanerRobot: Opening detected! Dist jumped from", lastWallDist, "to", rightDist)
+                robot.moveDirection = rightAngle
+                robot.navState = "turning"
+                robot.openingDetected = true
+                robot.openingDirection = rightAngle
+                Debug("CleanerRobot: Opening detected! Dist jumped from", lastWallDist, "to", rightDist)
+                return robot.moveDirection, false
+            end
+        end
+        robot.lastWallDistance = rightDist
+        return currentHeading, true
+    end
+
+
+    -- State: moving (default)
+    if robot.turnCompletePosition then
+        local dx = robotCoords.x - robot.turnCompletePosition.x
+        local dy = robotCoords.y - robot.turnCompletePosition.y
+        local distFromTurn = math.sqrt(dx * dx + dy * dy)
+        if distFromTurn < OPENING_PASS_DISTANCE then
+            return currentHeading, true
+        else
+            robot.turnCompletePosition = nil
+        end
+    end
+    local frontDist = self:getWallDistance(robot, currentHeading, WALL_DETECT_FRONT)
+    if frontDist < WALL_DETECT_FRONT then
+        local newDir = self:normalizeAngle(currentHeading + 90)
+        robot.moveDirection = newDir
+        robot.navState = "turning"
+        robot.openingDetected = false
+        return robot.moveDirection, false
+    end
+    robot.moveDirection = currentHeading
+    return currentHeading, true
+end
+
+
+function CleanerRobot:isPathBlocked(robot, angle)
+    local dist = self:getWallDistance(robot, angle, WALL_DETECT_FRONT)
+    return dist < WALL_DETECT_FRONT, dist
+end
+
+
+function CleanerRobot:updateReturningState(robot)
+    if not DoesEntityExist(robot.robotHandle) then
+        return true
+    end
+    local robotCoords = GetEntityCoords(robot.robotHandle)
+    local dockCoords = robot.dockCoords
+    local distToDock = math.sqrt((robotCoords.x - dockCoords.x) ^ 2 + (robotCoords.y - dockCoords.y) ^ 2)
+
+    if distToDock < DOCK_ARRIVAL_DISTANCE then
+        robot.velocity = 0
+        robot.state = "docked"
+        if robot.isOwner then
+            if robot.networkedRobotHandle then
+                if DoesEntityExist(robot.networkedRobotHandle) then
+                    DeleteEntity(robot.networkedRobotHandle)
+                end
+                robot.networkedRobotHandle = nil
+                if robot.decorationHandle then
+                    if DoesEntityExist(robot.decorationHandle) then
+                        robot.robotHandle = robot.decorationHandle
+                        SetEntityCoords(robot.robotHandle, dockCoords.x, dockCoords.y, dockCoords.z, false, false, false, false)
+                        SetEntityHeading(robot.robotHandle, robot.dockRotation.z)
+                    end
+                end
+                TriggerServerEvent("housing:cleaner:stopped", robot.house, robot.id)
+                robot.isOwner = false
+            end
+        end
+        robot.currentHeading = robot.dockRotation.z
+        Debug("CleanerRobot: Returned to dock")
+        PlaySoundFrontend(-1, "Beep_Green", "DLC_HEIST_HACKING_SNAKE_SOUNDS", true)
+        SendReactMessage("cleaner_sound", { action = "stop" })
+        return true
+    end
+
+
+    -- Move towards dock
+    local dirX = dockCoords.x - robotCoords.x
+    local dirY = dockCoords.y - robotCoords.y
+    local dirLength = math.sqrt(dirX * dirX + dirY * dirY)
+    if dirLength > 0 then
+        dirX = dirX / dirLength
+        dirY = dirY / dirLength
+    end
+    local headingToDock = math.deg(math.atan(dirX, dirY))
+    robot.currentHeading = self:normalizeAngle(headingToDock)
+    SetEntityHeading(robot.robotHandle, robot.currentHeading)
+    local speed = self.moveSpeed * 1.5
+    local newX = robotCoords.x + dirX * speed
+    local newY = robotCoords.y + dirY * speed
+    local newZ = robot.baseZ + robot.robotHeightOffset
+    SetEntityCoords(robot.robotHandle, newX, newY, newZ, false, false, false, false)
+    robot.lastMoveTime = GetGameTimer()
+    return false
+end
+
+
+function CleanerRobot:startUpdateLoop()
+    if self.activeThread then
+        return
+    end
+    self.activeThread = true
+    CreateThread(function()
+        while self.activeThread do
+            local hasActive = false
+            for robotId, robot in pairs(self.robots) do
+                if robot.state == "cleaning" or robot.state == "returning" then
+                    hasActive = true
+                    if not robot.velocity then
+                        robot.velocity = 0
+                    end
+                    if not robot.wobblePhase then
+                        robot.wobblePhase = 0
+                    end
+                    if not robot.currentHeading then
+                        robot.currentHeading = GetEntityHeading(robot.robotHandle)
+                    end
+                    if not robot.isInitialized then
+                        self:initRoombaState(robot)
+                    end
+
+
+                    if robot.state == "cleaning" then
+                        if robot.cleaningStartTime then
+                            local elapsed = GetGameTimer() - robot.cleaningStartTime
+                            if elapsed >= self.cleaningTimeout then
+                                robot.state = "returning"
+                                robot.cleaningStartTime = nil
+                                Notification(i18n.t("cleaner.returning"), "info")
+                                Debug("CleanerRobot: Cleaning timeout, returning to dock", robotId)
+                            end
+                        else
+                            local targetDir, shouldMove = self:updateCleaningState(robot)
+                            self:updateRotation(robot, targetDir, false)
+                            self:updateVelocity(robot, shouldMove)
+                            if shouldMove then
+                                self:applyMovement(robot, false)
+                            end
+                        end
+                    elseif robot.state == "returning" then
+                        self:updateReturningState(robot)
+                    end
+                end
+            end
+            if not hasActive then
+                self.activeThread = false
+                break
+            end
+            Wait(TICK_RATE)
+        end
+    end)
+end
+
+
+function CleanerRobot:spawnForDecoration(decoration, houseId)
+    if not decoration or not decoration.id then
+        return false
+    end
+    local isModel, modelData = self:isCleanerModel(decoration.modelName)
+    if not isModel or not modelData then
+        return false
+    end
+    if self.robots[decoration.id] then
+        Debug("CleanerRobot: Robot already exists for decoration", decoration.id)
+        return true
+    end
+    local decoHandle = decoration.handle
+    if not decoHandle or not DoesEntityExist(decoHandle) then
+        Debug("CleanerRobot: Decoration object handle not found")
+        return false
+    end
+    local coords = decoration.coords
+    local rotation = decoration.rotation
+    if not rotation then
+        rotation = vec3(0, 0, 0)
+    end
+
+
+    local robotModelHash = joaat(modelData.model)
+    local dockModelHash = joaat(modelData.dockerModel)
+
+    lib.requestModel(dockModelHash, Config.DefaultRequestModelTimeout or 5000)
+    local dockHandle = CreateObject(dockModelHash, coords.x, coords.y, coords.z - 0.07, false, false, false)
+    if not DoesEntityExist(dockHandle) then
+        Debug("CleanerRobot: Failed to spawn dock")
+        SetModelAsNoLongerNeeded(dockModelHash)
+        return false
+    end
+    SetEntityRotation(dockHandle, rotation.x, rotation.y, rotation.z, 0, false)
+    FreezeEntityPosition(dockHandle, true)
+    SetEntityCompletelyDisableCollision(dockHandle, true, false)
+    SetModelAsNoLongerNeeded(dockModelHash)
+
+    local dockMin, dockMax = GetModelDimensions(dockModelHash)
+    local dockHeight = dockMax.z - dockMin.z
+    local baseZ = coords.z
+
+    local robotMin, robotMax = GetModelDimensions(robotModelHash)
+    local robotHeightOffset = (robotMax.z - robotMin.z) * 0.5
+    local dockPosition = vec3(coords.x, coords.y, baseZ + robotHeightOffset)
+
+
+    local robotData = {
+        id = decoration.id,
+        decorationObj = decoration,
+        robotHandle = decoHandle,
+        dockHandle = dockHandle,
+        robotModel = modelData.model,
+        dockModel = modelData.dockerModel,
+        dockCoords = dockPosition,
+        dockRotation = rotation,
+        baseZ = baseZ,
+        robotHeightOffset = robotHeightOffset,
+        state = "docked",
+        currentTarget = nil,
+        cleanedJunk = {},
+        house = houseId,
+        velocity = 0,
+        targetHeading = rotation.z,
+        currentHeading = rotation.z,
+        wobblePhase = 0,
+        lastMoveTime = 0,
+        lastKnownCoords = vec3(coords.x, coords.y, coords.z),
+        isInitialized = false,
+        navState = "moving",
+        moveDirection = nil,
+        lastWallDistance = nil,
+        wallFollowStartTime = nil,
+        openingDetected = false,
+        openingDirection = nil,
+        turnCompletePosition = nil,
+    }
+    self.robots[decoration.id] = robotData
+    Debug("CleanerRobot: Initialized cleaner for decoration", decoration.id)
+    return true
+end
+
+
+function CleanerRobot:despawn(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        return
+    end
+    if robot.isOwner then
+        if robot.state == "cleaning" or robot.state == "returning" then
+            TriggerServerEvent("housing:cleaner:stopped", robot.house, robotId)
+            SendReactMessage("cleaner_sound", { action = "stop" })
+        end
+    end
+    if robot.networkedRobotHandle then
+        if DoesEntityExist(robot.networkedRobotHandle) then
+            DeleteEntity(robot.networkedRobotHandle)
+            robot.networkedRobotHandle = nil
+        end
+    end
+    if DoesEntityExist(robot.dockHandle) then
+        DeleteEntity(robot.dockHandle)
+    end
+    if DoesEntityExist(robot.robotHandle) then
+        SetEntityCoords(robot.robotHandle, robot.dockCoords.x, robot.dockCoords.y, robot.dockCoords.z, false, false, false, false)
+        SetEntityHeading(robot.robotHandle, robot.dockRotation.z)
+    end
+    self.robots[robotId] = nil
+    Debug("CleanerRobot: Despawned cleaner", robotId)
+end
+
+
+function CleanerRobot:startCleaning(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        Debug("CleanerRobot: Robot not found", robotId)
+        return
+    end
+    if robot.state ~= "docked" and robot.state ~= "idle" then
+        Debug("CleanerRobot: Robot is not ready to clean", robot.state)
+        return
+    end
+    local success, reason = lib.callback.await("housing:cleaner:start", false, robot.house, robotId, robot.robotModel)
+    if not success then
+        if "already_active" == reason then
+            Notification(i18n.t("cleaner.already_active"), "error")
+        end
+        Debug("CleanerRobot: Server rejected start", reason)
+        return
+    end
+    robot.decorationHandle = robot.robotHandle
+    robot.isOwner = true
+
+
+    local robotModelHash = joaat(robot.robotModel)
+    lib.requestModel(robotModelHash, Config.DefaultRequestModelTimeout or 5000)
+    local dockCoords = robot.dockCoords
+    local networkedHandle = CreateObject(robotModelHash, dockCoords.x, dockCoords.y, dockCoords.z, true, true, true)
+    if not DoesEntityExist(networkedHandle) then
+        Debug("CleanerRobot: Failed to spawn networked robot")
+        TriggerServerEvent("housing:cleaner:stopped", robot.house, robotId)
+        SetModelAsNoLongerNeeded(robotModelHash)
+        return
+    end
+    SetEntityInvincible(networkedHandle, true)
+    SetEntityRotation(networkedHandle, 0.0, 0.0, robot.dockRotation.z, 0, false)
+    SetEntityCompletelyDisableCollision(networkedHandle, true, false)
+    SetModelAsNoLongerNeeded(robotModelHash)
+    robot.networkedRobotHandle = networkedHandle
+    robot.robotHandle = networkedHandle
+    local networkId = NetworkGetNetworkIdFromEntity(networkedHandle)
+    TriggerServerEvent("housing:cleaner:updateNetworkId", robot.house, robotId, networkId)
+
+
+    robot.state = "cleaning"
+    robot.cleanedJunk = {}
+    robot.velocity = 0
+    robot.wobblePhase = 0
+    robot.currentHeading = GetEntityHeading(networkedHandle)
+    robot.targetHeading = robot.currentHeading
+    robot.lastMoveTime = GetGameTimer()
+    robot.cleaningStartTime = GetGameTimer()
+    self:initRoombaState(robot)
+    robot.currentTarget = nil
+    Debug("CleanerRobot: Started cleaning with networked robot", robotId, "networkId", networkId)
+    Notification(i18n.t("cleaner.cleaning"), "info")
+    self:startUpdateLoop()
+    PlaySoundFrontend(-1, "Beep_Green", "DLC_HEIST_HACKING_SNAKE_SOUNDS", true)
+    SendReactMessage("cleaner_sound", { action = "start" })
+end
+
+
+function CleanerRobot:stopCleaning(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        return
+    end
+    if robot.state == "cleaning" then
+        robot.state = "returning"
+        robot.cleaningStartTime = nil
+        Notification(i18n.t("cleaner.returning"), "info")
+        Debug("CleanerRobot: Returning to dock", robotId)
+        self:startUpdateLoop()
+    end
+end
+
+function CleanerRobot:returnToDock(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        return
+    end
+    robot.state = "returning"
+    Notification(i18n.t("cleaner.returning"), "info")
+    self:startUpdateLoop()
+    Debug("CleanerRobot: Manually returning to dock", robotId)
+end
+
+function CleanerRobot:get(robotId)
+    return self.robots[robotId]
+end
+
+function CleanerRobot:getAll()
+    return self.robots
+end
+
+
+function CleanerRobot:getState(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        return "unknown"
+    end
+    return robot.state
+end
+
+function CleanerRobot:isActive(robotId)
+    local robot = self.robots[robotId]
+    if not robot then
+        return false
+    end
+    return "cleaning" == robot.state
+end
+
+function CleanerRobot:hasRobots()
+    return nil ~= next(self.robots)
+end
+
+function CleanerRobot:hasActiveCleaningRobot()
+    for robotId, robot in pairs(self.robots) do
+        if robot.state == "cleaning" or robot.state == "returning" then
+            return true, robotId
+        end
+    end
+    return false, nil
+end
+
+
+function CleanerRobot:reinitializeAtPosition(robotId, newCoords, newRotation)
+    local robot = self.robots[robotId]
+    if not robot then
+        return
+    end
+    if robot.state ~= "docked" then
+        Debug("CleanerRobot: Cannot reinitialize - robot not docked")
+        return
+    end
+    local modelInfo = self.cleanerModels[robot.robotModel]
+    if not modelInfo then
+        return
+    end
+    if DoesEntityExist(robot.dockHandle) then
+        DeleteEntity(robot.dockHandle)
+    end
+    local dockModelHash = joaat(modelInfo.dockerModel)
+    lib.requestModel(dockModelHash, Config.DefaultRequestModelTimeout or 5000)
+    local newDockHandle = CreateObject(dockModelHash, newCoords.x, newCoords.y, newCoords.z, false, false, false)
+    if not DoesEntityExist(newDockHandle) then
+        Debug("CleanerRobot: Failed to respawn dock")
+        SetModelAsNoLongerNeeded(dockModelHash)
+        return
+    end
+    SetEntityRotation(newDockHandle, newRotation.x, newRotation.y, newRotation.z, 0, false)
+    FreezeEntityPosition(newDockHandle, true)
+    SetEntityCompletelyDisableCollision(newDockHandle, true, false)
+    SetEntityInvincible(newDockHandle, true)
+    SetModelAsNoLongerNeeded(dockModelHash)
+
+
+    local dockMin, dockMax = GetModelDimensions(dockModelHash)
+    local dockHeight = dockMax.z - dockMin.z
+    local newBaseZ = newCoords.z + dockHeight + 0.02
+
+    if DoesEntityExist(robot.robotHandle) then
+        SetEntityCoords(robot.robotHandle, newCoords.x, newCoords.y, newBaseZ, false, false, false, false)
+        SetEntityRotation(robot.robotHandle, 0.0, 0.0, newRotation.z, 0, false)
+    end
+
+    local robotModelHash = joaat(robot.robotModel)
+    local robotMin, robotMax = GetModelDimensions(robotModelHash)
+    local robotHeightOffset = (robotMax.z - robotMin.z) * 0.5
+
+    robot.dockHandle = newDockHandle
+    robot.dockCoords = vec3(newCoords.x, newCoords.y, newCoords.z + robotHeightOffset)
+    robot.dockRotation = newRotation
+    robot.baseZ = newCoords.z
+    robot.lastKnownCoords = vec3(newCoords.x, newCoords.y, newCoords.z)
+    robot.currentHeading = newRotation.z
+    robot.targetHeading = newRotation.z
+    Debug("CleanerRobot: Reinitialized at new position", robotId)
+end
+
+function CleanerRobot:getCleanerModels()
+    return self.cleanerModels
+end
+
+
+function CleanerRobot:cleanAll()
+    for robotId, robot in pairs(self.robots) do
+        if robot.isOwner then
+            if robot.state == "cleaning" or robot.state == "returning" then
+                TriggerServerEvent("housing:cleaner:stopped", robot.house, robotId)
+            end
+        end
+        if robot.networkedRobotHandle then
+            if DoesEntityExist(robot.networkedRobotHandle) then
+                DeleteEntity(robot.networkedRobotHandle)
+            end
+        end
+        if DoesEntityExist(robot.dockHandle) then
+            DeleteEntity(robot.dockHandle)
+        end
+    end
+    SendReactMessage("cleaner_sound", { action = "stop" })
+    self.activeThread = false
+    self.interactionThread = false
+    self.robots = {}
+end
+
+
+function CleanerRobot:scanAndSpawnFromDecorations(houseId)
+    if not decorate or not decorate.objects then
+        return
+    end
+    for _, obj in pairs(decorate.objects) do
+        if obj.spawned and obj.coords and obj.handle then
+            if self:isCleanerModel(obj.modelName) then
+                self:spawnForDecoration(obj, houseId)
+            end
+        end
+    end
+end
+
+
+function CleanerRobot:startInteractionLoop()
+    if self.interactionThread then
+        return
+    end
+    if Config.UseTarget then
+        return
+    end
+    self.interactionThread = true
+    CreateThread(function()
+        while self.interactionThread and CurrentHouse do
+            local playerCoords = GetEntityCoords(cache.ped)
+            local nearest = nil
+            local nearestDist = 2.5
+            for robotId, robot in pairs(self.robots) do
+                if DoesEntityExist(robot.dockHandle) then
+                    local dockCoords = GetEntityCoords(robot.dockHandle)
+                    local dist = #(playerCoords - dockCoords)
+                    if nearestDist > dist then
+                        nearestDist = dist
+                        nearest = { id = robotId, data = robot }
+                    end
+                end
+            end
+            if nearest then
+                if CurrentHouseData and CurrentHouseData.haskey then
+                    local dockPos = GetEntityCoords(nearest.data.dockHandle)
+                    local state = nearest.data.state
+                    local text = ""
+                    if state == "docked" or state == "idle" then
+                        text = i18n.t("cleaner.press_start")
+                    elseif state == "cleaning" then
+                        text = i18n.t("cleaner.press_stop")
+                    elseif state == "returning" then
+                        text = i18n.t("cleaner.returning")
+                    end
+                    DrawText3D(dockPos.x, dockPos.y, dockPos.z + 0.3, text, "cleaner_robot", "E")
+                    if IsControlJustPressed(0, 38) then
+                        if state == "docked" or state == "idle" then
+                            self:startCleaning(nearest.id)
+                        elseif state == "cleaning" then
+                            self:stopCleaning(nearest.id)
+                        end
+                    end
+                end
+            end
+            Wait(0)
+        end
+        self.interactionThread = false
+    end)
+end
+
+function CleanerRobot:stopInteractionLoop()
+    self.interactionThread = false
+end
+
+
+-- Global instance
+_G.cleanerRobot = CleanerRobot:new()
+
+CreateThread(function()
+    Wait(1000)
+    cleanerRobot:buildModelList()
+end)
+
+-- Decoration tracking for spawn/despawn
+local trackedDecorations = {}
+
+CreateThread(function()
+    while true do
+        Wait(500)
+        if not CurrentHouse then
+            trackedDecorations = {}
+        elseif decorate and decorate.objects then
+            for _, obj in pairs(decorate.objects) do
+                if obj.id and obj.spawned and obj.coords and obj.handle then
+                    if cleanerRobot:isCleanerModel(obj.modelName) then
+                        local existing = cleanerRobot:get(obj.id)
+                        if not existing then
+                            local objCoords = vec3(obj.coords.x, obj.coords.y, obj.coords.z)
+                            local objRotation
+                            if obj.rotation then
+                                objRotation = vec3(obj.rotation.x, obj.rotation.y, obj.rotation.z)
+                            end
+                            if not objRotation then
+                                objRotation = vec3(0, 0, 0)
+                            end
+                            trackedDecorations[obj.id] = { coords = objCoords, rotation = objRotation }
+                            cleanerRobot:spawnForDecoration(obj, CurrentHouse)
+
+
+                        else
+                            local tracked = trackedDecorations[obj.id]
+                            if tracked then
+                                local objCoords = vec3(obj.coords.x, obj.coords.y, obj.coords.z)
+                                local objRotation
+                                if obj.rotation then
+                                    objRotation = vec3(obj.rotation.x, obj.rotation.y, obj.rotation.z)
+                                end
+                                if not objRotation then
+                                    objRotation = vec3(0, 0, 0)
+                                end
+                                local coordsMoved = #(objCoords - tracked.coords) > 0.1
+                                local rotationChanged = math.abs(objRotation.z - tracked.rotation.z) > 1.0
+                                if coordsMoved or rotationChanged then
+                                    existing.robotHandle = obj.handle
+                                    cleanerRobot:reinitializeAtPosition(obj.id, objCoords, objRotation)
+                                    trackedDecorations[obj.id] = { coords = objCoords, rotation = objRotation }
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+
+            -- Remove robots for deleted decorations
+            for trackedId, _ in pairs(trackedDecorations) do
+                local stillExists = false
+                for _, obj in pairs(decorate.objects) do
+                    if obj.id == trackedId then
+                        stillExists = true
+                        break
+                    end
+                end
+                if not stillExists then
+                    trackedDecorations[trackedId] = nil
+                    cleanerRobot:despawn(trackedId)
+                end
+            end
+        end
+    end
+end)
+
+
+-- Target system integration
+if Config.UseTarget then
+    CreateThread(function()
+        Wait(2000)
+        local models = cleanerRobot:getCleanerModels()
+        while nil == next(models) do
+            Wait(500)
+            models = cleanerRobot:getCleanerModels()
+        end
+
+        local robotModelHashes = {}
+        local dockModelHashes = {}
+        for modelName, data in pairs(models) do
+            table.insert(robotModelHashes, joaat(modelName))
+            if data.dockerModel then
+                local dockHash = joaat(data.dockerModel)
+                local alreadyAdded = false
+                for _, existing in ipairs(dockModelHashes) do
+                    if existing == dockHash then
+                        alreadyAdded = true
+                        break
+                    end
+                end
+                if not alreadyAdded then
+                    table.insert(dockModelHashes, dockHash)
+                end
+            end
+        end
+        if #robotModelHashes == 0 then
+            return
+        end
+
+
+        -- Helper: can interact check (house key required)
+        local function canInteractBase(entity, checkFn)
+            if not CurrentHouse then return false end
+            if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+            for robotId, robot in pairs(cleanerRobot:getAll()) do
+                if checkFn(robot) == entity then
+                    return true
+                end
+            end
+            return false
+        end
+
+        -- ox_target options for robot models
+        local robotOptions = {
+            {
+                icon = "fas fa-play",
+                label = i18n.t("cleaner.start"),
+                onSelect = function(data)
+                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.robotHandle == data.entity then
+                            if robot.state == "docked" or robot.state == "idle" then
+                                cleanerRobot:startCleaning(robotId)
+                            end
+                            break
+                        end
+                    end
+                end,
+                canInteract = function(entity)
+                    if not CurrentHouse then return false end
+                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                    for _, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.robotHandle == entity then
+                            return "docked" == robot.state
+                        end
+                    end
+                    return false
+                end,
+                distance = 2.5,
+            },
+
+
+            {
+                icon = "fas fa-stop",
+                label = i18n.t("cleaner.stop"),
+                onSelect = function(data)
+                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.robotHandle == data.entity then
+                            if robot.state == "cleaning" then
+                                cleanerRobot:stopCleaning(robotId)
+                            end
+                            break
+                        end
+                    end
+                end,
+                canInteract = function(entity)
+                    if not CurrentHouse then return false end
+                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                    for _, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.robotHandle == entity then
+                            return "cleaning" == robot.state
+                        end
+                    end
+                    return false
+                end,
+                distance = 2.5,
+            },
+        }
+
+
+        -- ox_target options for dock models
+        local dockOptions = {
+            {
+                icon = "fas fa-home",
+                label = i18n.t("cleaner.return_dock"),
+                onSelect = function(data)
+                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == data.entity then
+                            cleanerRobot:returnToDock(robotId)
+                            break
+                        end
+                    end
+                end,
+                canInteract = function(entity)
+                    if not CurrentHouse then return false end
+                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                    for _, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == entity then
+                            return "cleaning" == robot.state
+                        end
+                    end
+                    return false
+                end,
+                distance = 2.5,
+            },
+            {
+                icon = "fas fa-play",
+                label = i18n.t("cleaner.start"),
+                onSelect = function(data)
+                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == data.entity then
+                            if robot.state == "docked" or robot.state == "idle" then
+                                cleanerRobot:startCleaning(robotId)
+                            end
+                            break
+                        end
+                    end
+                end,
+
+
+                canInteract = function(entity)
+                    if not CurrentHouse then return false end
+                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                    for _, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == entity then
+                            return "docked" == robot.state
+                        end
+                    end
+                    return false
+                end,
+                distance = 2.5,
+            },
+            {
+                icon = "fas fa-stop",
+                label = i18n.t("cleaner.stop"),
+                onSelect = function(data)
+                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == data.entity then
+                            if robot.state == "cleaning" then
+                                cleanerRobot:stopCleaning(robotId)
+                            end
+                            break
+                        end
+                    end
+                end,
+                canInteract = function(entity)
+                    if not CurrentHouse then return false end
+                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                    for _, robot in pairs(cleanerRobot:getAll()) do
+                        if robot.dockHandle == entity then
+                            return "cleaning" == robot.state
+                        end
+                    end
+                    return false
+                end,
+                distance = 2.5,
+            },
+        }
+
+
+        local targetResource = GetResourceState("ox_target")
+        if "started" == targetResource then
+            exports.ox_target:addModel(robotModelHashes, robotOptions)
+            if #dockModelHashes > 0 then
+                exports.ox_target:addModel(dockModelHashes, dockOptions)
+            end
+            Debug("CleanerRobot: Registered ox_target models (robot + dock)")
+        else
+            targetResource = GetResourceState("qb-target")
+            if "started" == targetResource then
+                -- qb-target robot options
+                exports["qb-target"]:AddTargetModel(robotModelHashes, {
+                    options = {
+                        {
+                            icon = "fas fa-play",
+                            label = i18n.t("cleaner.start"),
+                            action = function(entity)
+                                for robotId, robot in pairs(cleanerRobot:getAll()) do
+                                    if robot.robotHandle == entity then
+                                        if robot.state == "docked" or robot.state == "idle" then
+                                            cleanerRobot:startCleaning(robotId)
+                                        end
+                                        break
+                                    end
+                                end
+                            end,
+                            canInteract = function(entity)
+                                if not CurrentHouse then return false end
+                                if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                                for _, robot in pairs(cleanerRobot:getAll()) do
+                                    if robot.robotHandle == entity then
+                                        return "docked" == robot.state
+                                    end
+                                end
+                                return false
+                            end,
+                        },
+
+
+                        {
+                            icon = "fas fa-stop",
+                            label = i18n.t("cleaner.stop"),
+                            action = function(entity)
+                                for robotId, robot in pairs(cleanerRobot:getAll()) do
+                                    if robot.robotHandle == entity then
+                                        if robot.state == "cleaning" then
+                                            cleanerRobot:stopCleaning(robotId)
+                                        end
+                                        break
+                                    end
+                                end
+                            end,
+                            canInteract = function(entity)
+                                if not CurrentHouse then return false end
+                                if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                                for _, robot in pairs(cleanerRobot:getAll()) do
+                                    if robot.robotHandle == entity then
+                                        return "cleaning" == robot.state
+                                    end
+                                end
+                                return false
+                            end,
+                        },
+                    },
+                    distance = 2.5,
+                })
+
+
+                -- qb-target dock options
+                if #dockModelHashes > 0 then
+                    exports["qb-target"]:AddTargetModel(dockModelHashes, {
+                        options = {
+                            {
+                                icon = "fas fa-home",
+                                label = i18n.t("cleaner.return_dock"),
+                                action = function(entity)
+                                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            cleanerRobot:returnToDock(robotId)
+                                            break
+                                        end
+                                    end
+                                end,
+                                canInteract = function(entity)
+                                    if not CurrentHouse then return false end
+                                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                                    for _, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            return "cleaning" == robot.state
+                                        end
+                                    end
+                                    return false
+                                end,
+                            },
+                            {
+                                icon = "fas fa-play",
+                                label = i18n.t("cleaner.start"),
+                                action = function(entity)
+                                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            if robot.state == "docked" or robot.state == "idle" then
+                                                cleanerRobot:startCleaning(robotId)
+                                            end
+                                            break
+                                        end
+                                    end
+                                end,
+
+
+                                canInteract = function(entity)
+                                    if not CurrentHouse then return false end
+                                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                                    for _, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            return "docked" == robot.state
+                                        end
+                                    end
+                                    return false
+                                end,
+                            },
+                            {
+                                icon = "fas fa-stop",
+                                label = i18n.t("cleaner.stop"),
+                                action = function(entity)
+                                    for robotId, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            if robot.state == "cleaning" then
+                                                cleanerRobot:stopCleaning(robotId)
+                                            end
+                                            break
+                                        end
+                                    end
+                                end,
+                                canInteract = function(entity)
+                                    if not CurrentHouse then return false end
+                                    if not CurrentHouseData or not CurrentHouseData.haskey then return false end
+                                    for _, robot in pairs(cleanerRobot:getAll()) do
+                                        if robot.dockHandle == entity then
+                                            return "cleaning" == robot.state
+                                        end
+                                    end
+                                    return false
+                                end,
+                            },
+                        },
+                        distance = 2.5,
+                    })
+                end
+                Debug("CleanerRobot: Registered qb-target models (robot + dock)")
+            end
+        end
+    end)
+end
+
+
+-- Event handlers
+AddEventHandler("onResourceStop", function(resourceName)
+    if resourceName == GetCurrentResourceName() then
+        cleanerRobot:cleanAll()
+    end
+end)
+
+RegisterNetEvent("housing:cleaner:setDecorationAlpha", function(houseId, decorationId, alpha)
+    if not decorate or not decorate.objects then
+        return
+    end
+    for _, obj in pairs(decorate.objects) do
+        if obj.id == decorationId then
+            if obj.handle then
+                if DoesEntityExist(obj.handle) then
+                    SetEntityAlpha(obj.handle, alpha, false)
+                    Debug("CleanerRobot: Set decoration alpha", decorationId, alpha)
+                end
+            end
+            break
+        end
+    end
+    local robot = cleanerRobot:get(decorationId)
+    if robot then
+        if robot.decorationHandle then
+            if DoesEntityExist(robot.decorationHandle) then
+                SetEntityAlpha(robot.decorationHandle, alpha, false)
+            end
+        end
+    end
+end)
+
+
+RegisterNetEvent("housing:cleaner:deleteNetworkedRobot", function(houseId, decorationId)
+    local robot = cleanerRobot:get(decorationId)
+    if not robot then
+        return
+    end
+    if robot.networkedRobotHandle then
+        if DoesEntityExist(robot.networkedRobotHandle) then
+            DeleteEntity(robot.networkedRobotHandle)
+            robot.networkedRobotHandle = nil
+            Debug("CleanerRobot: Deleted networked robot by server request", decorationId)
+        end
+    end
+    if robot.decorationHandle then
+        if DoesEntityExist(robot.decorationHandle) then
+            robot.robotHandle = robot.decorationHandle
+            SetEntityCoords(robot.robotHandle, robot.dockCoords.x, robot.dockCoords.y, robot.dockCoords.z, false, false, false, false)
+            SetEntityHeading(robot.robotHandle, robot.dockRotation.z)
+        end
+    end
+    robot.state = "docked"
+    robot.isOwner = false
+end)

@@ -10,9 +10,9 @@ db.createHouse = function(source, creatorJob, data)
 
   local query = [[
 		INSERT INTO houselocations
-		(name, label, coords, blip, price, board, defaultPrice, tier, creator, creatorJob, apartmentCount, mlo, ipl, garage, garageShell, paymentMethod, photos, description, hideFromBrowser, assistantZoneMessagesEnabled, allowPlantInside, allowPlantOutside)
+		(name, label, coords, blip, owned, price, board, defaultPrice, tier, creator, creatorJob, apartmentCount, mlo, ipl, garage, garageShell, paymentMethod, photos, description, hideFromBrowser, allowPlantInside, allowPlantOutside)
 		VALUES
-		(@name, @label, @coords, @blip, @price, @board, @defaultPrice, @tier, @creator, @creatorJob, @apartmentCount, @mlo, @ipl, @garage, @garageShell, @paymentMethod, @photos, @description, @hideFromBrowser, @assistantZoneMessagesEnabled, @allowPlantInside, @allowPlantOutside)
+		(@name, @label, @coords, @blip, @owned, @price, @board, @defaultPrice, @tier, @creator, @creatorJob, @apartmentCount, @mlo, @ipl, @garage, @garageShell, @paymentMethod, @photos, @description, @hideFromBrowser, @allowPlantInside, @allowPlantOutside)
 	]]
 
   local createdNames = {}
@@ -30,6 +30,7 @@ db.createHouse = function(source, creatorJob, data)
       ["@label"] = data.address,
       ["@coords"] = json.encode(data.coords),
       ["@blip"] = (data.blip and json.encode(data.blip)) or nil,
+      ["@owned"] = 0,
       ["@price"] = data.price,
       ["@defaultPrice"] = data.price,
       ["@tier"] = data.tier,
@@ -45,7 +46,6 @@ db.createHouse = function(source, creatorJob, data)
       ["@photos"] = (data.photos and json.encode(data.photos)) or nil,
       ["@description"] = data.description or "",
       ["@hideFromBrowser"] = data.hideFromBrowser and 1 or 0,
-      ["@assistantZoneMessagesEnabled"] = 1,
       ["@allowPlantInside"] = (false ~= data.allowPlantInside) and 1 or 0,
       ["@allowPlantOutside"] = (false ~= data.allowPlantOutside) and 1 or 0,
     })

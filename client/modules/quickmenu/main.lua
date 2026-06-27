@@ -182,6 +182,8 @@ RegisterNUICallback("quick_menu:leave", function(data, cb)
     if houseConfig then
         if houseConfig.ipl then
             LeaveIplHouse(EnteredHouse, inOwned)
+        else
+            LeaveHouse()
         end
     else
         LeaveHouse()

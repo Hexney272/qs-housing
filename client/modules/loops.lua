@@ -373,6 +373,10 @@ local function insideHouseLoop()
     local sleepTime = nil
     local houseConfig = Config.Houses[CurrentHouse]
 
+    if not houseConfig then
+        return sleepTime
+    end
+
     if EnteringHouse then
         return sleepTime
     end
